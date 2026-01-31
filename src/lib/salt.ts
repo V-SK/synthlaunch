@@ -1,4 +1,5 @@
-import { getContractAddress, pad, numberToHex } from 'viem';
+import { getContractAddress, keccak256, toBytes, toHex } from 'viem';
+import { generatePrivateKey } from 'viem/accounts';
 
 const PORTAL = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as const;
 const TAX_IMPL = '0x29e6383F0ce68507b5A72a53c2B118a118332aA8';
@@ -14,6 +15,7 @@ function buildBytecode(impl: string): `0x${string}` {
 /**
  * Find a salt that produces a CREATE2 address ending with the required vanity suffix.
  * Tax tokens must end with "7777", non-tax tokens with "8888".
+ * Uses the same approach as Flap's official example: keccak256 hashing.
  */
 export async function findVanitySalt(hasTax: boolean): Promise<`0x${string}`> {
   const suffix = hasTax ? '7777' : '8888';
@@ -22,29 +24,26 @@ export async function findVanitySalt(hasTax: boolean): Promise<`0x${string}`> {
 
   const maxIterations = 500000;
 
-  // Random starting point
-  const randomBytes = new Uint8Array(32);
-  crypto.getRandomValues(randomBytes);
-  let saltBigInt = BigInt(
-    '0x' + Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('')
-  );
+  // Use the exact same approach as Flap's official code:
+  // Generate a random seed, then repeatedly keccak256 hash it
+  const seed = generatePrivateKey();
+  let salt: `0x${string}` = keccak256(toHex(seed));
 
   for (let i = 0; i < maxIterations; i++) {
-    const salt = pad(numberToHex(saltBigInt), { size: 32 });
-
     const addr = getContractAddress({
       from: PORTAL,
-      salt,
+      salt: toBytes(salt),
       bytecode,
       opcode: 'CREATE2',
     });
 
     if (addr.toLowerCase().endsWith(suffix)) {
-      console.log(`Found vanity salt after ${i + 1} iterations`);
+      console.log(`Found vanity salt after ${i + 1} iterations: ${salt}`);
+      console.log(`Token address: ${addr}`);
       return salt;
     }
 
-    saltBigInt += BigInt(1);
+    salt = keccak256(salt);
 
     // Yield to UI every 10k iterations to avoid freezing
     if (i % 10000 === 9999) {
