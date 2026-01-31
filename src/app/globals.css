@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1a1a1a #0a0a0a;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #1a1a1a;
+    border-radius: 3px;
+  }
+
+  body {
+    @apply bg-synth-bg text-synth-text font-mono;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-synth-surface border border-synth-border rounded-lg p-4;
+    @apply hover:border-synth-green/30 transition-all duration-300;
+    @apply hover:shadow-glow-green;
+  }
+
+  .btn-primary {
+    @apply bg-synth-green/10 border border-synth-green text-synth-green;
+    @apply px-4 py-2 rounded font-mono text-sm font-medium;
+    @apply hover:bg-synth-green/20 hover:shadow-glow-green;
+    @apply transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-synth-cyan/10 border border-synth-cyan text-synth-cyan;
+    @apply px-4 py-2 rounded font-mono text-sm font-medium;
+    @apply hover:bg-synth-cyan/20 hover:shadow-glow-cyan;
+    @apply transition-all duration-200;
+  }
+
+  .btn-purple {
+    @apply bg-synth-purple/10 border border-synth-purple text-synth-purple;
+    @apply px-4 py-2 rounded font-mono text-sm font-medium;
+    @apply hover:bg-synth-purple/20 hover:shadow-glow-purple;
+    @apply transition-all duration-200;
+  }
+
+  .input-field {
+    @apply bg-synth-bg border border-synth-border rounded px-3 py-2;
+    @apply text-synth-text font-mono text-sm;
+    @apply focus:border-synth-green/50 focus:outline-none focus:ring-1 focus:ring-synth-green/30;
+    @apply placeholder:text-synth-muted;
+    @apply transition-all duration-200;
+  }
+
+  .terminal-prompt::before {
+    content: '> ';
+    @apply text-synth-green;
+  }
+
+  .glow-text-green {
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+  }
+
+  .glow-text-cyan {
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  }
+
+  .glow-text-purple {
+    text-shadow: 0 0 10px rgba(180, 74, 255, 0.5);
+  }
+
+  .scanline {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 136, 0.015) 2px,
+      rgba(0, 255, 136, 0.015) 4px
+    );
+    pointer-events: none;
+  }
+}
