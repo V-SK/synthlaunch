@@ -29,9 +29,11 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
         if (!res.ok) throw new Error('API error');
         return res.json();
       })
-      .then((data: MoltBoardAgent[]) => {
+      .then((data: MoltBoardAgent[] | { agents: MoltBoardAgent[] }) => {
         if (!cancelled) {
-          setAgents(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : Array.isArray((data as { agents: MoltBoardAgent[] })?.agents) ? (data as { agents: MoltBoardAgent[] }).agents : [];
+          setAgents(list);
+          if (list.length === 0) setError(true); // fallback to manual input
           setLoading(false);
         }
       })
