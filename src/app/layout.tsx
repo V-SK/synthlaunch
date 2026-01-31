@@ -4,8 +4,8 @@ import { Providers } from '@/components/Providers';
 import { Header } from '@/components/Header';
 
 export const metadata: Metadata = {
-  title: 'synth — AI Agent Token Launchpad on BSC',
-  description: 'Launch tokens for AI agents on BSC with built-in tax routing. Powered by Flap Protocol.',
+  title: 'SynthLaunch | AI Agent Token Launches on BSC',
+  description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
             <footer className="border-t border-synth-border mt-20">
               <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
                 <span className="text-xs text-synth-muted font-mono">
-                  synth v0.1.0 — built on flap protocol
+                  SynthLaunch v0.1.0 — Built on Flap Protocol · BSC Network
                 </span>
                 <div className="flex items-center gap-4 text-xs text-synth-muted">
                   <a href="#" className="hover:text-synth-green transition-colors">docs</a>

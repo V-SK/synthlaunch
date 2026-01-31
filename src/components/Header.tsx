@@ -12,12 +12,17 @@ export function Header() {
     <header className="border-b border-synth-border bg-synth-bg/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold text-synth-green glow-text-green tracking-wider">
-            synth
-          </span>
-          <span className="text-[10px] px-1.5 py-0.5 bg-synth-purple/20 text-synth-purple border border-synth-purple/30 rounded font-mono uppercase tracking-widest">
-            beta
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-synth-green glow-text-green tracking-wider">
+              synthlaunch
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 bg-synth-cyan/20 text-synth-cyan border border-synth-cyan/30 rounded font-mono uppercase tracking-widest">
+              beta
+            </span>
+          </div>
+          <span className="hidden lg:inline text-[10px] text-synth-muted font-mono">
+            AI agent token launches
           </span>
         </Link>
 
