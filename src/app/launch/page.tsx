@@ -8,7 +8,7 @@ import { useAccount } from 'wagmi';
 import { useLaunchToken } from '@/hooks/useFlap';
 import { uploadToFlap } from '@/lib/ipfs';
 
-type LaunchStep = 'idle' | 'uploading' | 'sending-tx' | 'confirming' | 'success' | 'error';
+type LaunchStep = 'idle' | 'uploading' | 'mining-salt' | 'sending-tx' | 'confirming' | 'success' | 'error';
 
 export default function LaunchPage() {
   const { isConnected, address } = useAccount();
@@ -74,9 +74,9 @@ export default function LaunchPage() {
         telegram: form.telegram || undefined,
       });
 
-      // Step 2: Send transaction
-      setStep('sending-tx');
-      launch({
+      // Step 2: Mine vanity salt + send transaction
+      setStep('mining-salt');
+      await launch({
         metaCid,
         name: form.name,
         symbol: form.symbol,
@@ -97,11 +97,12 @@ export default function LaunchPage() {
     txError ? 'error' :
     step;
 
-  const isLoading = ['uploading', 'sending-tx', 'confirming'].includes(currentStep);
+  const isLoading = ['uploading', 'mining-salt', 'sending-tx', 'confirming'].includes(currentStep);
 
   const stepLabels: Record<LaunchStep, string> = {
     'idle': '',
     'uploading': 'Uploading to IPFS...',
+    'mining-salt': 'Mining vanity address...',
     'sending-tx': 'Confirm transaction in wallet...',
     'confirming': 'Waiting for confirmation...',
     'success': 'Token launched successfully!',
