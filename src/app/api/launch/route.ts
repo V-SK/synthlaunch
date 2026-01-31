@@ -291,11 +291,11 @@ export async function POST(request: Request) {
           taxRate,
           migratorType,
           quoteToken: zeroAddress,
-          quoteAmt: 0n,
+          quoteAmt: BigInt(0),
           beneficiary: tokenDetails.wallet as `0x${string}`,
           permitData: '0x' as `0x${string}`,
         }],
-        value: 0n,
+        value: BigInt(0),
       });
 
       console.log(`[launch] Transaction sent: ${txHash}`);
