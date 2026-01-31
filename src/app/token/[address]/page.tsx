@@ -79,12 +79,19 @@ export default function TokenPage({ params }: { params: { address: string } }) {
         ))}
       </div>
 
-      {/* Chart Placeholder */}
-      <div className="card h-64 flex items-center justify-center">
+      {/* Chart / Trade Link */}
+      <div className="card h-32 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <span className="text-synth-muted text-sm">📊 Chart coming soon</span>
-          <p className="text-[10px] text-synth-muted">
-            Price chart will be integrated in the next update
+          <span className="text-synth-green text-sm">📊 View chart and trade on Flap</span>
+          <p className="text-[10px]">
+            <a
+              href={`https://flap.sh/token/${params.address}?chain=bsc`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-synth-cyan hover:text-synth-green transition-colors underline"
+            >
+              flap.sh/token/{params.address.slice(0, 8)}...
+            </a>
           </p>
         </div>
       </div>
@@ -159,12 +166,20 @@ export default function TokenPage({ params }: { params: { address: string } }) {
         <h2 className="text-sm font-bold text-synth-green uppercase tracking-wider">
           Trade & Explore
         </h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <a
+            href={`https://flap.sh/token/${params.address}?chain=bsc`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary py-3 text-center"
+          >
+            🚀 Trade on Flap
+          </a>
           <a
             href={`https://pancakeswap.finance/swap?outputCurrency=${params.address}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-primary py-3 text-center"
+            className="btn-secondary py-3 text-center"
           >
             Trade on PancakeSwap
           </a>
