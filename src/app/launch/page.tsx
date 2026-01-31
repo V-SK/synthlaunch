@@ -6,9 +6,9 @@ import { AgentSelector } from '@/components/AgentSelector';
 import { WalletConnect } from '@/components/WalletConnect';
 import { useAccount } from 'wagmi';
 import { useLaunchToken } from '@/hooks/useFlap';
-import { uploadToIPFS, uploadMetadata } from '@/lib/ipfs';
+import { uploadToFlap } from '@/lib/ipfs';
 
-type LaunchStep = 'idle' | 'uploading-image' | 'uploading-meta' | 'sending-tx' | 'confirming' | 'success' | 'error';
+type LaunchStep = 'idle' | 'uploading' | 'sending-tx' | 'confirming' | 'success' | 'error';
 
 export default function LaunchPage() {
   const { isConnected, address } = useAccount();
@@ -63,23 +63,18 @@ export default function LaunchPage() {
     setTokenAddress('');
 
     try {
-      // Step 1: Upload image
-      setStep('uploading-image');
-      const imageCid = await uploadToIPFS(form.image);
-
-      // Step 2: Upload metadata
-      setStep('uploading-meta');
-      const metaCid = await uploadMetadata({
+      // Step 1: Upload image + metadata to IPFS (single request)
+      setStep('uploading');
+      const metaCid = await uploadToFlap(form.image, {
         name: form.name,
         symbol: form.symbol,
         description: form.description,
-        image: imageCid,
         website: form.website || undefined,
         twitter: form.twitter || undefined,
         telegram: form.telegram || undefined,
       });
 
-      // Step 3: Send transaction
+      // Step 2: Send transaction
       setStep('sending-tx');
       launch({
         metaCid,
@@ -102,12 +97,11 @@ export default function LaunchPage() {
     txError ? 'error' :
     step;
 
-  const isLoading = ['uploading-image', 'uploading-meta', 'sending-tx', 'confirming'].includes(currentStep);
+  const isLoading = ['uploading', 'sending-tx', 'confirming'].includes(currentStep);
 
   const stepLabels: Record<LaunchStep, string> = {
     'idle': '',
-    'uploading-image': 'Uploading image to IPFS...',
-    'uploading-meta': 'Uploading metadata to IPFS...',
+    'uploading': 'Uploading to IPFS...',
     'sending-tx': 'Confirm transaction in wallet...',
     'confirming': 'Waiting for confirmation...',
     'success': 'Token launched successfully!',
