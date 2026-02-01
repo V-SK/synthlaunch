@@ -1,16 +1,20 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n';
+
 interface TaxRateSliderProps {
   value: number;
   onChange: (value: number) => void;
 }
 
 export function TaxRateSlider({ value, onChange }: TaxRateSliderProps) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="text-sm text-synth-muted">
-          AI Agent Tax Rate
+          {t('taxRate.label')}
         </label>
         <span className="text-sm font-bold text-synth-cyan">
           {value}%
@@ -37,7 +41,7 @@ export function TaxRateSlider({ value, onChange }: TaxRateSliderProps) {
         <span>5%</span>
       </div>
       <p className="text-[10px] text-synth-muted">
-        Tax is sent to the linked AI agent&apos;s wallet. The agent earns fees on every trade.
+        {t('taxRate.hint')}
       </p>
     </div>
   );

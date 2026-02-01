@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 type AgentMode = 'moltbook' | 'twitter' | 'self';
 
@@ -18,13 +19,15 @@ interface AgentSelectorProps {
   onModeChange: (mode: AgentMode) => void;
 }
 
-const MODE_TABS: { key: AgentMode; icon: string; label: string }[] = [
-  { key: 'moltbook', icon: '🤖', label: 'AI Agent' },
-  { key: 'twitter', icon: '🐦', label: 'Twitter' },
-  { key: 'self', icon: '👤', label: 'Self' },
-];
-
 export function AgentSelector({ value, onChange, mode, onModeChange }: AgentSelectorProps) {
+  const { t } = useI18n();
+
+  const MODE_TABS: { key: AgentMode; icon: string; label: string }[] = [
+    { key: 'moltbook', icon: '🤖', label: t('agent.aiAgent') },
+    { key: 'twitter', icon: '🐦', label: t('agent.twitterTab') },
+    { key: 'self', icon: '👤', label: t('agent.selfTab') },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Mode Tabs */}
@@ -62,6 +65,7 @@ export function AgentSelector({ value, onChange, mode, onModeChange }: AgentSele
 
 /* ── Moltbook Selector (original logic preserved) ── */
 function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [agents, setAgents] = useState<MoltBoardAgent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +161,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
   if (error) {
     return (
       <div className="space-y-2">
-        <label className="text-sm text-synth-muted">AI Agent</label>
+        <label className="text-sm text-synth-muted">{t('agent.aiAgent')}</label>
         <input
           type="text"
           value={value}
@@ -166,24 +170,24 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
             setValidationState('idle');
           }}
           onBlur={() => validateAgent(value)}
-          placeholder="Enter agent name..."
+          placeholder={t('agent.enterAgentName')}
           className="input-field w-full"
         />
         {validationState === 'checking' && (
-          <p className="text-[10px] text-synth-cyan">⏳ Verifying on Moltbook...</p>
+          <p className="text-[10px] text-synth-cyan">{t('agent.verifying')}</p>
         )}
         {validationState === 'found' && (
-          <p className="text-[10px] text-synth-green">✓ Agent verified on Moltbook</p>
+          <p className="text-[10px] text-synth-green">{t('agent.verified')}</p>
         )}
         {validationState === 'not-found' && (
-          <p className="text-[10px] text-yellow-400">⚠ Agent not found on Moltbook — make sure the name is correct</p>
+          <p className="text-[10px] text-yellow-400">{t('agent.agentNotFound')}</p>
         )}
         {validationState === 'error' && (
-          <p className="text-[10px] text-yellow-400">⚠ Could not verify — Moltbook API unavailable</p>
+          <p className="text-[10px] text-yellow-400">{t('agent.apiUnavailable')}</p>
         )}
         {validationState === 'idle' && (
           <p className="text-[10px] text-synth-muted">
-            MoltBoard is unavailable — type the exact agent name.
+            {t('agent.boardUnavailable')}
           </p>
         )}
       </div>
@@ -194,7 +198,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
 
   return (
     <div className="space-y-2" ref={dropdownRef}>
-      <label className="text-sm text-synth-muted">AI Agent</label>
+      <label className="text-sm text-synth-muted">{t('agent.aiAgent')}</label>
       <div className="relative">
         <button
           type="button"
@@ -203,7 +207,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
         >
           <span>
             {loading ? (
-              <span className="text-synth-muted">Loading agents...</span>
+              <span className="text-synth-muted">{t('agent.loadingAgents')}</span>
             ) : selectedAgent ? (
               <span className="flex items-center gap-2">
                 <span className="text-synth-purple">🤖</span>
@@ -222,7 +226,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
                 {validationState === 'error' && <span className="text-yellow-400 text-xs">⚠</span>}
               </span>
             ) : (
-              <span className="text-synth-muted">Select an AI agent...</span>
+              <span className="text-synth-muted">{t('agent.selectAgent')}</span>
             )}
           </span>
           <span className="text-synth-muted">▾</span>
@@ -235,7 +239,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search or type agent name..."
+                placeholder={t('agent.searchPlaceholder')}
                 className="w-full px-2 py-1.5 text-sm bg-synth-bg text-synth-text border border-synth-border rounded focus:border-synth-green/50 focus:outline-none placeholder:text-synth-muted"
                 autoFocus
               />
@@ -249,16 +253,16 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
               >
                 <span className="flex items-center gap-2">
                   <span className="text-synth-cyan">+</span>
-                  <span className="text-synth-text">Use &quot;{search.trim()}&quot;</span>
+                  <span className="text-synth-text">{t('agent.useCustom', { name: search.trim() })}</span>
                 </span>
-                <span className="text-synth-muted text-xs">custom</span>
+                <span className="text-synth-muted text-xs">{t('agent.custom')}</span>
               </button>
             )}
 
             <div className="max-h-60 overflow-y-auto">
               {filtered.length === 0 && !showCustomOption ? (
                 <div className="px-3 py-3 text-sm text-synth-muted text-center">
-                  No agents found
+                  {t('agent.noAgentsFound')}
                 </div>
               ) : (
                 filtered.map((agent) => (
@@ -285,7 +289,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
 
             <div className="px-3 py-2 border-t border-synth-border/50">
               <p className="text-[10px] text-synth-muted text-center">
-                Not in top list? Type the exact agent name above.
+                {t('agent.notInList')}
               </p>
             </div>
           </div>
@@ -293,20 +297,20 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
       </div>
 
       {value && !selectedAgent && validationState === 'checking' && (
-        <p className="text-[10px] text-synth-cyan">⏳ Verifying on Moltbook...</p>
+        <p className="text-[10px] text-synth-cyan">{t('agent.verifying')}</p>
       )}
       {value && !selectedAgent && validationState === 'found' && (
-        <p className="text-[10px] text-synth-green">✓ Agent verified on Moltbook</p>
+        <p className="text-[10px] text-synth-green">{t('agent.verified')}</p>
       )}
       {value && !selectedAgent && validationState === 'not-found' && (
-        <p className="text-[10px] text-yellow-400">⚠ Agent not verified on Moltbook — make sure the name is correct</p>
+        <p className="text-[10px] text-yellow-400">{t('agent.notVerified')}</p>
       )}
       {value && !selectedAgent && validationState === 'error' && (
-        <p className="text-[10px] text-yellow-400">⚠ Could not verify — Moltbook API unavailable</p>
+        <p className="text-[10px] text-yellow-400">{t('agent.apiUnavailable')}</p>
       )}
       {(!value || selectedAgent || validationState === 'idle') && (
         <p className="text-[10px] text-synth-muted">
-          Select the AI agent that will receive trading fees from this token.
+          {t('agent.selectHint')}
         </p>
       )}
     </div>
@@ -315,6 +319,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
 
 /* ── Twitter Selector ── */
 function TwitterSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useI18n();
   // Strip "tw:" prefix for display
   const handle = value.startsWith('tw:') ? value.slice(3) : '';
 
@@ -326,7 +331,7 @@ function TwitterSelector({ value, onChange }: { value: string; onChange: (v: str
 
   return (
     <div className="space-y-2">
-      <label className="text-sm text-synth-muted">Twitter Handle</label>
+      <label className="text-sm text-synth-muted">{t('launch.twitterHandle')}</label>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-synth-cyan text-sm font-mono">@</span>
         <input
@@ -338,12 +343,12 @@ function TwitterSelector({ value, onChange }: { value: string; onChange: (v: str
         />
       </div>
       <p className="text-[10px] text-synth-muted">
-        Token tax fees will be claimable by this Twitter account owner.
+        {t('agent.twitterNote')}
       </p>
       {handle && (
         <div className="bg-synth-cyan/5 border border-synth-cyan/20 rounded-lg px-3 py-2">
           <p className="text-[10px] text-synth-cyan">
-            🐦 Fees will be held in custody for <span className="font-bold">@{handle}</span> — they can verify via Twitter to claim.
+            {t('agent.feesHeldNote', { handle })}
           </p>
         </div>
       )}
@@ -353,12 +358,13 @@ function TwitterSelector({ value, onChange }: { value: string; onChange: (v: str
 
 /* ── Self Selector ── */
 function SelfSelector() {
+  const { t } = useI18n();
   return (
     <div className="space-y-2">
       <div className="bg-synth-green/5 border border-synth-green/20 rounded-lg px-3 py-3 space-y-1.5">
-        <p className="text-sm text-synth-green font-mono">👤 No Agent — Direct Fees</p>
+        <p className="text-sm text-synth-green font-mono">{t('agent.selfTitle')}</p>
         <p className="text-[10px] text-synth-muted">
-          You will receive all trading fees directly to your connected wallet. No custody contract involved.
+          {t('agent.selfDesc')}
         </p>
       </div>
     </div>

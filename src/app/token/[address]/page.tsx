@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import type { Token } from '@/lib/api';
 import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 export default function TokenPage({ params }: { params: { address: string } }) {
+  const { t } = useI18n();
   const [token, setToken] = useState<Token | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -33,10 +35,10 @@ export default function TokenPage({ params }: { params: { address: string } }) {
     return (
       <div className="max-w-4xl mx-auto space-y-8">
         <Link href="/" className="text-sm text-synth-muted hover:text-synth-green transition-colors">
-          ← Back to tokens
+          {t('token.backToTokens')}
         </Link>
         <div className="card animate-pulse py-20 text-center">
-          <span className="text-synth-muted">Loading token data...</span>
+          <span className="text-synth-muted">{t('token.loadingToken')}</span>
         </div>
       </div>
     );
@@ -46,13 +48,13 @@ export default function TokenPage({ params }: { params: { address: string } }) {
     return (
       <div className="max-w-4xl mx-auto space-y-8">
         <Link href="/" className="text-sm text-synth-muted hover:text-synth-green transition-colors">
-          ← Back to tokens
+          {t('token.backToTokens')}
         </Link>
         <div className="card py-20 text-center space-y-4">
           <span className="text-3xl">🔍</span>
-          <p className="text-synth-muted">Token not found</p>
+          <p className="text-synth-muted">{t('token.notFound')}</p>
           <p className="text-xs text-synth-muted">
-            This token may not have been indexed yet or may not exist on the Flap portal.
+            {t('token.notFoundDesc')}
           </p>
         </div>
       </div>
@@ -65,7 +67,7 @@ export default function TokenPage({ params }: { params: { address: string } }) {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Back */}
       <Link href="/" className="text-sm text-synth-muted hover:text-synth-green transition-colors">
-        ← Back to tokens
+        {t('token.backToTokens')}
       </Link>
 
       {/* Token Header */}
@@ -95,15 +97,15 @@ export default function TokenPage({ params }: { params: { address: string } }) {
               onClick={copyAddress}
               className="text-[10px] px-1.5 py-0.5 bg-synth-surface text-synth-muted border border-synth-border rounded font-mono hover:border-synth-green/30 transition-colors"
             >
-              {copied ? '✓ Copied' : `${params.address.slice(0, 10)}...${params.address.slice(-6)}`}
+              {copied ? t('token.copied') : `${params.address.slice(0, 10)}...${params.address.slice(-6)}`}
             </button>
             {token.taxRate > 0 && (
               <span className="text-[10px] px-1.5 py-0.5 bg-synth-cyan/10 text-synth-cyan rounded">
-                {token.taxRate}% tax
+                {token.taxRate}% {t('home.tax')}
               </span>
             )}
             <span className="text-[10px] text-synth-muted">
-              Created {formatTimeAgo(token.createdAt)}
+              {t('token.created')} {formatTimeAgo(token.createdAt)}
             </span>
           </div>
         </div>
@@ -112,10 +114,10 @@ export default function TokenPage({ params }: { params: { address: string } }) {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Price (USD)', value: formatPrice(token.priceUsd), color: 'text-synth-text' },
-          { label: 'Market Cap', value: formatMarketCap(token.marketCap), color: 'text-synth-green' },
-          { label: 'Price (BNB)', value: token.price > 0 ? token.price.toExponential(3) : '—', color: 'text-synth-cyan' },
-          { label: 'Progress', value: isOnDex ? 'Migrated ✓' : `${(token.progress * 100).toFixed(1)}%`, color: isOnDex ? 'text-synth-cyan' : 'text-synth-green' },
+          { label: t('token.priceLabel'), value: formatPrice(token.priceUsd), color: 'text-synth-text' },
+          { label: t('token.marketCapLabel'), value: formatMarketCap(token.marketCap), color: 'text-synth-green' },
+          { label: t('token.priceBnbLabel'), value: token.price > 0 ? token.price.toExponential(3) : '—', color: 'text-synth-cyan' },
+          { label: t('token.progressLabel'), value: isOnDex ? t('token.migrated') : `${(token.progress * 100).toFixed(1)}%`, color: isOnDex ? 'text-synth-cyan' : 'text-synth-green' },
         ].map((stat) => (
           <div key={stat.label} className="card text-center">
             <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
@@ -130,7 +132,7 @@ export default function TokenPage({ params }: { params: { address: string } }) {
       {!isOnDex && (
         <div className="card">
           <div className="flex justify-between text-xs text-synth-muted mb-2">
-            <span>Bonding Curve Progress</span>
+            <span>{t('token.bondingCurveProgress')}</span>
             <span>{(token.progress * 100).toFixed(1)}%</span>
           </div>
           <div className="w-full h-3 bg-synth-surface rounded-full overflow-hidden">
@@ -140,8 +142,8 @@ export default function TokenPage({ params }: { params: { address: string } }) {
             />
           </div>
           <div className="flex justify-between text-[10px] text-synth-muted mt-2">
-            <span>Reserve: {token.reserve?.toFixed(4)} BNB</span>
-            <span>Supply: {(token.circulatingSupply / 1e6).toFixed(1)}M / 1B</span>
+            <span>{t('token.reserve')}: {token.reserve?.toFixed(4)} BNB</span>
+            <span>{t('token.supply')}: {(token.circulatingSupply / 1e6).toFixed(1)}M / 1B</span>
           </div>
         </div>
       )}
@@ -149,9 +151,9 @@ export default function TokenPage({ params }: { params: { address: string } }) {
       {/* Trade on Flap - Prominent CTA */}
       <div className="card border-synth-green/30 bg-synth-green/5">
         <div className="text-center space-y-4">
-          <h2 className="text-lg font-bold text-synth-green">🚀 Trade on Flap</h2>
+          <h2 className="text-lg font-bold text-synth-green">{t('token.tradeOnFlap')}</h2>
           <p className="text-sm text-synth-muted">
-            Buy and sell this token directly on the Flap bonding curve
+            {t('token.tradeHint')}
           </p>
           <a
             href={`https://flap.sh/token/${params.address}?chain=bsc`}
@@ -159,7 +161,7 @@ export default function TokenPage({ params }: { params: { address: string } }) {
             rel="noopener noreferrer"
             className="btn-primary inline-block px-8 py-3 text-lg"
           >
-            Trade {token.symbol} on Flap →
+            {t('token.tradeBtn', { symbol: token.symbol })}
           </a>
         </div>
       </div>
@@ -168,31 +170,31 @@ export default function TokenPage({ params }: { params: { address: string } }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="card space-y-3">
           <h2 className="text-sm font-bold text-synth-cyan uppercase tracking-wider">
-            Token Details
+            {t('token.tokenDetails')}
           </h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-synth-muted">Contract</span>
+              <span className="text-synth-muted">{t('token.contract')}</span>
               <button onClick={copyAddress} className="text-synth-text font-mono text-xs hover:text-synth-green transition-colors">
                 {params.address.slice(0, 10)}...{params.address.slice(-8)}
               </button>
             </div>
             <div className="flex justify-between">
-              <span className="text-synth-muted">Creator</span>
+              <span className="text-synth-muted">{t('token.creator')}</span>
               <span className="text-synth-text font-mono text-xs">
                 {token.creator ? `${token.creator.slice(0, 10)}...${token.creator.slice(-8)}` : '—'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-synth-muted">Status</span>
+              <span className="text-synth-muted">{t('token.status')}</span>
               <span className="text-synth-text">{statusLabel(token.status)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-synth-muted">Chain</span>
+              <span className="text-synth-muted">{t('token.chain')}</span>
               <span className="text-synth-text">BSC</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-synth-muted">Protocol</span>
+              <span className="text-synth-muted">{t('token.protocol')}</span>
               <span className="text-synth-text">Flap</span>
             </div>
           </div>
@@ -200,24 +202,24 @@ export default function TokenPage({ params }: { params: { address: string } }) {
 
         <div className="card space-y-3">
           <h2 className="text-sm font-bold text-synth-purple uppercase tracking-wider">
-            Bonding Curve
+            {t('token.bondingCurve')}
           </h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-synth-muted">Circulating Supply</span>
+              <span className="text-synth-muted">{t('token.circulatingSupply')}</span>
               <span className="text-synth-text">{(token.circulatingSupply / 1e6).toFixed(2)}M</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-synth-muted">Total Supply</span>
+              <span className="text-synth-muted">{t('token.totalSupply')}</span>
               <span className="text-synth-text">1,000,000,000</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-synth-muted">Reserve (BNB)</span>
+              <span className="text-synth-muted">{t('token.reserveBnb')}</span>
               <span className="text-synth-cyan">{token.reserve?.toFixed(4)}</span>
             </div>
             {token.taxRate > 0 && (
               <div className="flex justify-between">
-                <span className="text-synth-muted">Tax Rate</span>
+                <span className="text-synth-muted">{t('token.taxRate')}</span>
                 <span className="text-synth-cyan">{token.taxRate}%</span>
               </div>
             )}
@@ -228,7 +230,7 @@ export default function TokenPage({ params }: { params: { address: string } }) {
       {/* Action Buttons */}
       <div className="card space-y-4">
         <h2 className="text-sm font-bold text-synth-green uppercase tracking-wider">
-          Explore
+          {t('token.explore')}
         </h2>
         <div className="grid grid-cols-3 gap-4">
           <a
@@ -237,7 +239,7 @@ export default function TokenPage({ params }: { params: { address: string } }) {
             rel="noopener noreferrer"
             className="btn-primary py-3 text-center"
           >
-            🚀 Trade on Flap
+            {t('token.tradeOnFlap')}
           </a>
           <a
             href={`https://bscscan.com/token/${params.address}`}
@@ -245,7 +247,7 @@ export default function TokenPage({ params }: { params: { address: string } }) {
             rel="noopener noreferrer"
             className="btn-secondary py-3 text-center"
           >
-            View on BscScan
+            {t('token.viewOnBscScan')}
           </a>
           <a
             href={`https://dexscreener.com/bsc/${params.address}`}

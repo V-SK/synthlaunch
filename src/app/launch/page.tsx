@@ -7,10 +7,12 @@ import { WalletConnect } from '@/components/WalletConnect';
 import { useAccount } from 'wagmi';
 import { useLaunchToken } from '@/hooks/useFlap';
 import { uploadToFlap } from '@/lib/ipfs';
+import { useI18n } from '@/lib/i18n';
 
 type LaunchStep = 'idle' | 'uploading' | 'mining-salt' | 'sending-tx' | 'confirming' | 'success' | 'error';
 
 export default function LaunchPage() {
+  const { t } = useI18n();
   const { isConnected, address } = useAccount();
   const { launch, hash, isPending, isConfirming, isSuccess, error: txError, reset } = useLaunchToken();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,9 +58,9 @@ export default function LaunchPage() {
     if (!address) return;
 
     // Validate
-    if (!form.name.trim()) return setErrorMsg('Token name is required');
-    if (!form.symbol.trim()) return setErrorMsg('Token symbol is required');
-    if (!form.image) return setErrorMsg('Token image is required');
+    if (!form.name.trim()) return setErrorMsg(t('launch.nameRequired'));
+    if (!form.symbol.trim()) return setErrorMsg(t('launch.symbolRequired'));
+    if (!form.image) return setErrorMsg(t('launch.imageRequired'));
 
     setErrorMsg('');
     setTokenAddress('');
@@ -86,7 +88,7 @@ export default function LaunchPage() {
       });
     } catch (err) {
       setStep('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+      setErrorMsg(err instanceof Error ? err.message : t('launch.unknownError'));
     }
   };
 
@@ -102,12 +104,12 @@ export default function LaunchPage() {
 
   const stepLabels: Record<LaunchStep, string> = {
     'idle': '',
-    'uploading': 'Uploading to IPFS...',
-    'mining-salt': 'Mining vanity address...',
-    'sending-tx': 'Confirm transaction in wallet...',
-    'confirming': 'Waiting for confirmation...',
-    'success': 'Token launched successfully!',
-    'error': txError?.message || errorMsg || 'Transaction failed',
+    'uploading': t('launch.uploading'),
+    'mining-salt': t('launch.miningSalt'),
+    'sending-tx': t('launch.sendingTx'),
+    'confirming': t('launch.confirming'),
+    'success': t('launch.successMsg'),
+    'error': txError?.message || errorMsg || t('launch.txFailed'),
   };
 
   const handleReset = () => {
@@ -122,10 +124,10 @@ export default function LaunchPage() {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-synth-text terminal-prompt">
-          Launch Token
+          {t('launch.title')}
         </h1>
         <p className="text-sm text-synth-muted">
-          Create a new token on BSC with AI agent tax routing via Flap Protocol.
+          {t('launch.subtitle')}
         </p>
       </div>
 
@@ -176,12 +178,12 @@ export default function LaunchPage() {
         {/* Token Info */}
         <div className="card space-y-4">
           <h2 className="text-sm font-bold text-synth-cyan uppercase tracking-wider">
-            Token Information
+            {t('launch.tokenInfo')}
           </h2>
 
           {/* Image Upload */}
           <div className="space-y-1">
-            <label className="text-sm text-synth-muted">Token Image *</label>
+            <label className="text-sm text-synth-muted">{t('launch.tokenImage')} *</label>
             <div
               onClick={() => fileRef.current?.click()}
               onDrop={handleDrop}
@@ -204,13 +206,13 @@ export default function LaunchPage() {
                   />
                   <div className="text-left">
                     <p className="text-sm text-synth-text">{form.image?.name}</p>
-                    <p className="text-xs text-synth-muted">Click to change</p>
+                    <p className="text-xs text-synth-muted">{t('launch.clickToChange')}</p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-1">
                   <p className="text-synth-muted text-sm group-hover:text-synth-green transition-colors">
-                    Drop image or click to upload
+                    {t('launch.dropImage')}
                   </p>
                   <p className="text-[10px] text-synth-muted">PNG, JPG, GIF, SVG</p>
                 </div>
@@ -220,7 +222,7 @@ export default function LaunchPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-sm text-synth-muted">Token Name *</label>
+              <label className="text-sm text-synth-muted">{t('launch.tokenName')} *</label>
               <input
                 type="text"
                 placeholder="Neural Net Token"
@@ -232,7 +234,7 @@ export default function LaunchPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm text-synth-muted">Symbol *</label>
+              <label className="text-sm text-synth-muted">{t('launch.tokenSymbol')} *</label>
               <input
                 type="text"
                 placeholder="NNT"
@@ -247,9 +249,9 @@ export default function LaunchPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm text-synth-muted">Description</label>
+            <label className="text-sm text-synth-muted">{t('launch.tokenDescription')}</label>
             <textarea
-              placeholder="Describe your token..."
+              placeholder={t('launch.descPlaceholder')}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="input-field w-full h-24 resize-none"
@@ -261,11 +263,11 @@ export default function LaunchPage() {
         {/* Social Links */}
         <div className="card space-y-4">
           <h2 className="text-sm font-bold text-synth-cyan uppercase tracking-wider">
-            Social Links
+            {t('launch.socialLinks')}
           </h2>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-sm text-synth-muted">Website</label>
+              <label className="text-sm text-synth-muted">{t('launch.website')}</label>
               <input
                 type="url"
                 placeholder="https://"
@@ -276,7 +278,7 @@ export default function LaunchPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm text-synth-muted">Twitter</label>
+              <label className="text-sm text-synth-muted">{t('launch.twitter')}</label>
               <input
                 type="text"
                 placeholder="@handle"
@@ -287,7 +289,7 @@ export default function LaunchPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm text-synth-muted">Telegram</label>
+              <label className="text-sm text-synth-muted">{t('launch.telegram')}</label>
               <input
                 type="text"
                 placeholder="t.me/group"
@@ -303,7 +305,7 @@ export default function LaunchPage() {
         {/* AI Agent Config */}
         <div className="card space-y-4">
           <h2 className="text-sm font-bold text-synth-purple uppercase tracking-wider">
-            AI Agent Configuration
+            {t('launch.aiAgentConfig')}
           </h2>
 
           <AgentSelector
@@ -327,10 +329,10 @@ export default function LaunchPage() {
         {/* Dev Buy */}
         <div className="card space-y-4">
           <h2 className="text-sm font-bold text-synth-cyan uppercase tracking-wider">
-            Initial Buy (Optional)
+            {t('launch.initialBuy')}
           </h2>
           <div className="space-y-1">
-            <label className="text-sm text-synth-muted">Dev Buy Amount (BNB)</label>
+            <label className="text-sm text-synth-muted">{t('launch.devBuyAmount')}</label>
             <input
               type="number"
               step="0.01"
@@ -342,7 +344,7 @@ export default function LaunchPage() {
               disabled={isLoading}
             />
             <p className="text-[10px] text-synth-muted">
-              Amount of BNB to buy tokens with at launch. This creates initial liquidity.
+              {t('launch.devBuyHint')}
             </p>
           </div>
         </div>
@@ -363,15 +365,15 @@ export default function LaunchPage() {
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-synth-green border-t-transparent rounded-full animate-spin" />
-                  Processing...
+                  {t('launch.processing')}
                 </>
               ) : (
-                '🚀 Launch Token'
+                `🚀 ${t('launch.launchToken')}`
               )}
             </button>
           ) : (
             <div className="w-full text-center space-y-3">
-              <p className="text-sm text-synth-muted">Connect wallet to launch</p>
+              <p className="text-sm text-synth-muted">{t('launch.connectToLaunch')}</p>
               <WalletConnect />
             </div>
           )}

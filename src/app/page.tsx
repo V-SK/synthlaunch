@@ -34,9 +34,9 @@ export default function Home() {
   }, [sort]);
 
   const tabs: { key: SortTab; label: string; icon: string }[] = [
-    { key: 'hot', label: 'Hot', icon: '🔥' },
-    { key: 'new', label: 'New', icon: '🆕' },
-    { key: 'top', label: 'Top', icon: '🏆' },
+    { key: 'hot', label: t('home.sortHot'), icon: '🔥' },
+    { key: 'new', label: t('home.sortNew'), icon: '🆕' },
+    { key: 'top', label: t('home.sortTop'), icon: '🏆' },
   ];
 
   return (
@@ -44,7 +44,7 @@ export default function Home() {
       {/* Hero */}
       <section className="text-center py-12 space-y-4">
         <div className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono mb-4">
-          ● LIVE ON BSC MAINNET
+          ● {t('home.liveOnBsc')}
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-synth-text">
           {t('home.heroTitle')}
@@ -89,9 +89,9 @@ export default function Home() {
           </div>
           <span className="text-xs text-synth-muted">
             {loading ? (
-              <span className="animate-pulse">Loading...</span>
+              <span className="animate-pulse">{t('common.loading')}</span>
             ) : (
-              `${tokens.length} tokens`
+              t('home.tokenCount', { count: String(tokens.length) })
             )}
           </span>
         </div>
@@ -117,7 +117,7 @@ export default function Home() {
           </div>
         ) : error ? (
           <div className="card text-center py-12">
-            <span className="text-red-400 text-sm">Failed to load tokens: {error}</span>
+            <span className="text-red-400 text-sm">{t('home.failedToLoad', { error })}</span>
           </div>
         ) : tokens.length === 0 ? (
           <div className="card text-center py-12">
@@ -135,7 +135,7 @@ export default function Home() {
       {/* Bottom tagline */}
       <div className="text-center pt-8 pb-4">
         <span className="text-xs text-synth-muted font-mono">
-          Built on Flap Protocol · BSC Network
+          {t('home.builtOn')}
         </span>
       </div>
     </div>

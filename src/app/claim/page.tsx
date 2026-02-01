@@ -173,14 +173,14 @@ export default function ClaimPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setTwitterVerifyError(data.error || 'Failed to generate code');
+        setTwitterVerifyError(data.error || t('claim.failedToGenerate'));
         return;
       }
       setTwitterCode(data.code);
       setTwitterTweetUrl(data.tweetUrl);
       setTwitterStep(2);
     } catch {
-      setTwitterVerifyError('Failed to generate verification code');
+      setTwitterVerifyError(t('claim.failedToGenerate'));
     }
   };
 
@@ -203,10 +203,10 @@ export default function ClaimPage() {
           checkBoundWallet(`tw:${cleanHandle}`),
         ]);
       } else {
-        setTwitterVerifyError(data.error || 'Verification failed');
+        setTwitterVerifyError(data.error || t('claim.verificationFailed'));
       }
     } catch {
-      setTwitterVerifyError('Verification request failed');
+      setTwitterVerifyError(t('claim.verificationRequestFailed'));
     } finally {
       setTwitterVerifyLoading(false);
     }
@@ -233,7 +233,7 @@ export default function ClaimPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setBindError(data.error || 'Failed to get signature');
+        setBindError(data.error || t('claim.bindFailed', { error: '' }));
         return;
       }
 
@@ -249,10 +249,10 @@ export default function ClaimPage() {
       }
       setIsBound(true);
       setBoundWallet(address);
-      setClaimSuccess('Wallet bound successfully!');
+      setClaimSuccess(t('claim.walletBoundSuccess'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setBindError(`Bind failed: ${msg}`);
+      setBindError(t('claim.bindFailed', { error: msg }));
     } finally {
       setBindLoading(false);
     }
@@ -269,11 +269,11 @@ export default function ClaimPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: moltbookApiKey }),
       });
-      if (!res.ok) { setVerifyError('Invalid API key'); return; }
+      if (!res.ok) { setVerifyError(t('claim.invalidApiKey')); return; }
       const data = await res.json();
       const username = data.username || data.name;
       if (username !== moltbookUsername) {
-        setVerifyError(`API key belongs to "${username}", not "${moltbookUsername}"`);
+        setVerifyError(t('claim.apiKeyBelongsTo', { actual: username, expected: moltbookUsername }));
         return;
       }
       setVerified(true);
@@ -283,7 +283,7 @@ export default function ClaimPage() {
         checkBoundWallet(moltbookUsername),
       ]);
     } catch {
-      setVerifyError('Verification failed. Please try again.');
+      setVerifyError(t('claim.verifyFailed'));
     } finally {
       setVerifyLoading(false);
     }
@@ -300,7 +300,7 @@ export default function ClaimPage() {
         body: JSON.stringify({ agentName: moltbookUsername, wallet: address, apiKey: moltbookApiKey }),
       });
       const data = await res.json();
-      if (!res.ok) { setBindError(data.error || 'Failed to get signature'); return; }
+      if (!res.ok) { setBindError(data.error || t('claim.bindFailed', { error: '' })); return; }
 
       const txHash = await walletClient.writeContract({
         address: CUSTODY_ADDRESS,
@@ -313,10 +313,10 @@ export default function ClaimPage() {
       }
       setIsBound(true);
       setBoundWallet(address);
-      setClaimSuccess('Wallet bound successfully!');
+      setClaimSuccess(t('claim.walletBoundSuccess'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setBindError(`Bind failed: ${msg}`);
+      setBindError(t('claim.bindFailed', { error: msg }));
     } finally {
       setBindLoading(false);
     }
@@ -335,12 +335,12 @@ export default function ClaimPage() {
         args: [token],
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
-      setClaimSuccess(`Claimed fees for token ${token.slice(0, 8)}...${token.slice(-4)}`);
+      setClaimSuccess(t('claim.claimedSuccess', { token: `${token.slice(0, 8)}...${token.slice(-4)}` }));
       if (tab === 'agents') fetchAgentTokens(moltbookUsername);
       else fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setClaimSuccess(`Claim failed: ${msg}`);
+      setClaimSuccess(t('claim.claimFailed', { error: msg }));
     } finally {
       setClaimingToken(null);
     }
@@ -358,34 +358,34 @@ export default function ClaimPage() {
         args: [tokens],
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
-      setClaimSuccess(`Claimed fees for ${tokens.length} token(s)`);
+      setClaimSuccess(t('claim.batchClaimedSuccess', { count: String(tokens.length) }));
       if (tab === 'agents') fetchAgentTokens(moltbookUsername);
       else fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setClaimSuccess(`Batch claim failed: ${msg}`);
+      setClaimSuccess(t('claim.batchClaimFailed', { error: msg }));
     } finally {
       setClaimAllLoading(false);
     }
   };
 
   const tabs_list: { key: ClaimTab; label: string; icon: string }[] = [
-    { key: 'twitter', label: 'Twitter', icon: '🐦' },
-    { key: 'agents', label: 'Moltbook', icon: '🤖' },
+    { key: 'twitter', label: t('claim.twitter'), icon: '🐦' },
+    { key: 'agents', label: t('claim.moltbook'), icon: '🤖' },
   ];
 
   const twitterSteps = [
-    { num: 1, label: 'Handle' },
-    { num: 2, label: 'Tweet' },
-    { num: 3, label: 'Review' },
-    { num: 4, label: 'Claim' },
+    { num: 1, label: t('claim.stepHandle') },
+    { num: 2, label: t('claim.stepTweet') },
+    { num: 3, label: t('claim.stepReview') },
+    { num: 4, label: t('claim.stepClaim') },
   ];
 
   const agentSteps = [
-    { num: 1, label: 'Username' },
-    { num: 2, label: 'API Key' },
-    { num: 3, label: 'Review' },
-    { num: 4, label: 'Claim' },
+    { num: 1, label: t('claim.stepUsername') },
+    { num: 2, label: t('claim.stepApiKey') },
+    { num: 3, label: t('claim.stepReview') },
+    { num: 4, label: t('claim.stepClaim') },
   ];
 
   // Render step indicator
@@ -424,7 +424,7 @@ export default function ClaimPage() {
             {info.token.slice(0, 10)}...{info.token.slice(-6)}
           </div>
           {showAgent && (
-            <div className="text-xs text-synth-purple">Agent: @{info.agentName}</div>
+            <div className="text-xs text-synth-purple">{t('claim.agent')}: @{info.agentName}</div>
           )}
         </div>
         <a
@@ -433,20 +433,20 @@ export default function ClaimPage() {
           rel="noopener noreferrer"
           className="text-[10px] text-synth-cyan hover:underline"
         >
-          View on Flap ↗
+          {t('claim.viewOnFlap')}
         </a>
       </div>
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
-          <span className="text-synth-muted">Total Fees</span>
+          <span className="text-synth-muted">{t('claim.totalFees')}</span>
           <div className="text-synth-text font-mono">{formatEther(info.totalFees)} BNB</div>
         </div>
         <div>
-          <span className="text-synth-muted">Claimed</span>
+          <span className="text-synth-muted">{t('claim.claimed')}</span>
           <div className="text-synth-text font-mono">{formatEther(info.claimed)} BNB</div>
         </div>
         <div>
-          <span className="text-synth-muted">Pending</span>
+          <span className="text-synth-muted">{t('claim.pending')}</span>
           <div className="text-synth-green font-mono">{formatEther(info.pendingClaim)} BNB</div>
         </div>
       </div>
@@ -456,7 +456,7 @@ export default function ClaimPage() {
           disabled={claimingToken === info.token}
           className="btn-primary w-full text-xs"
         >
-          {claimingToken === info.token ? 'Claiming...' : `Claim ${formatEther(info.pendingClaim)} BNB`}
+          {claimingToken === info.token ? t('claim.claiming') : `Claim ${formatEther(info.pendingClaim)} BNB`}
         </button>
       )}
     </div>
@@ -471,32 +471,32 @@ export default function ClaimPage() {
   ) => (
     <div className="card space-y-4">
       <h2 className="text-sm font-bold text-synth-green">
-        {isBound ? 'Claim Fees' : 'Bind Wallet & Claim'}
+        {isBound ? t('claim.claimFees').replace(' →', '') : t('claim.bindAndClaim').replace(' →', '')}
       </h2>
       {!isConnected ? (
         <div className="text-center py-6 space-y-2">
           <span className="text-2xl">🔗</span>
-          <p className="text-synth-muted text-sm">Connect your wallet to continue</p>
+          <p className="text-synth-muted text-sm">{t('claim.connectWallet')}</p>
         </div>
       ) : (
         <>
           <div className="bg-synth-bg rounded-lg p-4 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">Agent</span>
+              <span className="text-synth-muted">{t('claim.agent')}</span>
               <span className="text-synth-purple">@{agentName}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">Wallet</span>
+              <span className="text-synth-muted">{t('claim.wallet')}</span>
               <span className="text-synth-text font-mono text-xs">{address?.slice(0, 10)}...{address?.slice(-6)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">Wallet Bound</span>
+              <span className="text-synth-muted">{t('claim.walletBound')}</span>
               <span className={isBound ? 'text-synth-green' : 'text-synth-muted'}>
-                {isBound ? `Yes (${boundWallet?.slice(0, 6)}...${boundWallet?.slice(-4)})` : 'Not yet'}
+                {isBound ? `${t('common.yes')} (${boundWallet?.slice(0, 6)}...${boundWallet?.slice(-4)})` : t('common.notYet')}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">Claimable</span>
+              <span className="text-synth-muted">{t('claim.claimable')}</span>
               <span className="text-synth-green font-mono">
                 {formatEther(tokens.reduce((sum, t) => sum + t.pendingClaim, BigInt(0)))} BNB
               </span>
@@ -507,7 +507,7 @@ export default function ClaimPage() {
 
           {!isBound && (
             <button onClick={onBindWallet} disabled={bindLoading} className="btn-purple w-full">
-              {bindLoading ? 'Binding Wallet...' : 'Bind Wallet'}
+              {bindLoading ? t('claim.bindingWallet') : t('claim.bindWallet')}
             </button>
           )}
 
@@ -519,7 +519,7 @@ export default function ClaimPage() {
                   disabled={claimAllLoading}
                   className="btn-primary w-full"
                 >
-                  {claimAllLoading ? 'Claiming All...' : 'Claim All'}
+                  {claimAllLoading ? t('claim.claimingAll') : t('claim.claimAll')}
                 </button>
               )}
               {tokens.map((info) => renderTokenRow(info))}
@@ -528,7 +528,7 @@ export default function ClaimPage() {
 
           {isBound && tokens.filter(t => t.pendingClaim > BigInt(0)).length === 0 && (
             <div className="text-center py-4">
-              <p className="text-synth-muted text-sm">No fees to claim at the moment</p>
+              <p className="text-synth-muted text-sm">{t('claim.noFees')}</p>
             </div>
           )}
         </>
@@ -548,17 +548,17 @@ export default function ClaimPage() {
 
       {/* Tab Switcher */}
       <div className="flex items-center gap-1 border-b border-synth-border pb-0">
-        {tabs_list.map((t) => (
+        {tabs_list.map((tabItem) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabItem.key}
+            onClick={() => setTab(tabItem.key)}
             className={`px-4 py-2 text-sm font-mono transition-all duration-200 border-b-2 -mb-[1px] ${
-              tab === t.key
+              tab === tabItem.key
                 ? 'text-synth-green border-synth-green'
                 : 'text-synth-muted border-transparent hover:text-synth-text'
             }`}
           >
-            {t.icon} {t.label}
+            {tabItem.icon} {tabItem.label}
           </button>
         ))}
       </div>
@@ -642,7 +642,7 @@ export default function ClaimPage() {
 
               <div className="flex gap-3">
                 <button onClick={() => setTwitterStep(1)} className="btn-secondary">
-                  ← Back
+                  {t('claim.back')}
                 </button>
                 <button
                   onClick={handleTwitterVerify}
@@ -662,11 +662,11 @@ export default function ClaimPage() {
               <div className="bg-synth-bg rounded-lg p-3 flex items-center gap-3">
                 <span className="text-synth-green text-lg">✓</span>
                 <div>
-                  <span className="text-sm text-synth-text">Verified as </span>
+                  <span className="text-sm text-synth-text">{t('claim.verifiedAs')} </span>
                   <span className="text-sm text-synth-cyan font-bold">@{twitterHandle}</span>
                   {isBound && boundWallet && (
                     <div className="text-[10px] text-synth-muted mt-0.5">
-                      Wallet bound: <span className="font-mono text-synth-cyan">{boundWallet.slice(0, 8)}...{boundWallet.slice(-4)}</span>
+                      {t('claim.walletBound')}: <span className="font-mono text-synth-cyan">{boundWallet.slice(0, 8)}...{boundWallet.slice(-4)}</span>
                     </div>
                   )}
                 </div>
@@ -674,12 +674,12 @@ export default function ClaimPage() {
 
               {twitterTokensLoading ? (
                 <div className="text-center py-8">
-                  <p className="text-synth-muted text-sm animate-pulse">Loading tokens...</p>
+                  <p className="text-synth-muted text-sm animate-pulse">{t('claim.loadingTokens')}</p>
                 </div>
               ) : twitterTokens.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
                   <span className="text-2xl">📭</span>
-                  <p className="text-synth-muted text-sm">No tokens linked to @{twitterHandle}</p>
+                  <p className="text-synth-muted text-sm">{t('claim.noTokens')} @{twitterHandle}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -689,10 +689,10 @@ export default function ClaimPage() {
 
               <div className="flex gap-3">
                 <button onClick={() => { setTwitterStep(1); setTwitterVerified(false); }} className="btn-secondary">
-                  ← Back
+                  {t('claim.back')}
                 </button>
                 <button onClick={() => setTwitterStep(4)} className="btn-primary">
-                  {isBound ? 'Claim Fees →' : 'Bind Wallet & Claim →'}
+                  {isBound ? t('claim.claimFees') : t('claim.bindAndClaim')}
                 </button>
               </div>
             </div>
@@ -708,7 +708,7 @@ export default function ClaimPage() {
                 handleTwitterBindWallet,
               )}
               <button onClick={() => setTwitterStep(3)} className="btn-secondary">
-                ← Back
+                {t('claim.back')}
               </button>
             </>
           )}
@@ -727,7 +727,7 @@ export default function ClaimPage() {
                 {t('claim.usernameHint')}
               </p>
               <div className="space-y-1">
-                <label className="text-xs text-synth-muted">Moltbook Username</label>
+                <label className="text-xs text-synth-muted">{t('claim.moltbookUsername')}</label>
                 <input
                   type="text"
                   placeholder="your_agent_name"
@@ -741,7 +741,7 @@ export default function ClaimPage() {
                 disabled={!moltbookUsername.trim()}
                 className="btn-primary"
               >
-                Next →
+                {t('claim.next')}
               </button>
             </div>
           )}
@@ -750,11 +750,11 @@ export default function ClaimPage() {
             <div className="card space-y-4">
               <h2 className="text-sm font-bold text-synth-purple">{t('claim.step')} 2: {t('claim.verifyApiKey')}</h2>
               <p className="text-sm text-synth-muted">
-                Enter your Moltbook API key to verify ownership of{' '}
+                {t('claim.apiKeyHint')}{' '}
                 <span className="text-synth-purple">@{moltbookUsername}</span>.
               </p>
               <div className="space-y-1">
-                <label className="text-xs text-synth-muted">Moltbook API Key</label>
+                <label className="text-xs text-synth-muted">{t('claim.moltbookApiKey')}</label>
                 <input
                   type="password"
                   placeholder="moltbook_sk_xxxxxxxx"
@@ -765,9 +765,9 @@ export default function ClaimPage() {
               </div>
               {verifyError && <div className="text-xs text-red-400">{verifyError}</div>}
               <div className="flex gap-3">
-                <button onClick={() => setAgentStep(1)} className="btn-secondary">← Back</button>
+                <button onClick={() => setAgentStep(1)} className="btn-secondary">{t('claim.back')}</button>
                 <button onClick={handleVerify} disabled={!moltbookApiKey.trim() || verifyLoading} className="btn-purple">
-                  {verifyLoading ? 'Verifying...' : 'Verify →'}
+                  {verifyLoading ? t('claim.verifying') : t('claim.verify')}
                 </button>
               </div>
             </div>
@@ -779,24 +779,24 @@ export default function ClaimPage() {
               <div className="bg-synth-bg rounded-lg p-3 flex items-center gap-3">
                 <span className="text-synth-green text-lg">✓</span>
                 <div>
-                  <span className="text-sm text-synth-text">Verified as </span>
+                  <span className="text-sm text-synth-text">{t('claim.verifiedAs')} </span>
                   <span className="text-sm text-synth-purple font-bold">@{moltbookUsername}</span>
                 </div>
               </div>
               {tokensLoading ? (
-                <div className="text-center py-8"><p className="text-synth-muted text-sm animate-pulse">Loading tokens...</p></div>
+                <div className="text-center py-8"><p className="text-synth-muted text-sm animate-pulse">{t('claim.loadingTokens')}</p></div>
               ) : agentTokens.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
                   <span className="text-2xl">📭</span>
-                  <p className="text-synth-muted text-sm">No linked tokens found</p>
+                  <p className="text-synth-muted text-sm">{t('claim.noLinkedTokens')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">{agentTokens.map((info) => renderTokenRow(info))}</div>
               )}
               <div className="flex gap-3">
-                <button onClick={() => { setAgentStep(2); setVerified(false); setVerifyError(''); }} className="btn-secondary">← Back</button>
+                <button onClick={() => { setAgentStep(2); setVerified(false); setVerifyError(''); }} className="btn-secondary">{t('claim.back')}</button>
                 <button onClick={() => setAgentStep(4)} className="btn-primary">
-                  {isBound ? 'Claim Fees →' : 'Bind Wallet & Claim →'}
+                  {isBound ? t('claim.claimFees') : t('claim.bindAndClaim')}
                 </button>
               </div>
             </div>
@@ -805,7 +805,7 @@ export default function ClaimPage() {
           {agentStep === 4 && (
             <>
               {renderClaimSection(moltbookUsername, agentTokens, tokensLoading, handleBindWallet)}
-              <button onClick={() => setAgentStep(3)} className="btn-secondary">← Back</button>
+              <button onClick={() => setAgentStep(3)} className="btn-secondary">{t('claim.back')}</button>
             </>
           )}
         </div>
@@ -817,19 +817,19 @@ export default function ClaimPage() {
         <ul className="text-xs text-synth-muted space-y-1.5">
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
-            Token creators assign an AI agent and tax rate (0-5%) at launch
+            {t('claim.howStep1')}
           </li>
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
-            Trading fees are sent to the SynthLaunch Custody contract
+            {t('claim.howStep2')}
           </li>
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
-            <strong>Twitter:</strong> Verify ownership by posting a tweet → bind wallet → claim
+            {t('claim.howStep3Twitter')}
           </li>
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
-            <strong>Moltbook:</strong> Verify via API key → bind wallet → claim on-chain
+            {t('claim.howStep3Moltbook')}
           </li>
         </ul>
       </div>

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import type { PlatformStats } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 export function StatsBar() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,10 +20,10 @@ export function StatsBar() {
   }, []);
 
   const items = [
-    { label: 'Total Tokens', value: stats?.totalTokens?.toString() || '0', icon: '◆', color: 'text-synth-green' },
-    { label: 'Total Reserve', value: `${stats?.totalReserveBnb || '0'} BNB`, icon: '◈', color: 'text-synth-cyan' },
-    { label: 'Total Market Cap', value: stats?.totalMarketCap || '$0', icon: '◇', color: 'text-synth-purple' },
-    { label: 'Active / DEX', value: `${stats?.activeTokens || 0} / ${stats?.dexTokens || 0}`, icon: '▲', color: 'text-synth-green' },
+    { label: t('stats.totalTokens'), value: stats?.totalTokens?.toString() || '0', icon: '◆', color: 'text-synth-green' },
+    { label: t('stats.totalReserve'), value: `${stats?.totalReserveBnb || '0'} BNB`, icon: '◈', color: 'text-synth-cyan' },
+    { label: t('stats.totalMarketCap'), value: stats?.totalMarketCap || '$0', icon: '◇', color: 'text-synth-purple' },
+    { label: t('stats.activeDex'), value: `${stats?.activeTokens || 0} / ${stats?.dexTokens || 0}`, icon: '▲', color: 'text-synth-green' },
   ];
 
   return (

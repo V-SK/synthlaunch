@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import type { Token } from '@/lib/api';
 import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 export function TokenCard({ address, name, symbol, image, price, priceUsd, marketCap, taxRate, status, progress, createdAt }: Token) {
+  const { t } = useI18n();
   const statusText = statusLabel(status);
   const isOnDex = status === 4;
 
@@ -23,7 +25,7 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
             )}
             <div>
               <h3 className="font-bold text-synth-text group-hover:text-synth-green transition-colors">
-                {name || symbol || 'Unknown'}
+                {name || symbol || t('common.unknown')}
               </h3>
               <span className="text-xs text-synth-muted">${symbol}</span>
             </div>
@@ -38,11 +40,11 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div>
-            <span className="text-[10px] text-synth-muted block">Price</span>
+            <span className="text-[10px] text-synth-muted block">{t('home.price')}</span>
             <span className="text-sm text-synth-text">{formatPrice(priceUsd)}</span>
           </div>
           <div>
-            <span className="text-[10px] text-synth-muted block">MCap</span>
+            <span className="text-[10px] text-synth-muted block">{t('home.mcap')}</span>
             <span className="text-sm text-synth-text">{formatMarketCap(marketCap)}</span>
           </div>
         </div>
@@ -51,7 +53,7 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
         {!isOnDex && (
           <div className="mb-3">
             <div className="flex justify-between text-[10px] text-synth-muted mb-1">
-              <span>Progress</span>
+              <span>{t('home.progress')}</span>
               <span>{(progress * 100).toFixed(1)}%</span>
             </div>
             <div className="w-full h-1.5 bg-synth-surface rounded-full overflow-hidden">
@@ -68,7 +70,7 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
           <div className="flex items-center gap-2">
             {taxRate > 0 && (
               <span className="text-[10px] px-1.5 py-0.5 bg-synth-cyan/10 text-synth-cyan rounded">
-                {taxRate}% tax
+                {taxRate}% {t('home.tax')}
               </span>
             )}
           </div>

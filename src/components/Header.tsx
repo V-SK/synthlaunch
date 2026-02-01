@@ -50,7 +50,7 @@ export function Header() {
             </span>
           </div>
           <span className="hidden lg:inline text-[10px] text-synth-muted font-mono">
-            AI agent token launches
+            {t('header.tagline')}
           </span>
         </Link>
 
