@@ -144,7 +144,7 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
     const data = await res.json();
     // Filter out invalid addresses
     const valid = data.filter((t: any) => t.address && t.address.startsWith('0x') && t.address.length === 42);
-    console.log(`[tokens] Supabase returned ${data.length} rows, ${valid.length} valid`);
+    console.log(`[tokens] Supabase raw=${data.length} valid=${valid.length} addrs=${data.map((t:any)=>t.address?.slice(0,8)||'null').join(',')}`);
     if (valid.length > 0) {
       lastKnownSupabaseTokens = valid;
     }
@@ -181,7 +181,7 @@ async function refreshTokens(): Promise<void> {
       isFetching = false;
       return;
     }
-    const debugParts: string[] = [`sb=${supabaseTokens.length}`];
+    const debugParts: string[] = [`sb=${supabaseTokens.length}`, `addrs=${supabaseTokens.map(t=>t.address?.slice(0,6)).join('|')}`];
     console.log(`[tokens] Fetched ${supabaseTokens.length} tokens from Supabase: ${supabaseTokens.map(t => t.address?.slice(0,8)).join(',')}`);
 
     const tokens: CachedToken[] = [];
