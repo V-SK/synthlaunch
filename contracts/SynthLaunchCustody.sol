@@ -6,6 +6,11 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
+/// @notice Flap tax processor interface
+interface ITaxProcessor {
+    function taxToken() external view returns (address);
+}
+
 /**
  * @title SynthLaunchCustody
  * @notice 托管 AI Agent 的 token 交易税费，支持验证后提取，含平台手续费
@@ -87,9 +92,23 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         emit FeeRecorded(token, msg.value);
     }
 
-    /// @notice 接收 Flap 自动发的纯 BNB 转账（无法区分 token）
-    /// @dev BNB 存在合约里，由 owner 通过 recordFee 记账归属到具体 token
-    receive() external payable {}
+    /// @notice 接收 Flap 自动发的 BNB 转账，自动识别 token 并记账
+    /// @dev 调用 msg.sender（Flap tax processor）的 taxToken() 获取 token 地址
+    receive() external payable {
+        if (msg.value == 0) return;
+
+        // 尝试从 Flap tax processor 获取 token 地址
+        try ITaxProcessor(msg.sender).taxToken() returns (address token) {
+            if (bytes(tokenAgent[token]).length > 0) {
+                tokenFees[token] += msg.value;
+                totalRecorded += msg.value;
+                emit FeeRecorded(token, msg.value);
+            }
+            // token 未注册的情况：BNB 留在合约里，可通过 recordFee 手动归属
+        } catch {
+            // msg.sender 不是 tax processor（普通转账），BNB 留在合约里
+        }
+    }
 
     // ============ 开放记账（任何人可调用，合约校验余额） ============
 
