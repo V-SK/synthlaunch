@@ -347,7 +347,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 10. Record launch
+    // 10. Register in Supabase
+    try {
+      const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (SUPABASE_URL && SUPABASE_KEY) {
+        const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/tokens`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            address: tokenAddress.toLowerCase(),
+            agent_name: agentName,
+            tx_hash: txHash,
+            launch_type: 'api',
+            tax_rate: taxRate,
+          }),
+        });
+        console.log(`[launch] Supabase register: ${sbRes.status}`);
+      }
+    } catch (err: unknown) {
+      console.error(`[launch] Supabase register failed (non-fatal):`, err instanceof Error ? err.message : String(err));
+    }
+
+    // 11. Record launch
     launches[agentId] = Date.now();
     saveLaunches(launches);
     console.log(`[launch] Launch recorded for agent ${agentId}`);
