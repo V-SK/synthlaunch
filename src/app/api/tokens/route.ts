@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, formatEther, parseAbi, type Address } from 'viem';
+import { createPublicClient, http, formatEther, parseAbi, getAddress, type Address } from 'viem';
 import { bsc } from 'viem/chains';
 
 export const dynamic = 'force-dynamic';
@@ -184,7 +184,7 @@ async function refreshTokens(): Promise<void> {
               address: PORTAL_ADDRESS,
               abi: PORTAL_ABI,
               functionName: 'getTokenV5',
-              args: [info.address as Address],
+              args: [getAddress(info.address) as Address],
             }) as any;
 
             const status = Number(result[0]);
@@ -245,9 +245,12 @@ async function refreshTokens(): Promise<void> {
         })
       );
 
-      for (const r of results) {
+      for (let ri = 0; ri < results.length; ri++) {
+        const r = results[ri];
         if (r.status === 'fulfilled' && r.value) {
           tokens.push(r.value);
+        } else if (r.status === 'rejected') {
+          console.error(`[tokens] Rejected token ${batch[ri]?.address}:`, r.reason?.message || r.reason);
         }
       }
     }
