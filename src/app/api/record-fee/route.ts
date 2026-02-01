@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createWalletClient, createPublicClient, http } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { getDeployerAccount } from '@/lib/kms-signer';
 import { bsc } from 'viem/chains';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
 
@@ -40,12 +40,7 @@ export async function POST(request: Request) {
       return errorResponse('Invalid token address', 'INVALID_TOKEN');
     }
 
-    const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
-    if (!deployerKey) {
-      return errorResponse('Server configuration error', 'CONFIG_ERROR', 500);
-    }
-
-    const account = privateKeyToAccount(deployerKey as `0x${string}`);
+    const account = await getDeployerAccount();
     const walletClient = createWalletClient({
       account,
       chain: bsc,

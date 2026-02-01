@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createWalletClient, http, defineChain } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { getDeployerAccount } from '@/lib/kms-signer';
 
 const bsc = defineChain({
   id: 56,
@@ -73,11 +73,7 @@ export async function POST(request: Request) {
     // Best-effort: register token on SynthLaunchCustody contract
     if (agent_name && address) {
       try {
-        const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
-        if (deployerKey) {
-          const account = privateKeyToAccount(
-            (deployerKey.startsWith('0x') ? deployerKey : `0x${deployerKey}`) as `0x${string}`
-          );
+          const account = await getDeployerAccount();
           const walletClient = createWalletClient({
             account,
             chain: bsc,
@@ -90,7 +86,6 @@ export async function POST(request: Request) {
             args: [address.toLowerCase() as `0x${string}`, agent_name],
           });
           console.log(`[register] registerToken tx sent for ${address} / ${agent_name}`);
-        }
       } catch (contractErr: unknown) {
         const errMsg = contractErr instanceof Error ? contractErr.message : String(contractErr);
         console.error(`[register] registerToken failed (non-fatal): ${errMsg}`);

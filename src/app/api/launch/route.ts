@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createWalletClient, createPublicClient, http, getContractAddress, keccak256, toBytes, toHex, zeroAddress } from 'viem';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { generatePrivateKey } from 'viem/accounts';
+import { getDeployerAccount } from '@/lib/kms-signer';
 import { bsc } from 'viem/chains';
 import { FLAP_ABI, FLAP_ADDRESS } from '@/lib/contracts';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
@@ -270,13 +271,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. Send transaction
-    const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
-    if (!deployerKey) {
-      console.error('[launch] DEPLOYER_PRIVATE_KEY not set');
-      return errorResponse('Server configuration error', 'DEPLOY_FAILED', 500);
-    }
-
-    const account = privateKeyToAccount(deployerKey as `0x${string}`);
+    const account = await getDeployerAccount();
     const walletClient = createWalletClient({
       account,
       chain: bsc,

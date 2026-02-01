@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, encodePacked, keccak256, toHex } from 'viem';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
-import { privateKeyToAccount } from 'viem/accounts';
+import { getDeployerAccount } from '@/lib/kms-signer';
 import { bsc } from 'viem/chains';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
 
@@ -93,13 +93,7 @@ export async function POST(request: NextRequest) {
     const nonce = toHex(randomBytes, { size: 32 });
 
     // 4. Sign the message: keccak256(abi.encodePacked("SynthLaunch:BindWallet", agentName, wallet, nonce, chainId))
-    const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
-    if (!deployerKey) {
-      console.error('[bind-wallet] DEPLOYER_PRIVATE_KEY not set');
-      return errorResponse('Server configuration error', 'CONFIG_ERROR', 500);
-    }
-
-    const account = privateKeyToAccount(deployerKey as `0x${string}`);
+    const account = await getDeployerAccount();
 
     // Build the message hash matching the contract's verification
     const messageHash = keccak256(
