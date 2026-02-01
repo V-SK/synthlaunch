@@ -10,15 +10,18 @@ async function main() {
   const signerAddress = process.env.SIGNER_ADDRESS || deployer.address;
   console.log("Signer address:", signerAddress);
 
+  const platformFeeRate = process.env.PLATFORM_FEE_RATE || "2000"; // 20% default
+  console.log("Platform fee rate:", platformFeeRate, "basis points");
+
   const SynthLaunchCustody = await ethers.getContractFactory("SynthLaunchCustody");
-  const custody = await SynthLaunchCustody.deploy(signerAddress);
+  const custody = await SynthLaunchCustody.deploy(signerAddress, platformFeeRate);
   await custody.waitForDeployment();
 
   const contractAddress = await custody.getAddress();
   console.log("SynthLaunchCustody deployed to:", contractAddress);
   console.log("");
   console.log("To verify on BscScan:");
-  console.log(`npx hardhat verify --network bscMainnet ${contractAddress} "${signerAddress}"`);
+  console.log(`npx hardhat verify --network bscMainnet ${contractAddress} "${signerAddress}" "${platformFeeRate}"`);
 }
 
 main()

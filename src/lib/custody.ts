@@ -1,6 +1,6 @@
 // SynthLaunchCustody contract constants
 
-export const CUSTODY_ADDRESS = '0x2CbAC696e5Dc662df0fc4DE3ce59D7DF8C19FdE2' as const;
+export const CUSTODY_ADDRESS = '0x1356e260622402a40f478197AFe6230B744aF02c' as const;
 
 export const CUSTODY_ABI = [
   {
@@ -163,5 +163,26 @@ export const CUSTODY_ABI = [
     ],
     name: 'FeeClaimed',
     type: 'event',
+  },
+  {
+    inputs: [],
+    name: 'platformFeeBalance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'to', type: 'address' }],
+    name: 'withdrawPlatformFee',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'tokens', type: 'address[]' }],
+    name: 'collectPlatformFeeBatch',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
 ] as const;

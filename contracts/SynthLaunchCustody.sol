@@ -70,6 +70,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     event PlatformFeeCollected(address indexed token, uint256 amount);
     event PlatformFeeUpdated(uint256 oldRate, uint256 newRate);
     event PlatformFeeWithdrawn(address to, uint256 amount);
+    event EmergencyWithdrawn(address to, uint256 amount);
 
     // ============ 构造函数 ============
 
@@ -78,6 +79,13 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         require(_platformFeeRate <= MAX_PLATFORM_FEE, "Fee too high");
         signer = _signer;
         platformFeeRate = _platformFeeRate;
+    }
+
+    // ============ 禁用 renounceOwnership ============
+
+    /// @notice 禁止放弃 owner 权限，防止误操作
+    function renounceOwnership() public pure override {
+        revert("Disabled");
     }
 
     // ============ 接收 BNB ============
@@ -182,6 +190,9 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         require(bytes(tokenAgent[token]).length > 0, "Token not registered");
         require(tokenFees[token] == tokenClaimed[token], "Has pending claims");
         delete tokenAgent[token];
+        delete tokenFees[token];
+        delete tokenClaimed[token];
+        delete platformFeeCollected[token];
     }
 
     /// @notice 更新签名者地址
@@ -326,7 +337,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
 
             (bool success, ) = wallet.call{value: payout}("");
             require(success, "Transfer failed");
-            emit FeeClaimed(tokens[i], agentName, wallet, payout);
+            emit FeeClaimed(tokens[i], agentName, wallet, amount);
         }
     }
 
@@ -448,5 +459,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
 
         (bool success, ) = to.call{value: excess}("");
         require(success, "Transfer failed");
+
+        emit EmergencyWithdrawn(to, excess);
     }
 }
