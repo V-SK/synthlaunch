@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, formatEther, parseAbi, type Address } from 'viem';
 import { bsc } from 'viem/chains';
 
+export const dynamic = 'force-dynamic';
+
 // --- Constants ---
 const PORTAL_ADDRESS = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as Address;
 const BSC_RPC = 'https://bsc-dataseed.binance.org';
@@ -9,29 +11,10 @@ const BILLION = 1000000000;
 const CACHE_TTL = 45000; // 45 seconds
 
 const PORTAL_ABI = parseAbi([
-  'event TokenCreated(uint256 ts, address creator, uint256 nonce, address token, string name, string symbol, string meta)',
   'function getTokenV5(address token) external view returns ((uint8,uint256,uint256,uint256,uint8,uint256,uint256,uint256,uint256,address,bool,bytes32))',
 ]);
 
-const ERC20_ABI = parseAbi([
-  'function name() external view returns (string)',
-  'function symbol() external view returns (string)',
-  'function metaURI() external view returns (string)',
-]);
-
-// --- Bonding curve math (CDPV2) ---
-function calcPrice(k: number, h: number, supply: number): number {
-  const denom = h + BILLION - supply;
-  if (denom <= 0) return 0;
-  return k / (denom * denom);
-}
-
-function estimateSupply(r: number, h: number, k: number, reserve: number): number {
-  const denom = reserve + r;
-  if (denom <= 0) return 0;
-  return BILLION + h - k / denom;
-}
-
+// --- Bonding curve math ---
 function estimateReserve(r: number, h: number, k: number, supply: number): number {
   const denom = BILLION + h - supply;
   if (denom <= 0) return 0;
@@ -47,16 +30,17 @@ interface CachedToken {
   image: string;
   description: string;
   creator: string;
+  agent_name: string;
   taxRate: number;
-  price: number;        // in BNB
+  price: number;
   priceUsd: number;
-  marketCap: number;    // in USD
+  marketCap: number;
   marketCapBnb: number;
   circulatingSupply: number;
-  status: number;       // 0=Invalid, 1=Tradable, 4=DEX
-  progress: number;     // 0-1
-  createdAt: number;    // unix timestamp
-  reserve: number;      // in BNB
+  status: number;
+  progress: number;
+  createdAt: string;
+  reserve: number;
   r: number;
   h: number;
   k: number;
@@ -87,14 +71,14 @@ async function fetchBnbPrice(): Promise<number> {
     bnbPriceCache = data.binancecoin?.usd || 600;
     bnbPriceTimestamp = Date.now();
   } catch {
-    if (bnbPriceCache === 0) bnbPriceCache = 600; // fallback
+    if (bnbPriceCache === 0) bnbPriceCache = 600;
   }
   return bnbPriceCache;
 }
 
 // --- IPFS Metadata ---
 async function fetchMeta(cid: string): Promise<{ name: string; description: string; image: string }> {
-  if (!cid || cid === '' || cid.length < 10) {
+  if (!cid || cid.length < 10) {
     return { name: '', description: '', image: '' };
   }
   try {
@@ -103,17 +87,57 @@ async function fetchMeta(cid: string): Promise<{ name: string; description: stri
     if (!res.ok) return { name: '', description: '', image: '' };
     const data = await res.json();
     let image = data.image || '';
-    // If image is an IPFS hash (not a URL), convert it
     if (image && !image.startsWith('http') && !image.startsWith('data:')) {
       image = `https://ipfs.io/ipfs/${image}`;
     }
-    return {
-      name: data.name || '',
-      description: data.description || '',
-      image,
-    };
+    return { name: data.name || '', description: data.description || '', image };
   } catch {
     return { name: '', description: '', image: '' };
+  }
+}
+
+// --- Fetch token list from Supabase ---
+interface SupabaseToken {
+  address: string;
+  name: string;
+  symbol: string;
+  meta: string;
+  creator: string;
+  agent_name: string;
+  tax_rate: number;
+  created_at: string;
+}
+
+async function fetchTokenList(): Promise<SupabaseToken[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('[tokens] Supabase not configured');
+    return [];
+  }
+
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/tokens?select=address,name,symbol,meta,creator,agent_name,tax_rate,created_at&order=created_at.desc`,
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        signal: AbortSignal.timeout(5000),
+      }
+    );
+
+    if (!res.ok) {
+      console.error('[tokens] Supabase error:', res.status, await res.text());
+      return [];
+    }
+
+    return await res.json();
+  } catch (e) {
+    console.error('[tokens] Failed to fetch from Supabase:', e);
+    return [];
   }
 }
 
@@ -123,77 +147,35 @@ async function refreshTokens(): Promise<void> {
   isFetching = true;
 
   try {
-    const bnbPrice = await fetchBnbPrice();
+    const [bnbPrice, supabaseTokens] = await Promise.all([
+      fetchBnbPrice(),
+      fetchTokenList(),
+    ]);
 
-    // Start block for BSC portal - we search recent blocks for events
-    // First, get the current block
-    const currentBlock = await client.getBlockNumber();
-
-    // Search last ~2M blocks (~7 days on BSC at 3s/block)
-    // But limit to batches of 5000 to avoid RPC limits
-    const startBlock = currentBlock - BigInt(2000000);
-    const batchSize = BigInt(5000);
-
-    const allTokenAddresses: Map<string, { creator: string; name: string; symbol: string; meta: string; ts: number }> = new Map();
-
-    // Fetch events in batches
-    let fromBlock = startBlock;
-    while (fromBlock <= currentBlock) {
-      const toBlock = fromBlock + batchSize > currentBlock ? currentBlock : fromBlock + batchSize;
-      try {
-        const logs = await client.getLogs({
-          address: PORTAL_ADDRESS,
-          event: PORTAL_ABI[0] as any,
-          fromBlock,
-          toBlock,
-        });
-
-        for (const log of logs) {
-          const args = (log as any).args;
-          if (args && args.token) {
-            allTokenAddresses.set(args.token.toLowerCase(), {
-              creator: args.creator || '',
-              name: args.name || '',
-              symbol: args.symbol || '',
-              meta: args.meta || '',
-              ts: Number(args.ts || 0),
-            });
-          }
-        }
-      } catch (e) {
-        // Some batch failed, just continue
-        console.error(`Log fetch failed for blocks ${fromBlock}-${toBlock}:`, e);
-      }
-      fromBlock = toBlock + BigInt(1);
-    }
-
-    if (allTokenAddresses.size === 0) {
+    if (supabaseTokens.length === 0) {
+      console.log('[tokens] No tokens in Supabase');
       isFetching = false;
       return;
     }
 
-    // Fetch on-chain state for each token using getTokenV5
     const tokens: CachedToken[] = [];
-    const entries = Array.from(allTokenAddresses.entries());
 
-    // Process in batches of 10 to avoid overloading RPC
-    for (let i = 0; i < entries.length; i += 10) {
-      const batch = entries.slice(i, i + 10);
+    // Process in batches of 10
+    for (let i = 0; i < supabaseTokens.length; i += 10) {
+      const batch = supabaseTokens.slice(i, i + 10);
       const results = await Promise.allSettled(
-        batch.map(async ([addr, info]) => {
+        batch.map(async (info) => {
           try {
             const result = await client.readContract({
               address: PORTAL_ADDRESS,
               abi: PORTAL_ABI,
               functionName: 'getTokenV5',
-              args: [addr as Address],
+              args: [info.address as Address],
             }) as any;
 
             const status = Number(result[0]);
             const reserve = parseFloat(formatEther(result[1]));
             const circulatingSupply = parseFloat(formatEther(result[2]));
-            // Use the on-chain price field directly — the contract computes it
-            // correctly for both bonding curve and DEX tokens.
             const priceBnb = parseFloat(formatEther(result[3]));
             const r = parseFloat(formatEther(result[5]));
             const h = parseFloat(formatEther(result[6]));
@@ -201,12 +183,9 @@ async function refreshTokens(): Promise<void> {
             const dexSupplyThreshold = parseFloat(formatEther(result[8]));
 
             const priceUsd = priceBnb * bnbPrice;
-
-            // Market cap = price × total supply (FDV), matches Flap's display
             const marketCapBnb = priceBnb * BILLION;
             const marketCapUsd = marketCapBnb * bnbPrice;
 
-            // Calculate progress
             let progress = 0;
             if (status === 4) {
               progress = 1;
@@ -222,14 +201,15 @@ async function refreshTokens(): Promise<void> {
             const meta = await fetchMeta(info.meta);
 
             return {
-              address: addr,
+              address: info.address,
               name: meta.name || info.name,
               symbol: info.symbol,
               meta: info.meta,
               image: meta.image,
               description: meta.description,
               creator: info.creator,
-              taxRate: 0, // Would need separate call for tax
+              agent_name: info.agent_name || '',
+              taxRate: info.tax_rate || 0,
               price: priceBnb,
               priceUsd,
               marketCap: marketCapUsd,
@@ -237,7 +217,7 @@ async function refreshTokens(): Promise<void> {
               circulatingSupply,
               status,
               progress,
-              createdAt: info.ts,
+              createdAt: info.created_at,
               reserve,
               r,
               h,
@@ -245,7 +225,7 @@ async function refreshTokens(): Promise<void> {
               dexSupplyThreshold,
             } as CachedToken;
           } catch (e) {
-            console.error(`Failed to fetch token state for ${addr}:`, e);
+            console.error(`[tokens] Failed to fetch on-chain data for ${info.address}:`, e);
             return null;
           }
         })
@@ -258,10 +238,10 @@ async function refreshTokens(): Promise<void> {
       }
     }
 
-    tokenCache = tokens.sort((a, b) => b.createdAt - a.createdAt);
+    tokenCache = tokens;
     cacheTimestamp = Date.now();
   } catch (e) {
-    console.error('Error refreshing tokens:', e);
+    console.error('[tokens] Error refreshing:', e);
   } finally {
     isFetching = false;
   }
@@ -272,7 +252,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
 
-  // Refresh if cache is stale
   if (Date.now() - cacheTimestamp > CACHE_TTL || tokenCache.length === 0) {
     await refreshTokens();
   }
@@ -297,7 +276,7 @@ export async function GET(request: NextRequest) {
       break;
     case 'new':
     default:
-      sorted.sort((a, b) => b.createdAt - a.createdAt);
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       break;
   }
 
