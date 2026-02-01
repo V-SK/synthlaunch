@@ -5,10 +5,12 @@ import { StatsBar } from '@/components/StatsBar';
 import { TokenCard } from '@/components/TokenCard';
 import type { Token } from '@/lib/api';
 import Link from 'next/link';
+import { useI18n } from '@/lib/i18n';
 
 type SortTab = 'hot' | 'new' | 'top';
 
 export default function Home() {
+  const { t } = useI18n();
   const [sort, setSort] = useState<SortTab>('new');
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export default function Home() {
         <h1 className="text-4xl md:text-5xl font-bold text-synth-text">
           Token Launches with
           <br />
-          <span className="text-synth-green glow-text-green">AI Agent Fee Sharing</span>
+          <span className="text-synth-green glow-text-green">{t('home.subtitle')}</span>
         </h1>
         <p className="text-synth-muted max-w-xl mx-auto text-sm">
           Create tokens on BSC and route trading fees directly to AI agents.
@@ -56,7 +58,7 @@ export default function Home() {
         </p>
         <div className="flex items-center justify-center gap-3 pt-4">
           <Link href="/launch" className="btn-primary">
-            Launch Token →
+            {t('launch.launchToken')} →
           </Link>
           <a href="https://flap.sh" target="_blank" rel="noopener noreferrer" className="btn-secondary">
             View Docs
@@ -119,7 +121,7 @@ export default function Home() {
           </div>
         ) : tokens.length === 0 ? (
           <div className="card text-center py-12">
-            <span className="text-synth-muted text-sm">No tokens found yet. Be the first to launch!</span>
+            <span className="text-synth-muted text-sm">{t('home.empty')}</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

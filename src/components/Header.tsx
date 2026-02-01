@@ -4,12 +4,19 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { NAV_ITEMS } from '@/lib/constants';
 import { WalletConnect } from './WalletConnect';
+import { useI18n, LanguageToggle } from '@/lib/i18n';
 
 export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useI18n();
+
+  const NAV_ITEMS = [
+    { label: t('nav.home'), href: '/' },
+    { label: t('nav.launch'), href: '/launch' },
+    { label: t('nav.claim'), href: '/claim' },
+  ];
 
   return (
     <header className="border-b border-synth-border bg-synth-bg/80 backdrop-blur-md sticky top-0 z-50">
@@ -64,8 +71,11 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Wallet */}
-        <WalletConnect />
+        {/* Language + Wallet */}
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <WalletConnect />
+        </div>
       </div>
 
       {/* Mobile Navigation */}

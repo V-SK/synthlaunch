@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { formatEther, type Address } from 'viem';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
+import { useI18n } from '@/lib/i18n';
 
 type ClaimTab = 'twitter' | 'agents';
 type AgentStep = 1 | 2 | 3 | 4;
@@ -19,6 +20,7 @@ interface TokenInfo {
 }
 
 export default function ClaimPage() {
+  const { t } = useI18n();
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -538,9 +540,9 @@ export default function ClaimPage() {
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-synth-text terminal-prompt">Claim Fees</h1>
+        <h1 className="text-2xl font-bold text-synth-text terminal-prompt">{t('claim.title')}</h1>
         <p className="text-sm text-synth-muted">
-          Claim accumulated trading fees from tokens you created or AI agents you operate.
+          {t('claim.subtitle')}
         </p>
       </div>
 
@@ -576,12 +578,12 @@ export default function ClaimPage() {
           {/* Step 1: Enter handle */}
           {twitterStep === 1 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-cyan">Step 1: Enter Twitter Handle</h2>
+              <h2 className="text-sm font-bold text-synth-cyan">{t('claim.step')} 1: {t('claim.enterHandle')}</h2>
               <p className="text-sm text-synth-muted">
-                Enter the Twitter/X handle linked to your token. You&apos;ll verify ownership by posting a tweet.
+                {t('claim.handleHint')}
               </p>
               <div className="space-y-1">
-                <label className="text-xs text-synth-muted">Twitter Handle</label>
+                <label className="text-xs text-synth-muted">{t('claim.twitterHandle')}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-synth-muted">@</span>
                   <input
@@ -598,7 +600,7 @@ export default function ClaimPage() {
                 disabled={!twitterHandle.trim()}
                 className="btn-primary"
               >
-                Generate Verification Code →
+                {t('claim.generateCode')}
               </button>
               {twitterVerifyError && (
                 <div className="text-xs text-red-400">{twitterVerifyError}</div>
@@ -609,13 +611,13 @@ export default function ClaimPage() {
           {/* Step 2: Post tweet */}
           {twitterStep === 2 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-cyan">Step 2: Post Verification Tweet</h2>
+              <h2 className="text-sm font-bold text-synth-cyan">{t('claim.step')} 2: {t('claim.postTweet')}</h2>
               <p className="text-sm text-synth-muted">
-                Post a tweet containing the verification code below. Click the button to open a pre-filled tweet.
+                {t('claim.postTweetHint')}
               </p>
 
               <div className="bg-synth-bg rounded-lg p-4 space-y-3">
-                <div className="text-xs text-synth-muted">Your verification code:</div>
+                <div className="text-xs text-synth-muted">{t('claim.verificationCode')}</div>
                 <div className="text-lg font-mono text-synth-green text-center py-2 bg-synth-surface rounded border border-synth-green/30">
                   {twitterCode}
                 </div>
@@ -627,11 +629,11 @@ export default function ClaimPage() {
                 rel="noopener noreferrer"
                 className="btn-primary w-full text-center block"
               >
-                🐦 Post Verification Tweet
+                {t('claim.postBtn')}
               </a>
 
               <div className="text-[10px] text-synth-muted text-center">
-                After posting, wait a few seconds then click Verify below
+                {t('claim.afterPost')}
               </div>
 
               {twitterVerifyError && (
@@ -647,7 +649,7 @@ export default function ClaimPage() {
                   disabled={twitterVerifyLoading}
                   className="btn-purple flex-1"
                 >
-                  {twitterVerifyLoading ? 'Checking...' : 'Verify Tweet ✓'}
+                  {twitterVerifyLoading ? t('claim.checking') : t('claim.verifyTweet')}
                 </button>
               </div>
             </div>
@@ -656,7 +658,7 @@ export default function ClaimPage() {
           {/* Step 3: Review */}
           {twitterStep === 3 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-green">Step 3: Verified!</h2>
+              <h2 className="text-sm font-bold text-synth-green">{t('claim.step')} 3: {t('claim.verified')}</h2>
               <div className="bg-synth-bg rounded-lg p-3 flex items-center gap-3">
                 <span className="text-synth-green text-lg">✓</span>
                 <div>
@@ -720,9 +722,9 @@ export default function ClaimPage() {
 
           {agentStep === 1 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-cyan">Step 1: Enter Moltbook Username</h2>
+              <h2 className="text-sm font-bold text-synth-cyan">{t('claim.step')} 1: {t('claim.enterUsername')}</h2>
               <p className="text-sm text-synth-muted">
-                Enter the Moltbook username of the AI agent you want to claim fees for.
+                {t('claim.usernameHint')}
               </p>
               <div className="space-y-1">
                 <label className="text-xs text-synth-muted">Moltbook Username</label>
@@ -746,7 +748,7 @@ export default function ClaimPage() {
 
           {agentStep === 2 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-purple">Step 2: Verify with API Key</h2>
+              <h2 className="text-sm font-bold text-synth-purple">{t('claim.step')} 2: {t('claim.verifyApiKey')}</h2>
               <p className="text-sm text-synth-muted">
                 Enter your Moltbook API key to verify ownership of{' '}
                 <span className="text-synth-purple">@{moltbookUsername}</span>.
@@ -773,7 +775,7 @@ export default function ClaimPage() {
 
           {agentStep === 3 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-green">Step 3: Review Linked Tokens</h2>
+              <h2 className="text-sm font-bold text-synth-green">{t('claim.step')} 3: {t('claim.reviewTokens')}</h2>
               <div className="bg-synth-bg rounded-lg p-3 flex items-center gap-3">
                 <span className="text-synth-green text-lg">✓</span>
                 <div>
@@ -811,7 +813,7 @@ export default function ClaimPage() {
 
       {/* Info Box */}
       <div className="card border-synth-purple/30">
-        <h3 className="text-sm font-bold text-synth-purple mb-2">How it works</h3>
+        <h3 className="text-sm font-bold text-synth-purple mb-2">{t('claim.howItWorks')}</h3>
         <ul className="text-xs text-synth-muted space-y-1.5">
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
