@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface MoltBoardAgent {
   name: string;
@@ -20,6 +20,7 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
+  const [validationState, setValidationState] = useState<'idle' | 'checking' | 'found' | 'not-found' | 'error'>('idle');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
         if (!cancelled) {
           const list = Array.isArray(data) ? data : Array.isArray((data as { agents: MoltBoardAgent[] })?.agents) ? (data as { agents: MoltBoardAgent[] }).agents : [];
           setAgents(list);
-          if (list.length === 0) setError(true); // fallback to manual input
+          if (list.length === 0) setError(true);
           setLoading(false);
         }
       })
@@ -57,9 +58,57 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Soft validate custom agent name against Moltbook
+  const validateAgent = useCallback(async (name: string) => {
+    if (!name.trim()) {
+      setValidationState('idle');
+      return;
+    }
+    // If it's in the leaderboard list, already verified
+    if (agents.some((a) => a.name.toLowerCase() === name.toLowerCase())) {
+      setValidationState('found');
+      return;
+    }
+    setValidationState('checking');
+    try {
+      const res = await fetch(`https://www.moltbook.com/api/v1/agents/profile?name=${encodeURIComponent(name)}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success !== false && !data.error) {
+          setValidationState('found');
+        } else {
+          setValidationState('not-found');
+        }
+      } else {
+        setValidationState('not-found');
+      }
+    } catch {
+      setValidationState('error'); // API down — don't block
+    }
+  }, [agents]);
+
   const filtered = agents.filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const exactMatch = agents.find((a) => a.name.toLowerCase() === search.toLowerCase());
+  const showCustomOption = search.trim() && !exactMatch;
+
+  const handleSelectCustom = (name: string) => {
+    onChange(name);
+    setIsOpen(false);
+    setSearch('');
+    validateAgent(name);
+  };
+
+  const handleSelectFromList = (name: string) => {
+    onChange(name);
+    setIsOpen(false);
+    setSearch('');
+    setValidationState('found');
+  };
 
   // Fallback: manual text input if API failed
   if (error) {
@@ -69,13 +118,31 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Enter agent name manually..."
+          onChange={(e) => {
+            onChange(e.target.value);
+            setValidationState('idle');
+          }}
+          onBlur={() => validateAgent(value)}
+          placeholder="Enter agent name..."
           className="input-field w-full"
         />
-        <p className="text-[10px] text-synth-muted">
-          MoltBoard is unavailable — type the agent name manually.
-        </p>
+        {validationState === 'checking' && (
+          <p className="text-[10px] text-synth-cyan">⏳ Verifying on Moltbook...</p>
+        )}
+        {validationState === 'found' && (
+          <p className="text-[10px] text-synth-green">✓ Agent verified on Moltbook</p>
+        )}
+        {validationState === 'not-found' && (
+          <p className="text-[10px] text-yellow-400">⚠ Agent not found on Moltbook — make sure the name is correct</p>
+        )}
+        {validationState === 'error' && (
+          <p className="text-[10px] text-yellow-400">⚠ Could not verify — Moltbook API unavailable</p>
+        )}
+        {validationState === 'idle' && (
+          <p className="text-[10px] text-synth-muted">
+            MoltBoard is unavailable — type the exact agent name.
+          </p>
+        )}
       </div>
     );
   }
@@ -107,6 +174,9 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
               <span className="flex items-center gap-2">
                 <span className="text-synth-purple">🤖</span>
                 {value}
+                {validationState === 'found' && <span className="text-synth-green text-xs">✓</span>}
+                {validationState === 'not-found' && <span className="text-yellow-400 text-xs">⚠</span>}
+                {validationState === 'error' && <span className="text-yellow-400 text-xs">⚠</span>}
               </span>
             ) : (
               <span className="text-synth-muted">Select an AI agent...</span>
@@ -117,21 +187,36 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
 
         {isOpen && !loading && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-synth-surface border border-synth-border rounded-lg overflow-hidden z-10">
-            {/* Search input */}
+            {/* Search / custom input */}
             <div className="p-2 border-b border-synth-border">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search agents..."
+                placeholder="Search or type agent name..."
                 className="w-full px-2 py-1.5 text-sm bg-synth-bg text-synth-text border border-synth-border rounded focus:border-synth-green/50 focus:outline-none placeholder:text-synth-muted"
                 autoFocus
               />
             </div>
 
+            {/* Custom option */}
+            {showCustomOption && (
+              <button
+                type="button"
+                onClick={() => handleSelectCustom(search.trim())}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-synth-cyan/10 flex items-center justify-between border-b border-synth-border/50 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-synth-cyan">+</span>
+                  <span className="text-synth-text">Use &quot;{search.trim()}&quot;</span>
+                </span>
+                <span className="text-synth-muted text-xs">custom</span>
+              </button>
+            )}
+
             {/* Agent list */}
             <div className="max-h-60 overflow-y-auto">
-              {filtered.length === 0 ? (
+              {filtered.length === 0 && !showCustomOption ? (
                 <div className="px-3 py-3 text-sm text-synth-muted text-center">
                   No agents found
                 </div>
@@ -140,11 +225,7 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
                   <button
                     key={agent.name}
                     type="button"
-                    onClick={() => {
-                      onChange(agent.name);
-                      setIsOpen(false);
-                      setSearch('');
-                    }}
+                    onClick={() => handleSelectFromList(agent.name)}
                     className={`w-full px-3 py-2 text-left text-sm hover:bg-synth-green/10 flex items-center gap-2 transition-colors ${
                       value === agent.name ? 'bg-synth-green/5' : ''
                     }`}
@@ -161,12 +242,35 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
                 ))
               )}
             </div>
+
+            {/* Hint */}
+            <div className="px-3 py-2 border-t border-synth-border/50">
+              <p className="text-[10px] text-synth-muted text-center">
+                Not in top list? Type the exact agent name above.
+              </p>
+            </div>
           </div>
         )}
       </div>
-      <p className="text-[10px] text-synth-muted">
-        Select the AI agent that will receive trading fees from this token.
-      </p>
+
+      {/* Validation feedback below selector */}
+      {value && !selectedAgent && validationState === 'checking' && (
+        <p className="text-[10px] text-synth-cyan">⏳ Verifying on Moltbook...</p>
+      )}
+      {value && !selectedAgent && validationState === 'found' && (
+        <p className="text-[10px] text-synth-green">✓ Agent verified on Moltbook</p>
+      )}
+      {value && !selectedAgent && validationState === 'not-found' && (
+        <p className="text-[10px] text-yellow-400">⚠ Agent not verified on Moltbook — make sure the name is correct</p>
+      )}
+      {value && !selectedAgent && validationState === 'error' && (
+        <p className="text-[10px] text-yellow-400">⚠ Could not verify — Moltbook API unavailable</p>
+      )}
+      {(!value || selectedAgent || validationState === 'idle') && (
+        <p className="text-[10px] text-synth-muted">
+          Select the AI agent that will receive trading fees from this token.
+        </p>
+      )}
     </div>
   );
 }
