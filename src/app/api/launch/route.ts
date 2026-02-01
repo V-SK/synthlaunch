@@ -177,7 +177,8 @@ export async function POST(request: NextRequest) {
       return errorResponse('Post not found', 'POST_NOT_FOUND', 404);
     }
 
-    const postData = await postRes.json();
+    const postRaw = await postRes.json();
+    const postData = postRaw.post || postRaw;
     console.log(`[launch] Post fetched, author: ${postData.author?.username || postData.author?.name || postData.authorId}`);
 
     // 4. Verify post belongs to agent
