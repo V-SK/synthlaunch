@@ -15,6 +15,7 @@ export default function LaunchPage() {
   const { launch, hash, isPending, isConfirming, isSuccess, error: txError, reset } = useLaunchToken();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [agentMode, setAgentMode] = useState<'moltbook' | 'twitter' | 'self'>('moltbook');
   const [form, setForm] = useState({
     name: '',
     symbol: '',
@@ -308,6 +309,13 @@ export default function LaunchPage() {
           <AgentSelector
             value={form.agentId}
             onChange={(agentId) => setForm({ ...form, agentId })}
+            mode={agentMode}
+            onModeChange={(mode) => {
+              setAgentMode(mode);
+              if (mode === 'self') {
+                setForm(prev => ({ ...prev, agentId: '', taxRate: 0 }));
+              }
+            }}
           />
 
           <TaxRateSlider

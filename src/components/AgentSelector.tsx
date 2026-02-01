@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+type AgentMode = 'moltbook' | 'twitter' | 'self';
+
 interface MoltBoardAgent {
   name: string;
   karma: number;
@@ -12,9 +14,54 @@ interface MoltBoardAgent {
 interface AgentSelectorProps {
   value: string;
   onChange: (agentName: string) => void;
+  mode: AgentMode;
+  onModeChange: (mode: AgentMode) => void;
 }
 
-export function AgentSelector({ value, onChange }: AgentSelectorProps) {
+const MODE_TABS: { key: AgentMode; icon: string; label: string }[] = [
+  { key: 'moltbook', icon: '🤖', label: 'AI Agent' },
+  { key: 'twitter', icon: '🐦', label: 'Twitter' },
+  { key: 'self', icon: '👤', label: 'Self' },
+];
+
+export function AgentSelector({ value, onChange, mode, onModeChange }: AgentSelectorProps) {
+  return (
+    <div className="space-y-4">
+      {/* Mode Tabs */}
+      <div className="flex items-center gap-1 p-1 bg-synth-bg rounded-lg border border-synth-border">
+        {MODE_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => onModeChange(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-mono rounded-md transition-all duration-200 ${
+              mode === tab.key
+                ? 'bg-synth-green/20 text-synth-green border border-synth-green/30'
+                : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Mode Content */}
+      {mode === 'moltbook' && (
+        <MoltbookSelector value={value} onChange={onChange} />
+      )}
+      {mode === 'twitter' && (
+        <TwitterSelector value={value} onChange={onChange} />
+      )}
+      {mode === 'self' && (
+        <SelfSelector />
+      )}
+    </div>
+  );
+}
+
+/* ── Moltbook Selector (original logic preserved) ── */
+function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [agents, setAgents] = useState<MoltBoardAgent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +94,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
     return () => { cancelled = true; };
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -58,13 +104,11 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Soft validate custom agent name against Moltbook
   const validateAgent = useCallback(async (name: string) => {
     if (!name.trim()) {
       setValidationState('idle');
       return;
     }
-    // If it's in the leaderboard list, already verified
     if (agents.some((a) => a.name.toLowerCase() === name.toLowerCase())) {
       setValidationState('found');
       return;
@@ -85,7 +129,7 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
         setValidationState('not-found');
       }
     } catch {
-      setValidationState('error'); // API down — don't block
+      setValidationState('error');
     }
   }, [agents]);
 
@@ -110,7 +154,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
     setValidationState('found');
   };
 
-  // Fallback: manual text input if API failed
   if (error) {
     return (
       <div className="space-y-2">
@@ -187,7 +230,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
 
         {isOpen && !loading && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-synth-surface border border-synth-border rounded-lg overflow-hidden z-10">
-            {/* Search / custom input */}
             <div className="p-2 border-b border-synth-border">
               <input
                 type="text"
@@ -199,7 +241,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
               />
             </div>
 
-            {/* Custom option */}
             {showCustomOption && (
               <button
                 type="button"
@@ -214,7 +255,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
               </button>
             )}
 
-            {/* Agent list */}
             <div className="max-h-60 overflow-y-auto">
               {filtered.length === 0 && !showCustomOption ? (
                 <div className="px-3 py-3 text-sm text-synth-muted text-center">
@@ -243,7 +283,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
               )}
             </div>
 
-            {/* Hint */}
             <div className="px-3 py-2 border-t border-synth-border/50">
               <p className="text-[10px] text-synth-muted text-center">
                 Not in top list? Type the exact agent name above.
@@ -253,7 +292,6 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
         )}
       </div>
 
-      {/* Validation feedback below selector */}
       {value && !selectedAgent && validationState === 'checking' && (
         <p className="text-[10px] text-synth-cyan">⏳ Verifying on Moltbook...</p>
       )}
@@ -271,6 +309,58 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
           Select the AI agent that will receive trading fees from this token.
         </p>
       )}
+    </div>
+  );
+}
+
+/* ── Twitter Selector ── */
+function TwitterSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Strip "tw:" prefix for display
+  const handle = value.startsWith('tw:') ? value.slice(3) : '';
+
+  const handleChange = (raw: string) => {
+    // Remove @ prefix if user types it
+    const clean = raw.replace(/^@/, '').trim();
+    onChange(clean ? `tw:${clean}` : '');
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm text-synth-muted">Twitter Handle</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-synth-cyan text-sm font-mono">@</span>
+        <input
+          type="text"
+          value={handle}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Alice_BTC_AI"
+          className="input-field w-full pl-8"
+        />
+      </div>
+      <p className="text-[10px] text-synth-muted">
+        Token tax fees will be claimable by this Twitter account owner.
+      </p>
+      {handle && (
+        <div className="bg-synth-cyan/5 border border-synth-cyan/20 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-synth-cyan">
+            🐦 Fees will be held in custody for <span className="font-bold">@{handle}</span> — they can verify via Twitter to claim.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Self Selector ── */
+function SelfSelector() {
+  return (
+    <div className="space-y-2">
+      <div className="bg-synth-green/5 border border-synth-green/20 rounded-lg px-3 py-3 space-y-1.5">
+        <p className="text-sm text-synth-green font-mono">👤 No Agent — Direct Fees</p>
+        <p className="text-[10px] text-synth-muted">
+          You will receive all trading fees directly to your connected wallet. No custody contract involved.
+        </p>
+      </div>
     </div>
   );
 }
