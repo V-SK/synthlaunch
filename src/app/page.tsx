@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { StatsBar } from '@/components/StatsBar';
 import { TokenCard } from '@/components/TokenCard';
+import { Pagination } from '@/components/Pagination';
 import type { Token } from '@/lib/api';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
+
+const TOKENS_PER_PAGE = 12;
 
 type SortTab = 'hot' | 'new' | 'top';
 
@@ -15,6 +18,7 @@ export default function Home() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
@@ -25,6 +29,7 @@ export default function Home() {
       })
       .then(data => {
         setTokens(data);
+        setCurrentPage(1); // reset page on sort change
         setLoading(false);
       })
       .catch(e => {
@@ -38,6 +43,12 @@ export default function Home() {
     { key: 'new', label: t('home.sortNew'), icon: '🆕' },
     { key: 'top', label: t('home.sortTop'), icon: '🏆' },
   ];
+
+  const totalPages = Math.ceil(tokens.length / TOKENS_PER_PAGE);
+  const paginatedTokens = useMemo(() => {
+    const start = (currentPage - 1) * TOKENS_PER_PAGE;
+    return tokens.slice(start, start + TOKENS_PER_PAGE);
+  }, [tokens, currentPage]);
 
   return (
     <div className="space-y-8">
@@ -124,11 +135,18 @@ export default function Home() {
             <span className="text-synth-muted text-sm">{t('home.empty')}</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {tokens.map((token) => (
-              <TokenCard key={token.address} {...token} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {paginatedTokens.map((token) => (
+                <TokenCard key={token.address} {...token} />
+              ))}
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </section>
 
