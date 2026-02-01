@@ -362,10 +362,14 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             address: tokenAddress.toLowerCase(),
+            name: tokenDetails.name,
+            symbol: tokenDetails.symbol,
+            meta: cid,
             agent_name: agentName,
             tx_hash: txHash,
             launch_type: 'api',
             tax_rate: taxRate,
+            beneficiary: CUSTODY_ADDRESS,
           }),
         });
         console.log(`[launch] Supabase register: ${sbRes.status}`);
