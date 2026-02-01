@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
 // In-memory store for verification codes (MVP — use Redis/DB in production)
 const verificationCodes = new Map<string, { code: string; handle: string; createdAt: number }>();
@@ -17,6 +18,13 @@ function cleanup() {
 // Generate a verification code for a Twitter handle
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 10 requests per minute per IP
+    const ip = getClientIP(req);
+    const rl = rateLimit(`twitter-verify:${ip}`, 10, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     const { handle, action } = await req.json();
 
     if (!handle || typeof handle !== 'string') {

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createWalletClient, createPublicClient, http, getContractAddress, keccak256, toBytes, toHex, zeroAddress } from 'viem';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 import { bsc } from 'viem/chains';
 import { FLAP_ABI, FLAP_ADDRESS } from '@/lib/contracts';
@@ -127,8 +128,15 @@ async function uploadToIPFS(imageUrl: string, description: string, website?: str
 
 // --- Main handler ---
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 3 launches per minute per IP (very sensitive)
+    const ip = getClientIP(request);
+    const rl = rateLimit(`launch:${ip}`, 3, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many launch requests. Please wait.' }, { status: 429 });
+    }
+
     // 1. Validate request
     const body = await request.json();
     const { moltbook_key, post_id } = body;

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, encodePacked, keccak256, toHex } from 'viem';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { privateKeyToAccount } from 'viem/accounts';
 import { bsc } from 'viem/chains';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
@@ -11,8 +12,15 @@ function errorResponse(error: string, code: string, status: number = 400) {
   return NextResponse.json({ error, code }, { status });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 requests per minute per IP (sensitive endpoint)
+    const ip = getClientIP(request);
+    const rl = rateLimit(`bind-wallet:${ip}`, 5, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body = await request.json();
     const { agentName, wallet, apiKey, verifyMethod, twitterHandle } = body;
 
