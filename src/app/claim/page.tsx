@@ -71,7 +71,7 @@ export default function ClaimPage() {
         toBlock: 'latest',
       });
       const tokens = logs.map((log) => log.args.token as Address);
-      setKnownTokens([...new Set(tokens)]);
+      setKnownTokens(Array.from(new Set(tokens)));
     } catch (err) {
       console.error('Failed to fetch registered tokens:', err);
     }
