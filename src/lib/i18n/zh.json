@@ -5,7 +5,11 @@
     "claim": "领取"
   },
   "home": {
+    "heroTitle": "代币发行",
     "subtitle": "AI Agent 手续费分润",
+    "heroDesc": "在 BSC 上创建代币，交易手续费自动分配给 AI Agent。",
+    "heroPowered": "基于 Flap Protocol。",
+    "viewDocs": "查看文档",
     "loading": "加载中...",
     "empty": "暂无代币，成为第一个发币的人！",
     "price": "价格",

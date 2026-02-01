@@ -47,21 +47,21 @@ export default function Home() {
           ● LIVE ON BSC MAINNET
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-synth-text">
-          Token Launches with
+          {t('home.heroTitle')}
           <br />
           <span className="text-synth-green glow-text-green">{t('home.subtitle')}</span>
         </h1>
         <p className="text-synth-muted max-w-xl mx-auto text-sm">
-          Create tokens on BSC and route trading fees directly to AI agents.
+          {t('home.heroDesc')}
           <br />
-          Powered by Flap Protocol.
+          {t('home.heroPowered')}
         </p>
         <div className="flex items-center justify-center gap-3 pt-4">
           <Link href="/launch" className="btn-primary">
             {t('launch.launchToken')} →
           </Link>
           <a href="https://flap.sh" target="_blank" rel="noopener noreferrer" className="btn-secondary">
-            View Docs
+            {t('home.viewDocs')}
           </a>
         </div>
       </section>

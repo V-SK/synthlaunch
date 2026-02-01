@@ -5,7 +5,11 @@
     "claim": "Claim"
   },
   "home": {
+    "heroTitle": "Token Launches with",
     "subtitle": "AI Agent Fee Sharing",
+    "heroDesc": "Create tokens on BSC and route trading fees directly to AI agents.",
+    "heroPowered": "Powered by Flap Protocol.",
+    "viewDocs": "View Docs",
     "loading": "Loading...",
     "empty": "No tokens found yet. Be the first to launch!",
     "price": "Price",

@@ -71,9 +71,9 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Language + Wallet */}
+        {/* Wallet (language toggle moved to nav areas) */}
         <div className="flex items-center gap-2">
-          <LanguageToggle />
+          <div className="hidden md:block"><LanguageToggle /></div>
           <WalletConnect />
         </div>
       </div>
@@ -95,6 +95,9 @@ export function Header() {
               {item.label}
             </Link>
           ))}
+          <div className="px-3 py-2 border-t border-synth-border mt-1 pt-2">
+            <LanguageToggle />
+          </div>
         </nav>
       )}
     </header>
