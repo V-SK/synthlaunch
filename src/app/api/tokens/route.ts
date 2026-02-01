@@ -52,6 +52,7 @@ let cacheTimestamp = 0;
 let bnbPriceCache = 0;
 let bnbPriceTimestamp = 0;
 let isFetching = false;
+let fetchStartTime = 0;
 let lastKnownSupabaseTokens: SupabaseToken[] = []; // fallback if Supabase goes down
 
 const client = createPublicClient({
@@ -159,8 +160,14 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
 
 // --- Main data fetch ---
 async function refreshTokens(): Promise<void> {
+  // Reset stale lock (stuck for > 30s)
+  if (isFetching && Date.now() - fetchStartTime > 30000) {
+    console.warn('[tokens] Resetting stale isFetching lock');
+    isFetching = false;
+  }
   if (isFetching) return;
   isFetching = true;
+  fetchStartTime = Date.now();
 
   try {
     const [bnbPrice, supabaseTokens] = await Promise.all([
@@ -272,7 +279,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
 
-  if (Date.now() - cacheTimestamp > CACHE_TTL || tokenCache.length === 0) {
+  const forceRefresh = searchParams.get('refresh') === '1';
+  if (forceRefresh || Date.now() - cacheTimestamp > CACHE_TTL || tokenCache.length === 0) {
+    if (forceRefresh) {
+      cacheTimestamp = 0;
+      isFetching = false;
+    }
     await refreshTokens();
   }
 
