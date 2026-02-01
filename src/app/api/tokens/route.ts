@@ -54,6 +54,7 @@ let bnbPriceTimestamp = 0;
 let isFetching = false;
 let fetchStartTime = 0;
 let lastKnownSupabaseTokens: SupabaseToken[] = []; // fallback if Supabase goes down
+let lastRefreshDebug = '';
 
 const client = createPublicClient({
   chain: bsc,
@@ -180,7 +181,8 @@ async function refreshTokens(): Promise<void> {
       isFetching = false;
       return;
     }
-    console.log(`[tokens] Fetched ${supabaseTokens.length} tokens from Supabase`);
+    const debugParts: string[] = [`sb=${supabaseTokens.length}`];
+    console.log(`[tokens] Fetched ${supabaseTokens.length} tokens from Supabase: ${supabaseTokens.map(t => t.address?.slice(0,8)).join(',')}`);
 
     const tokens: CachedToken[] = [];
 
@@ -289,6 +291,8 @@ async function refreshTokens(): Promise<void> {
       }
     }
 
+    debugParts.push(`ok=${tokens.length}`);
+    lastRefreshDebug = debugParts.join(',');
     tokenCache = tokens;
     cacheTimestamp = Date.now();
   } catch (e) {
@@ -339,6 +343,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.json(sorted);
   response.headers.set('X-Token-Count', String(sorted.length));
   response.headers.set('X-Cache-Age', String(Math.floor((Date.now() - cacheTimestamp) / 1000)));
-  response.headers.set('X-Build', '20260201-v2');
+  response.headers.set('X-Build', '20260201-v3');
+  response.headers.set('X-Debug', lastRefreshDebug);
   return response;
 }
