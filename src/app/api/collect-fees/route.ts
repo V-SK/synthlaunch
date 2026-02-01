@@ -4,20 +4,13 @@ import { bsc } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { CUSTODY_ADDRESS, CUSTODY_ABI } from '@/lib/custody';
 
-// Cron secret to prevent unauthorized calls
 const CRON_SECRET = process.env.CRON_SECRET || '';
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || '';
 const PLATFORM_WALLET = process.env.PLATFORM_WALLET || '0x8028227C43947F41bB431571002D512815D77C4F';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
-  // Auth check
-  const authHeader = req.headers.get('authorization');
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+async function collectFees() {
   if (!DEPLOYER_PRIVATE_KEY) {
     return NextResponse.json({ error: 'DEPLOYER_PRIVATE_KEY not configured' }, { status: 500 });
   }
@@ -27,7 +20,7 @@ export async function POST(req: NextRequest) {
     const publicClient = createPublicClient({ chain: bsc, transport: http() });
     const walletClient = createWalletClient({ account, chain: bsc, transport: http() });
 
-    // 1. Get platform fee balance
+    // Check platform fee balance
     const platformFeeBalance = await publicClient.readContract({
       address: CUSTODY_ADDRESS,
       abi: CUSTODY_ABI,
@@ -42,7 +35,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Withdraw platform fees to platform wallet
+    // Withdraw platform fees
     const txHash = await walletClient.writeContract({
       address: CUSTODY_ADDRESS,
       abi: CUSTODY_ABI,
@@ -67,4 +60,22 @@ export async function POST(req: NextRequest) {
     console.error('Collect fees error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+// GET — Vercel Cron uses GET requests
+export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  return collectFees();
+}
+
+// POST — manual trigger
+export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  return collectFees();
 }
