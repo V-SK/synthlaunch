@@ -122,13 +122,16 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
 
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/tokens?select=*&order=created_at.desc`,
+      `${supabaseUrl}/rest/v1/tokens?select=*&order=created_at.desc&_t=${Date.now()}`,
       {
         headers: {
           apikey: supabaseKey,
           Authorization: `Bearer ${supabaseKey}`,
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache',
         },
         signal: AbortSignal.timeout(5000),
+        cache: 'no-store',
       }
     );
 
