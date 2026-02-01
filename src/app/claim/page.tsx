@@ -5,7 +5,7 @@ import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { formatEther, type Address } from 'viem';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
 
-type ClaimTab = 'humans' | 'twitter' | 'agents';
+type ClaimTab = 'twitter' | 'agents';
 type AgentStep = 1 | 2 | 3 | 4;
 type TwitterStep = 1 | 2 | 3 | 4; // handle → tweet → verify → claim
 
@@ -22,7 +22,7 @@ export default function ClaimPage() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  const [tab, setTab] = useState<ClaimTab>('humans');
+  const [tab, setTab] = useState<ClaimTab>('twitter');
 
   // Agent flow state
   const [agentStep, setAgentStep] = useState<AgentStep>(1);
@@ -57,10 +57,6 @@ export default function ClaimPage() {
   const [claimingToken, setClaimingToken] = useState<Address | null>(null);
   const [claimAllLoading, setClaimAllLoading] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState('');
-
-  // Humans tab
-  const [humanTokens, setHumanTokens] = useState<TokenInfo[]>([]);
-  const [humanTokensLoading, setHumanTokensLoading] = useState(false);
 
   const [knownTokens, setKnownTokens] = useState<Address[]>([]);
 
@@ -137,38 +133,6 @@ export default function ClaimPage() {
       setTwitterTokensLoading(false);
     }
   }, [fetchTokensByAgent]);
-
-  // Fetch human tokens
-  const fetchHumanTokens = useCallback(async () => {
-    if (!publicClient || !address || knownTokens.length === 0) return;
-    setHumanTokensLoading(true);
-    try {
-      const infos: TokenInfo[] = [];
-      for (const token of knownTokens) {
-        const [agentName, totalFees, claimed, pendingClaim, wallet] = await publicClient.readContract({
-          address: CUSTODY_ADDRESS,
-          abi: CUSTODY_ABI,
-          functionName: 'getTokenInfo',
-          args: [token],
-        }) as [string, bigint, bigint, bigint, Address];
-
-        if (wallet.toLowerCase() === address.toLowerCase() && pendingClaim > BigInt(0)) {
-          infos.push({ token, agentName, totalFees, claimed, pendingClaim, wallet });
-        }
-      }
-      setHumanTokens(infos);
-    } catch (err) {
-      console.error('Failed to fetch human tokens:', err);
-    } finally {
-      setHumanTokensLoading(false);
-    }
-  }, [publicClient, address, knownTokens]);
-
-  useEffect(() => {
-    if (isConnected && address && knownTokens.length > 0) {
-      fetchHumanTokens();
-    }
-  }, [isConnected, address, knownTokens, fetchHumanTokens]);
 
   // Check bound wallet
   const checkBoundWallet = useCallback(async (agentName: string) => {
@@ -371,8 +335,7 @@ export default function ClaimPage() {
       await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
       setClaimSuccess(`Claimed fees for token ${token.slice(0, 8)}...${token.slice(-4)}`);
       if (tab === 'agents') fetchAgentTokens(moltbookUsername);
-      else if (tab === 'twitter') fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
-      else fetchHumanTokens();
+      else fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setClaimSuccess(`Claim failed: ${msg}`);
@@ -395,8 +358,7 @@ export default function ClaimPage() {
       await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
       setClaimSuccess(`Claimed fees for ${tokens.length} token(s)`);
       if (tab === 'agents') fetchAgentTokens(moltbookUsername);
-      else if (tab === 'twitter') fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
-      else fetchHumanTokens();
+      else fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setClaimSuccess(`Batch claim failed: ${msg}`);
@@ -406,7 +368,6 @@ export default function ClaimPage() {
   };
 
   const tabs_list: { key: ClaimTab; label: string; icon: string }[] = [
-    { key: 'humans', label: 'Wallet', icon: '👤' },
     { key: 'twitter', label: 'Twitter', icon: '🐦' },
     { key: 'agents', label: 'Moltbook', icon: '🤖' },
   ];
@@ -604,53 +565,6 @@ export default function ClaimPage() {
       {claimSuccess && (
         <div className="bg-synth-green/10 border border-synth-green/30 rounded-lg p-3 text-sm text-synth-green">
           {claimSuccess}
-        </div>
-      )}
-
-      {/* ===== For Humans Tab ===== */}
-      {tab === 'humans' && (
-        <div className="space-y-4">
-          {!isConnected ? (
-            <div className="card text-center py-12 space-y-3">
-              <span className="text-3xl">🔗</span>
-              <p className="text-synth-muted text-sm">Connect Wallet to view your earnings</p>
-              <p className="text-[10px] text-synth-muted">
-                Your wallet address will be matched against token beneficiary records
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-xs text-synth-muted">
-                Connected as <span className="text-synth-green font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
-              </div>
-              {humanTokensLoading ? (
-                <div className="card text-center py-12">
-                  <p className="text-synth-muted text-sm animate-pulse">Loading claimable tokens...</p>
-                </div>
-              ) : humanTokens.length === 0 ? (
-                <div className="card text-center py-12 space-y-3">
-                  <span className="text-3xl">📭</span>
-                  <p className="text-synth-muted text-sm">No claimable tokens found</p>
-                  <p className="text-[10px] text-synth-muted">
-                    If you are a token beneficiary, claimable fees will appear here once fees are recorded.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {humanTokens.length > 1 && (
-                    <button
-                      onClick={() => handleClaimAll(humanTokens.map(t => t.token))}
-                      disabled={claimAllLoading}
-                      className="btn-primary w-full"
-                    >
-                      {claimAllLoading ? 'Claiming All...' : `Claim All (${humanTokens.length} tokens)`}
-                    </button>
-                  )}
-                  {humanTokens.map((info) => renderTokenRow(info, true))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 
@@ -906,10 +820,6 @@ export default function ClaimPage() {
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
             Trading fees are sent to the SynthLaunch Custody contract
-          </li>
-          <li className="flex gap-2">
-            <span className="text-synth-green">▸</span>
-            <strong>Wallet:</strong> If your wallet is already bound as beneficiary, claim directly
           </li>
           <li className="flex gap-2">
             <span className="text-synth-green">▸</span>
