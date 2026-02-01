@@ -9,7 +9,7 @@ export async function GET() {
   
   // Query with service key
   try {
-    const r1 = await fetch(`${url}/rest/v1/tokens?select=id,address&order=id.desc`, {
+    const r1 = await fetch(`${url}/rest/v1/tokens?select=address,name,symbol,meta,creator,agent_name,tax_rate,created_at&order=created_at.desc`, {
       headers: { apikey: svcKey!, Authorization: `Bearer ${svcKey!}` },
     });
     const d1 = await r1.json();
