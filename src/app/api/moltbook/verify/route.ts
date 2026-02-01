@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     }
 
     // 服务端调用 Moltbook，API Key 不暴露给浏览器
-    const res = await fetch('https://www.moltbook.com/api/v1/me', {
+    const res = await fetch('https://www.moltbook.com/api/v1/agents/me', {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json',

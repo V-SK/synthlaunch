@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Verify agent identity
     console.log('[launch] Verifying agent identity...');
-    const meRes = await fetch('https://www.moltbook.com/api/v1/me', {
+    const meRes = await fetch('https://www.moltbook.com/api/v1/agents/me', {
       headers: { 'Authorization': `Bearer ${moltbook_key}` },
       signal: AbortSignal.timeout(10_000),
     });
@@ -161,8 +161,9 @@ export async function POST(request: NextRequest) {
     }
 
     const meData = await meRes.json();
-    const agentName = meData.username || meData.name;
-    const agentId = meData.id || meData._id;
+    const agentObj = meData.agent || meData;
+    const agentName = agentObj.username || agentObj.name;
+    const agentId = agentObj.id || agentObj._id;
     console.log(`[launch] Agent authenticated: ${agentName} (${agentId})`);
 
     // 3. Fetch post (public endpoint, NO auth header)

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Moltbook API key verification
       console.log(`[bind-wallet] Verifying identity for agent: ${agentName}`);
-      const meRes = await fetch('https://www.moltbook.com/api/v1/me', {
+      const meRes = await fetch('https://www.moltbook.com/api/v1/agents/me', {
         headers: { 'Authorization': `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(10_000),
       });
