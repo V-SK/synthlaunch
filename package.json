@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "scanner": "npx tsx src/services/scanner/index.ts",
+    "scanner:backfill": "npx tsx src/services/scanner/backfill.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.0",

@@ -25,7 +25,7 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('https://moltboard-production.up.railway.app/api/agents/leaderboard')
+    fetch('/api/agents')
       .then((res) => {
         if (!res.ok) throw new Error('API error');
         return res.json();
