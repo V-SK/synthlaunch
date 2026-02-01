@@ -172,9 +172,11 @@ export default function ClaimPage() {
     setVerifyError('');
 
     try {
-      // Quick identity check via Moltbook API
-      const res = await fetch('https://www.moltbook.com/api/v1/me', {
-        headers: { 'Authorization': `Bearer ${moltbookApiKey}` },
+      // Verify via server-side proxy (API key never leaves our backend)
+      const res = await fetch('/api/moltbook/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: moltbookApiKey }),
       });
 
       if (!res.ok) {
