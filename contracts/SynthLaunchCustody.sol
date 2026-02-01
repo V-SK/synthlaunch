@@ -191,6 +191,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         // 验证签名
         bytes32 messageHash = keccak256(abi.encodePacked(
             "SynthLaunch:BindWallet",
+            address(this),
             agentName,
             wallet,
             nonce,
@@ -223,6 +224,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
 
         bytes32 messageHash = keccak256(abi.encodePacked(
             "SynthLaunch:RebindWallet",
+            address(this),
             agentName,
             newWallet,
             nonce,
@@ -296,15 +298,8 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
             uint256 payout = amount - fee;
 
             (bool success, ) = wallet.call{value: payout}("");
-            if (success) {
-                emit FeeClaimed(tokens[i], agentName, wallet, amount);
-            } else {
-                // 转账失败，回滚状态
-                tokenClaimed[tokens[i]] -= amount;
-                totalClaimedAmount -= amount;
-                platformFeeBalance -= newFee;
-                platformFeeCollected[tokens[i]] = alreadyCollected;
-            }
+            require(success, "Transfer failed");
+            emit FeeClaimed(tokens[i], agentName, wallet, payout);
         }
     }
 

@@ -9,7 +9,7 @@ const bsc = defineChain({
   rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org/'] } },
 });
 
-const CUSTODY_ADDRESS = '0x076Cb4D48479C05371020f05f66D6010b9a13fD1' as const;
+const CUSTODY_ADDRESS = '0x56e2E3539C64922a35B9d34ABB4340142484CeD2' as const;
 
 const REGISTER_TOKEN_ABI = [
   {
