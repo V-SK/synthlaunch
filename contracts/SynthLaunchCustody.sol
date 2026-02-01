@@ -91,35 +91,43 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     /// @dev BNB 存在合约里，由 owner 通过 recordFee 记账归属到具体 token
     receive() external payable {}
 
-    // ============ Owner 记账 ============
+    // ============ 开放记账（任何人可调用，合约校验余额） ============
 
-    /// @notice 后端扫链后记账（BNB 已在合约里，只更新映射）
+    /// @notice 记账：任何人都可以调用，但金额不能超过合约实际余额
+    /// @dev 去中心化记账 — 不依赖单一管理员，合约自动校验
     /// @param token Token 合约地址
     /// @param amount 这笔 fee 的金额（wei）
-    function recordFee(address token, uint256 amount) external onlyOwner {
+    function recordFee(address token, uint256 amount) external {
         require(bytes(tokenAgent[token]).length > 0, "Token not registered");
-        require(amount + totalRecorded <= address(this).balance, "Exceeds balance");
+        require(amount > 0, "Amount must be > 0");
+
+        // 核心校验：记录总额不能超过合约实际持有的 BNB（减去平台费和未提取的部分）
+        uint256 newTotal = totalRecorded + amount;
+        require(newTotal <= address(this).balance, "Exceeds contract balance");
+
         tokenFees[token] += amount;
-        totalRecorded += amount;
+        totalRecorded = newTotal;
         emit FeeRecorded(token, amount);
     }
 
-    /// @notice 批量记账
+    /// @notice 批量记账（任何人可调用）
     function recordFeeBatch(
         address[] calldata tokens,
         uint256[] calldata amounts
-    ) external onlyOwner {
+    ) external {
         require(tokens.length == amounts.length, "Length mismatch");
         uint256 total;
         for (uint i = 0; i < tokens.length; i++) {
+            require(amounts[i] > 0, "Amount must be > 0");
             if (bytes(tokenAgent[tokens[i]]).length > 0) {
                 tokenFees[tokens[i]] += amounts[i];
                 total += amounts[i];
                 emit FeeRecorded(tokens[i], amounts[i]);
             }
         }
-        require(address(this).balance >= total + totalRecorded, "Exceeds balance");
-        totalRecorded += total;
+        uint256 newTotal = totalRecorded + total;
+        require(newTotal <= address(this).balance, "Exceeds contract balance");
+        totalRecorded = newTotal;
     }
 
     // ============ 管理函数 ============

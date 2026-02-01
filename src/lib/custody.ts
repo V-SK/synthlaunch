@@ -1,6 +1,6 @@
 // SynthLaunchCustody contract constants
 
-export const CUSTODY_ADDRESS = '0x56e2E3539C64922a35B9d34ABB4340142484CeD2' as const;
+export const CUSTODY_ADDRESS = '0xe7AD04e7b44265C4BF8ef9a2F493d6F11fd8469C' as const;
 
 export const CUSTODY_ABI = [
   {
