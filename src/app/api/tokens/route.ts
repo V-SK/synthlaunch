@@ -192,30 +192,19 @@ async function refreshTokens(): Promise<void> {
             const status = Number(result[0]);
             const reserve = parseFloat(formatEther(result[1]));
             const circulatingSupply = parseFloat(formatEther(result[2]));
+            // Use the on-chain price field directly — the contract computes it
+            // correctly for both bonding curve and DEX tokens.
+            const priceBnb = parseFloat(formatEther(result[3]));
             const r = parseFloat(formatEther(result[5]));
             const h = parseFloat(formatEther(result[6]));
             const k = parseFloat(formatEther(result[7]));
             const dexSupplyThreshold = parseFloat(formatEther(result[8]));
 
-            // Calculate price using bonding curve
-            const priceBnb = status === 4 ? 0 : calcPrice(k, h, circulatingSupply);
             const priceUsd = priceBnb * bnbPrice;
 
-            // Market cap calculation:
-            // - Bonding curve phase: use (r + reserve) * bnbPrice (virtual + real liquidity)
-            //   This aligns with Flap's displayed market cap
-            // - DEX phase (status=4): use FDV = price * totalSupply
-            let marketCapBnb: number;
-            let marketCapUsd: number;
-            if (status === 4) {
-              // DEX phase: FDV
-              marketCapBnb = priceBnb * BILLION;
-              marketCapUsd = marketCapBnb * bnbPrice;
-            } else {
-              // Bonding curve phase: virtual liquidity model
-              marketCapBnb = r + reserve;
-              marketCapUsd = marketCapBnb * bnbPrice;
-            }
+            // Market cap = price × total supply (FDV), matches Flap's display
+            const marketCapBnb = priceBnb * BILLION;
+            const marketCapUsd = marketCapBnb * bnbPrice;
 
             // Calculate progress
             let progress = 0;
