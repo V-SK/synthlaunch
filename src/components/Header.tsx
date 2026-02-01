@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -8,10 +9,22 @@ import { WalletConnect } from './WalletConnect';
 
 export function Header() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="border-b border-synth-border bg-synth-bg/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden flex flex-col gap-1 p-2 -ml-2"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Menu"
+        >
+          <span className={`block w-5 h-0.5 bg-synth-green transition-transform ${mobileOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+          <span className={`block w-5 h-0.5 bg-synth-green transition-opacity ${mobileOpen ? 'opacity-0' : ''}`} />
+          <span className={`block w-5 h-0.5 bg-synth-green transition-transform ${mobileOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+        </button>
+
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -34,7 +47,7 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Navigation */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
           {NAV_ITEMS.map((item) => (
             <Link
@@ -54,6 +67,26 @@ export function Header() {
         {/* Wallet */}
         <WalletConnect />
       </div>
+
+      {/* Mobile Navigation */}
+      {mobileOpen && (
+        <nav className="md:hidden border-t border-synth-border bg-synth-bg/95 backdrop-blur-md px-4 py-2 flex flex-col gap-1">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={`px-3 py-2 rounded text-sm font-mono transition-all duration-200 ${
+                pathname === item.href
+                  ? 'text-synth-green bg-synth-green/10'
+                  : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }
