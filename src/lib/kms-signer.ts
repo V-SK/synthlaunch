@@ -68,14 +68,17 @@ export async function getKmsAddress(): Promise<`0x${string}`> {
 
   const buf = Buffer.from(PublicKey);
   
-  // Find uncompressed public key (0x04 + 64 bytes) in DER encoding
-  let offset = -1;
-  for (let i = buf.length - 66; i >= 0; i--) {
-    if (buf[i] === 0x04) { offset = i; break; }
+  // Find uncompressed public key in DER: look for BIT STRING (03 42 00) then 04 prefix
+  let pubkeyStart = -1;
+  for (let i = 0; i < buf.length - 2; i++) {
+    if (buf[i] === 0x03 && buf[i + 1] === 0x42 && buf[i + 2] === 0x00) {
+      pubkeyStart = i + 4; // skip 03 42 00 04
+      break;
+    }
   }
-  if (offset === -1) throw new Error('Could not find uncompressed public key in DER');
+  if (pubkeyStart === -1) throw new Error('Could not find uncompressed public key in DER');
 
-  const pubkey = buf.slice(offset + 1, offset + 65);
+  const pubkey = buf.slice(pubkeyStart, pubkeyStart + 64);
   const hash = keccak256(('0x' + pubkey.toString('hex')) as `0x${string}`);
   _cachedAddress = ('0x' + hash.slice(-40)) as `0x${string}`;
   
