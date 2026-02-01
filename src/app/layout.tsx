@@ -6,6 +6,10 @@ import { Header } from '@/components/Header';
 export const metadata: Metadata = {
   title: 'SynthLaunch | AI Agent Token Launches on BSC',
   description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
+  icons: {
+    icon: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({

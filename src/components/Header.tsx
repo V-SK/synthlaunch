@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { NAV_ITEMS } from '@/lib/constants';
 import { WalletConnect } from './WalletConnect';
@@ -14,6 +15,13 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <div className="flex items-center gap-2">
+            <Image
+              src="/logo.jpg"
+              alt="SynthLaunch Logo"
+              width={32}
+              height={32}
+              className="rounded-md"
+            />
             <span className="text-xl font-bold text-synth-green glow-text-green tracking-wider">
               synthlaunch
             </span>
