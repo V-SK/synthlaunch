@@ -3,6 +3,7 @@ import { createWalletClient, createPublicClient, http, getContractAddress, kecca
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 import { bsc } from 'viem/chains';
 import { FLAP_ABI, FLAP_ADDRESS } from '@/lib/contracts';
+import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
 import * as fs from 'fs';
 
 // --- Constants ---
@@ -275,6 +276,10 @@ export async function POST(request: Request) {
       transport: http('https://bsc-dataseed.binance.org'),
     });
 
+    // When taxRate > 0, use custody contract as beneficiary so fees flow to custody
+    const beneficiary = hasTax ? CUSTODY_ADDRESS : (tokenDetails.wallet as `0x${string}`);
+    console.log(`[launch] Beneficiary: ${beneficiary} (custody: ${hasTax})`);
+
     console.log(`[launch] Sending newTokenV2 transaction...`);
     let txHash: `0x${string}`;
     try {
@@ -292,7 +297,7 @@ export async function POST(request: Request) {
           migratorType,
           quoteToken: zeroAddress,
           quoteAmt: BigInt(0),
-          beneficiary: tokenDetails.wallet as `0x${string}`,
+          beneficiary,
           permitData: '0x' as `0x${string}`,
         }],
         value: BigInt(0),
@@ -312,6 +317,26 @@ export async function POST(request: Request) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[launch] Transaction error:`, msg);
       return errorResponse(`Transaction failed: ${msg}`, 'DEPLOY_FAILED', 500);
+    }
+
+    // Register token-agent mapping in custody contract (only for tax tokens)
+    if (hasTax) {
+      try {
+        console.log(`[launch] Registering token ${tokenAddress} for agent ${agentName} in custody contract...`);
+        const registerHash = await walletClient.writeContract({
+          address: CUSTODY_ADDRESS,
+          abi: CUSTODY_ABI,
+          functionName: 'registerToken',
+          args: [tokenAddress as `0x${string}`, agentName],
+        });
+        console.log(`[launch] registerToken tx: ${registerHash}`);
+        const registerReceipt = await publicClient.waitForTransactionReceipt({ hash: registerHash, confirmations: 1 });
+        console.log(`[launch] registerToken confirmed, status: ${registerReceipt.status}`);
+      } catch (err: unknown) {
+        // Log but don't fail the launch — token is already created
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[launch] registerToken failed (non-fatal):`, msg);
+      }
     }
 
     // 10. Record launch

@@ -2,127 +2,99 @@ export interface Token {
   address: string;
   name: string;
   symbol: string;
+  meta: string;
   image: string;
   description: string;
   creator: string;
   taxRate: number;
-  beneficiary: string;
-  agentName: string;
-  createdAt: string;
-  marketCap: string;
-  volume24h: string;
-  price: string;
-  priceChange24h: number;
+  price: number;
+  priceUsd: number;
+  marketCap: number;
+  marketCapBnb: number;
+  circulatingSupply: number;
+  status: number;
+  progress: number;
+  createdAt: number;
+  reserve: number;
 }
 
-export const MOCK_TOKENS: Token[] = [
-  {
-    address: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
-    name: 'Neural Net Token',
-    symbol: 'NNT',
-    image: '',
-    description: 'AI-powered neural network governance token with autonomous decision making capabilities.',
-    creator: '0xAbCdEf1234567890AbCdEf1234567890AbCdEf12',
-    taxRate: 2,
-    beneficiary: '0xAbCdEf1234567890AbCdEf1234567890AbCdEf12',
-    agentName: 'NeuralBot',
-    createdAt: '2h ago',
-    marketCap: '$1.2M',
-    volume24h: '$245K',
-    price: '$0.042',
-    priceChange24h: 12.5,
-  },
-  {
-    address: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
-    name: 'Synapse AI',
-    symbol: 'SYN',
-    image: '',
-    description: 'Decentralized AI agent communication protocol enabling multi-agent collaboration.',
-    creator: '0x1234567890AbCdEf1234567890AbCdEf12345678',
-    taxRate: 3,
-    beneficiary: '0x1234567890AbCdEf1234567890AbCdEf12345678',
-    agentName: 'SynapseAgent',
-    createdAt: '5h ago',
-    marketCap: '$890K',
-    volume24h: '$178K',
-    price: '$0.089',
-    priceChange24h: 8.3,
-  },
-  {
-    address: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
-    name: 'Cortex Protocol',
-    symbol: 'CTX',
-    image: '',
-    description: 'Self-evolving AI agent framework token powering on-chain intelligence.',
-    creator: '0x567890AbCdEf1234567890AbCdEf1234567890Ab',
-    taxRate: 1,
-    beneficiary: '0x567890AbCdEf1234567890AbCdEf1234567890Ab',
-    agentName: 'CortexAI',
-    createdAt: '12h ago',
-    marketCap: '$2.1M',
-    volume24h: '$512K',
-    price: '$0.21',
-    priceChange24h: -3.2,
-  },
-  {
-    address: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
-    name: 'Hivemind',
-    symbol: 'HIVE',
-    image: '',
-    description: 'Collective intelligence token for AI swarms coordinating autonomous tasks.',
-    creator: '0x890AbCdEf1234567890AbCdEf1234567890AbCdEf',
-    taxRate: 5,
-    beneficiary: '0x890AbCdEf1234567890AbCdEf1234567890AbCdEf',
-    agentName: 'HiveQueen',
-    createdAt: '1d ago',
-    marketCap: '$456K',
-    volume24h: '$89K',
-    price: '$0.0045',
-    priceChange24h: 28.7,
-  },
-  {
-    address: '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
-    name: 'AliceBTC Agent',
-    symbol: 'ALICE',
-    image: '',
-    description: 'Token powering AliceBTC, a Bitcoin-focused AI trading agent on Moltbook.',
-    creator: '0xDeF1234567890AbCdEf1234567890AbCdEf123456',
-    taxRate: 2.5,
-    beneficiary: '0xDeF1234567890AbCdEf1234567890AbCdEf123456',
-    agentName: 'AliceBTC',
-    createdAt: '3h ago',
-    marketCap: '$3.4M',
-    volume24h: '$720K',
-    price: '$0.34',
-    priceChange24h: 45.2,
-  },
-];
-
-export function getTokenByAddress(address: string): Token | undefined {
-  return MOCK_TOKENS.find(t => t.address.toLowerCase() === address.toLowerCase());
+export interface PlatformStats {
+  totalTokens: number;
+  totalReserveBnb: string;
+  totalMarketCap: string;
+  activeTokens: number;
+  dexTokens: number;
 }
 
-export function getTokensSorted(sort: 'hot' | 'new' | 'top'): Token[] {
-  const tokens = [...MOCK_TOKENS];
-  switch (sort) {
-    case 'hot':
-      return tokens.sort((a, b) => parseVolume(b.volume24h) - parseVolume(a.volume24h));
-    case 'new':
-      return tokens; // already sorted by recency in mock
-    case 'top':
-      return tokens.sort((a, b) => parseMcap(b.marketCap) - parseMcap(a.marketCap));
-    default:
-      return tokens;
+export async function fetchTokens(sort: string = 'new'): Promise<Token[]> {
+  try {
+    const res = await fetch(`/api/tokens?sort=${sort}`, {
+      next: { revalidate: 30 },
+    } as any);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
   }
 }
 
-function parseVolume(v: string): number {
-  const n = parseFloat(v.replace(/[$,KMB]/g, ''));
-  if (v.includes('M')) return n * 1e6;
-  if (v.includes('K')) return n * 1e3;
-  return n;
+export async function fetchTokenByAddress(address: string): Promise<Token | null> {
+  try {
+    const res = await fetch(`/api/tokens?address=${address}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
-function parseMcap(v: string): number {
-  return parseVolume(v);
+export async function fetchStats(): Promise<PlatformStats> {
+  try {
+    const res = await fetch('/api/stats');
+    if (!res.ok) throw new Error('Failed');
+    return await res.json();
+  } catch {
+    return {
+      totalTokens: 0,
+      totalReserveBnb: '0',
+      totalMarketCap: '$0',
+      activeTokens: 0,
+      dexTokens: 0,
+    };
+  }
+}
+
+export function formatPrice(priceUsd: number): string {
+  if (priceUsd === 0) return '$0';
+  if (priceUsd < 0.000001) return `$${priceUsd.toExponential(2)}`;
+  if (priceUsd < 0.01) return `$${priceUsd.toFixed(6)}`;
+  if (priceUsd < 1) return `$${priceUsd.toFixed(4)}`;
+  return `$${priceUsd.toFixed(2)}`;
+}
+
+export function formatMarketCap(mcap: number): string {
+  if (mcap >= 1e6) return `$${(mcap / 1e6).toFixed(1)}M`;
+  if (mcap >= 1e3) return `$${(mcap / 1e3).toFixed(1)}K`;
+  if (mcap > 0) return `$${mcap.toFixed(0)}`;
+  return '$0';
+}
+
+export function formatTimeAgo(ts: number): string {
+  if (!ts) return 'Unknown';
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - ts;
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(ts * 1000).toLocaleDateString();
+}
+
+export function statusLabel(status: number): string {
+  switch (status) {
+    case 0: return 'Invalid';
+    case 1: return 'Bonding Curve';
+    case 4: return 'On DEX';
+    default: return 'Unknown';
+  }
 }

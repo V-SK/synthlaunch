@@ -8,3 +8,8 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# Hardhat
+cache-hardhat/
+artifacts/
+typechain-types/
