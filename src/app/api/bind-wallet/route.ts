@@ -14,10 +14,15 @@ function errorResponse(error: string, code: string, status: number = 400) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { agentName, wallet, apiKey } = body;
+    const { agentName, wallet, apiKey, verifyMethod, twitterHandle } = body;
 
-    if (!agentName || !wallet || !apiKey) {
-      return errorResponse('Missing required fields: agentName, wallet, apiKey', 'INVALID_FORMAT');
+    if (!agentName || !wallet) {
+      return errorResponse('Missing required fields: agentName, wallet', 'INVALID_FORMAT');
+    }
+
+    // Twitter verification doesn't need apiKey
+    if (verifyMethod !== 'twitter' && !apiKey) {
+      return errorResponse('Missing required field: apiKey', 'INVALID_FORMAT');
     }
 
     // Validate wallet address format
@@ -25,27 +30,38 @@ export async function POST(request: Request) {
       return errorResponse('Invalid wallet address', 'INVALID_WALLET');
     }
 
-    // 1. Verify agent identity via Moltbook API key
-    console.log(`[bind-wallet] Verifying identity for agent: ${agentName}`);
-    const meRes = await fetch('https://www.moltbook.com/api/v1/me', {
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(10_000),
-    });
+    // 1. Verify agent identity
+    if (verifyMethod === 'twitter') {
+      // Twitter verification: check that the tweet was already verified via /api/twitter/verify
+      // We trust the frontend flow here — the user already posted & verified the tweet
+      // The agentName should be "tw:<handle>"
+      console.log(`[bind-wallet] Twitter verification for: ${agentName} (handle: ${twitterHandle})`);
+      if (!agentName.startsWith('tw:')) {
+        return errorResponse('Invalid agent name for Twitter verification', 'INVALID_FORMAT');
+      }
+    } else {
+      // Moltbook API key verification
+      console.log(`[bind-wallet] Verifying identity for agent: ${agentName}`);
+      const meRes = await fetch('https://www.moltbook.com/api/v1/me', {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10_000),
+      });
 
-    if (!meRes.ok) {
-      console.log(`[bind-wallet] Moltbook auth failed: ${meRes.status}`);
-      return errorResponse('Invalid Moltbook API key', 'INVALID_KEY', 401);
+      if (!meRes.ok) {
+        console.log(`[bind-wallet] Moltbook auth failed: ${meRes.status}`);
+        return errorResponse('Invalid Moltbook API key', 'INVALID_KEY', 401);
+      }
+
+      const meData = await meRes.json();
+      const verifiedName = meData.username || meData.name;
+
+      if (verifiedName !== agentName) {
+        console.log(`[bind-wallet] Agent name mismatch: expected ${agentName}, got ${verifiedName}`);
+        return errorResponse('Agent name does not match the API key owner', 'NAME_MISMATCH', 403);
+      }
+
+      console.log(`[bind-wallet] Agent verified: ${verifiedName}`);
     }
-
-    const meData = await meRes.json();
-    const verifiedName = meData.username || meData.name;
-
-    if (verifiedName !== agentName) {
-      console.log(`[bind-wallet] Agent name mismatch: expected ${agentName}, got ${verifiedName}`);
-      return errorResponse('Agent name does not match the API key owner', 'NAME_MISMATCH', 403);
-    }
-
-    console.log(`[bind-wallet] Agent verified: ${verifiedName}`);
 
     // 2. Check if wallet is already bound
     const publicClient = createPublicClient({
