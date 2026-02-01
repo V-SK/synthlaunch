@@ -110,13 +110,13 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         }
     }
 
-    // ============ 开放记账（任何人可调用，合约校验余额） ============
+    // ============ Owner 记账（手动补账/紧急用） ============
 
-    /// @notice 记账：任何人都可以调用，但金额不能超过合约实际余额
-    /// @dev 去中心化记账 — 不依赖单一管理员，合约自动校验
+    /// @notice 手动记账（仅 owner，用于 receive() 未自动记账的情况）
+    /// @dev 正常流程通过 receive() 自动记账，此函数仅作紧急补账
     /// @param token Token 合约地址
     /// @param amount 这笔 fee 的金额（wei）
-    function recordFee(address token, uint256 amount) external {
+    function recordFee(address token, uint256 amount) external onlyOwner {
         require(bytes(tokenAgent[token]).length > 0, "Token not registered");
         require(amount > 0, "Amount must be > 0");
 
@@ -129,11 +129,11 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         emit FeeRecorded(token, amount);
     }
 
-    /// @notice 批量记账（任何人可调用）
+    /// @notice 批量记账（仅 owner）
     function recordFeeBatch(
         address[] calldata tokens,
         uint256[] calldata amounts
-    ) external {
+    ) external onlyOwner {
         require(tokens.length == amounts.length, "Length mismatch");
         uint256 total;
         for (uint i = 0; i < tokens.length; i++) {
