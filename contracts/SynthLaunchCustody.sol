@@ -8,9 +8,10 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title SynthLaunchCustody
- * @notice 托管 AI Agent 的 token 交易税费，支持验证后提取
+ * @notice 托管 AI Agent 的 token 交易税费，支持验证后提取，含平台手续费
  * @dev Flap 的 tax fee 是纯 BNB 转账到 beneficiary，合约通过 receive() 接收
  *      owner 通过 recordFee() 从链下扫描后记账，agent 绑定钱包后 claim 提取
+ *      平台从每笔 claim 中收取 platformFeeRate/10000 的手续费
  */
 contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     using ECDSA for bytes32;
@@ -36,19 +37,42 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     /// @notice 已使用的 nonce（防重放）
     mapping(bytes32 => bool) public usedNonces;
 
+    /// @notice 累计记录的 fee 总额
+    uint256 public totalRecorded;
+
+    /// @notice 累计已 claim 的总额
+    uint256 public totalClaimedAmount;
+
+    /// @notice 平台手续费率（basis points，10000 = 100%）
+    uint256 public platformFeeRate;
+
+    /// @notice 平台手续费余额（可提取）
+    uint256 public platformFeeBalance;
+
+    /// @notice token 地址 => 已收取的平台手续费
+    mapping(address => uint256) public platformFeeCollected;
+
+    /// @notice 最大平台手续费率 30%
+    uint256 public constant MAX_PLATFORM_FEE = 3000;
+
     // ============ 事件 ============
 
     event TokenRegistered(address indexed token, string agentName);
     event FeeRecorded(address indexed token, uint256 amount);
-    event WalletBound(string agentName, address wallet);
+    event WalletBound(string indexed agentName, address indexed wallet);
     event FeeClaimed(address indexed token, string agentName, address wallet, uint256 amount);
     event SignerUpdated(address oldSigner, address newSigner);
+    event PlatformFeeCollected(address indexed token, uint256 amount);
+    event PlatformFeeUpdated(uint256 oldRate, uint256 newRate);
+    event PlatformFeeWithdrawn(address to, uint256 amount);
 
     // ============ 构造函数 ============
 
-    constructor(address _signer) Ownable(msg.sender) {
+    constructor(address _signer, uint256 _platformFeeRate) Ownable(msg.sender) {
         require(_signer != address(0), "Invalid signer");
+        require(_platformFeeRate <= MAX_PLATFORM_FEE, "Fee too high");
         signer = _signer;
+        platformFeeRate = _platformFeeRate;
     }
 
     // ============ 接收 BNB ============
@@ -59,6 +83,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         require(msg.value > 0, "No fee sent");
         require(bytes(tokenAgent[token]).length > 0, "Token not registered");
         tokenFees[token] += msg.value;
+        totalRecorded += msg.value;
         emit FeeRecorded(token, msg.value);
     }
 
@@ -73,7 +98,9 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     /// @param amount 这笔 fee 的金额（wei）
     function recordFee(address token, uint256 amount) external onlyOwner {
         require(bytes(tokenAgent[token]).length > 0, "Token not registered");
+        require(amount + totalRecorded <= address(this).balance, "Exceeds balance");
         tokenFees[token] += amount;
+        totalRecorded += amount;
         emit FeeRecorded(token, amount);
     }
 
@@ -83,12 +110,16 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         uint256[] calldata amounts
     ) external onlyOwner {
         require(tokens.length == amounts.length, "Length mismatch");
+        uint256 total;
         for (uint i = 0; i < tokens.length; i++) {
             if (bytes(tokenAgent[tokens[i]]).length > 0) {
                 tokenFees[tokens[i]] += amounts[i];
+                total += amounts[i];
                 emit FeeRecorded(tokens[i], amounts[i]);
             }
         }
+        require(address(this).balance >= total + totalRecorded, "Exceeds balance");
+        totalRecorded += total;
     }
 
     // ============ 管理函数 ============
@@ -119,11 +150,25 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         }
     }
 
+    /// @notice 取消注册 token（仅在无待 claim 时）
+    function unregisterToken(address token) external onlyOwner {
+        require(bytes(tokenAgent[token]).length > 0, "Token not registered");
+        require(tokenFees[token] == tokenClaimed[token], "Has pending claims");
+        delete tokenAgent[token];
+    }
+
     /// @notice 更新签名者地址
     function setSigner(address _signer) external onlyOwner {
         require(_signer != address(0), "Invalid signer");
         emit SignerUpdated(signer, _signer);
         signer = _signer;
+    }
+
+    /// @notice 更新平台手续费率
+    function setPlatformFeeRate(uint256 _rate) external onlyOwner {
+        require(_rate <= MAX_PLATFORM_FEE, "Fee too high");
+        emit PlatformFeeUpdated(platformFeeRate, _rate);
+        platformFeeRate = _rate;
     }
 
     // ============ Agent 绑定钱包 ============
@@ -194,7 +239,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
 
     // ============ Claim Fee ============
 
-    /// @notice Agent 提取 token 的累计 fee
+    /// @notice Agent 提取 token 的累计 fee（扣除平台手续费）
     /// @param token Token 地址
     function claim(address token) external nonReentrant {
         string memory agentName = tokenAgent[token];
@@ -208,15 +253,26 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         require(amount > 0, "Nothing to claim");
 
         tokenClaimed[token] += amount;
+        totalClaimedAmount += amount;
 
-        (bool success, ) = wallet.call{value: amount}("");
+        // 计算平台手续费
+        uint256 fee = amount * platformFeeRate / 10000;
+        uint256 alreadyCollected = platformFeeCollected[token];
+        uint256 newFee = fee > alreadyCollected ? fee - alreadyCollected : 0;
+        platformFeeBalance += newFee;
+        platformFeeCollected[token] = 0;
+
+        uint256 payout = amount - fee;
+
+        (bool success, ) = wallet.call{value: payout}("");
         require(success, "Transfer failed");
 
         emit FeeClaimed(token, agentName, wallet, amount);
     }
 
-    /// @notice 批量 claim 多个 token
+    /// @notice 批量 claim 多个 token（扣除平台手续费）
     function claimBatch(address[] calldata tokens) external nonReentrant {
+        require(tokens.length <= 20, "Too many tokens");
         for (uint i = 0; i < tokens.length; i++) {
             string memory agentName = tokenAgent[tokens[i]];
             if (bytes(agentName).length == 0) continue;
@@ -228,19 +284,95 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
             if (amount == 0) continue;
 
             tokenClaimed[tokens[i]] += amount;
+            totalClaimedAmount += amount;
 
-            (bool success, ) = wallet.call{value: amount}("");
+            // 计算平台手续费
+            uint256 fee = amount * platformFeeRate / 10000;
+            uint256 alreadyCollected = platformFeeCollected[tokens[i]];
+            uint256 newFee = fee > alreadyCollected ? fee - alreadyCollected : 0;
+            platformFeeBalance += newFee;
+            platformFeeCollected[tokens[i]] = 0;
+
+            uint256 payout = amount - fee;
+
+            (bool success, ) = wallet.call{value: payout}("");
             if (success) {
                 emit FeeClaimed(tokens[i], agentName, wallet, amount);
+            } else {
+                // 转账失败，回滚状态
+                tokenClaimed[tokens[i]] -= amount;
+                totalClaimedAmount -= amount;
+                platformFeeBalance -= newFee;
+                platformFeeCollected[tokens[i]] = alreadyCollected;
             }
         }
     }
 
+    // ============ 平台手续费 ============
+
+    /// @notice 收取单个 token 的平台手续费（预扣）
+    function collectPlatformFee(address token) external onlyOwner nonReentrant {
+        require(bytes(tokenAgent[token]).length > 0, "Token not registered");
+
+        uint256 amount = tokenFees[token] - tokenClaimed[token];
+        uint256 fee = amount * platformFeeRate / 10000;
+        uint256 alreadyCollected = platformFeeCollected[token];
+        uint256 newFee = fee > alreadyCollected ? fee - alreadyCollected : 0;
+
+        require(newFee > 0, "Nothing to collect");
+
+        platformFeeCollected[token] += newFee;
+        platformFeeBalance += newFee;
+
+        emit PlatformFeeCollected(token, newFee);
+    }
+
+    /// @notice 批量收取平台手续费
+    function collectPlatformFeeBatch(address[] calldata tokens) external onlyOwner nonReentrant {
+        require(tokens.length <= 20, "Too many tokens");
+        for (uint i = 0; i < tokens.length; i++) {
+            if (bytes(tokenAgent[tokens[i]]).length == 0) continue;
+
+            uint256 amount = tokenFees[tokens[i]] - tokenClaimed[tokens[i]];
+            uint256 fee = amount * platformFeeRate / 10000;
+            uint256 alreadyCollected = platformFeeCollected[tokens[i]];
+            uint256 newFee = fee > alreadyCollected ? fee - alreadyCollected : 0;
+
+            if (newFee == 0) continue;
+
+            platformFeeCollected[tokens[i]] += newFee;
+            platformFeeBalance += newFee;
+
+            emit PlatformFeeCollected(tokens[i], newFee);
+        }
+    }
+
+    /// @notice 提取平台手续费
+    function withdrawPlatformFee(address to) external onlyOwner nonReentrant {
+        require(to != address(0), "Invalid address");
+        require(platformFeeBalance > 0, "No fees to withdraw");
+
+        uint256 amount = platformFeeBalance;
+        platformFeeBalance = 0;
+
+        (bool success, ) = to.call{value: amount}("");
+        require(success, "Transfer failed");
+
+        emit PlatformFeeWithdrawn(to, amount);
+    }
+
     // ============ 查询函数 ============
 
-    /// @notice 查询 token 可提取金额
+    /// @notice 查询 token 可提取金额（未扣 fee）
     function claimable(address token) external view returns (uint256) {
         return tokenFees[token] - tokenClaimed[token];
+    }
+
+    /// @notice 查询扣除平台手续费后的可提取金额
+    function claimableAfterFee(address token) external view returns (uint256 payout, uint256 fee) {
+        uint256 amount = tokenFees[token] - tokenClaimed[token];
+        fee = amount * platformFeeRate / 10000;
+        payout = amount - fee;
     }
 
     /// @notice 查询 agent 的所有 token 可提取总额
@@ -283,11 +415,16 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
 
     // ============ 紧急函数 ============
 
-    /// @notice 紧急提取（仅 owner，用于合约升级或紧急情况）
-    function emergencyWithdraw(address to, uint256 amount) external onlyOwner {
+    /// @notice 紧急提取未记录的多余 BNB（仅 owner）
+    function emergencyWithdraw(address to) external onlyOwner {
+        uint256 unclaimed = totalRecorded - totalClaimedAmount;
+        uint256 accounted = platformFeeBalance + unclaimed;
+        uint256 excess = address(this).balance > accounted ? address(this).balance - accounted : 0;
+
         require(to != address(0), "Invalid address");
-        require(amount <= address(this).balance, "Insufficient balance");
-        (bool success, ) = to.call{value: amount}("");
+        require(excess > 0, "No unrecorded funds");
+
+        (bool success, ) = to.call{value: excess}("");
         require(success, "Transfer failed");
     }
 }

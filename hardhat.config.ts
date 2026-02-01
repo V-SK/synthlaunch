@@ -27,10 +27,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      bscMainnet: BSC_SCAN_API_KEY,
-      bscTestnet: BSC_SCAN_API_KEY,
-    },
+    apiKey: BSC_SCAN_API_KEY,
     customChains: [
       {
         network: "bscMainnet",
@@ -38,14 +35,6 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.bscscan.com/api",
           browserURL: "https://bscscan.com",
-        },
-      },
-      {
-        network: "bscTestnet",
-        chainId: 97,
-        urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com",
         },
       },
     ],
