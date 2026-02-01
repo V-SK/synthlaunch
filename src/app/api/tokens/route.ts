@@ -52,6 +52,7 @@ let cacheTimestamp = 0;
 let bnbPriceCache = 0;
 let bnbPriceTimestamp = 0;
 let isFetching = false;
+let lastKnownSupabaseTokens: SupabaseToken[] = []; // fallback if Supabase goes down
 
 const client = createPublicClient({
   chain: bsc,
@@ -131,12 +132,24 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
 
     if (!res.ok) {
       console.error('[tokens] Supabase error:', res.status, await res.text());
+      if (lastKnownSupabaseTokens.length > 0) {
+        console.log('[tokens] Using last-known-good Supabase data as fallback');
+        return lastKnownSupabaseTokens;
+      }
       return [];
     }
 
-    return await res.json();
+    const data = await res.json();
+    if (data.length > 0) {
+      lastKnownSupabaseTokens = data;
+    }
+    return data;
   } catch (e) {
     console.error('[tokens] Failed to fetch from Supabase:', e);
+    if (lastKnownSupabaseTokens.length > 0) {
+      console.log('[tokens] Using last-known-good Supabase data as fallback');
+      return lastKnownSupabaseTokens;
+    }
     return [];
   }
 }
@@ -153,10 +166,11 @@ async function refreshTokens(): Promise<void> {
     ]);
 
     if (supabaseTokens.length === 0) {
-      console.log('[tokens] No tokens in Supabase');
+      console.log('[tokens] No tokens from Supabase, keeping existing cache');
       isFetching = false;
       return;
     }
+    console.log(`[tokens] Fetched ${supabaseTokens.length} tokens from Supabase`);
 
     const tokens: CachedToken[] = [];
 

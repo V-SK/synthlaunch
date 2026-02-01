@@ -143,6 +143,7 @@ export async function POST(request: Request) {
     console.log('[launch] Verifying agent identity...');
     const meRes = await fetch('https://www.moltbook.com/api/v1/me', {
       headers: { 'Authorization': `Bearer ${moltbook_key}` },
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!meRes.ok) {
@@ -157,7 +158,9 @@ export async function POST(request: Request) {
 
     // 3. Fetch post (public endpoint, NO auth header)
     console.log(`[launch] Fetching post ${post_id}...`);
-    const postRes = await fetch(`https://www.moltbook.com/api/v1/posts/${post_id}`);
+    const postRes = await fetch(`https://www.moltbook.com/api/v1/posts/${post_id}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
 
     if (!postRes.ok) {
       console.log(`[launch] Post fetch failed: ${postRes.status}`);

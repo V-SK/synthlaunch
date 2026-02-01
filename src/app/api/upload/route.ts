@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(FLAP_UPLOAD_URL, {
       method: 'POST',
       body: flapForm,
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!res.ok) {

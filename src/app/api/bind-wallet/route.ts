@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     console.log(`[bind-wallet] Verifying identity for agent: ${agentName}`);
     const meRes = await fetch('https://www.moltbook.com/api/v1/me', {
       headers: { 'Authorization': `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!meRes.ok) {

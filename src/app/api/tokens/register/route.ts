@@ -42,6 +42,7 @@ export async function POST(request: Request) {
 
     const res = await fetch(`${supabaseUrl}/rest/v1/tokens`, {
       method: 'POST',
+      signal: AbortSignal.timeout(10_000),
       headers: {
         'apikey': supabaseKey,
         'Authorization': `Bearer ${supabaseKey}`,
