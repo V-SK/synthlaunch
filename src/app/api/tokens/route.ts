@@ -140,10 +140,13 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
     }
 
     const data = await res.json();
-    if (data.length > 0) {
-      lastKnownSupabaseTokens = data;
+    // Filter out invalid addresses
+    const valid = data.filter((t: any) => t.address && t.address.startsWith('0x') && t.address.length === 42);
+    console.log(`[tokens] Supabase returned ${data.length} rows, ${valid.length} valid`);
+    if (valid.length > 0) {
+      lastKnownSupabaseTokens = valid;
     }
-    return data;
+    return valid;
   } catch (e) {
     console.error('[tokens] Failed to fetch from Supabase:', e);
     if (lastKnownSupabaseTokens.length > 0) {
