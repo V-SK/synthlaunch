@@ -336,5 +336,9 @@ export async function GET(request: NextRequest) {
       break;
   }
 
-  return NextResponse.json(sorted);
+  const response = NextResponse.json(sorted);
+  response.headers.set('X-Token-Count', String(sorted.length));
+  response.headers.set('X-Cache-Age', String(Math.floor((Date.now() - cacheTimestamp) / 1000)));
+  response.headers.set('X-Build', '20260201-v2');
+  return response;
 }
