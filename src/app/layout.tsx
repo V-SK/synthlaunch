@@ -37,9 +37,9 @@ export default function RootLayout({
                   SynthLaunch v0.1.0 — Built on Flap Protocol · BSC Network
                 </span>
                 <div className="flex items-center gap-4 text-xs text-synth-muted">
-                  <a href="#" className="hover:text-synth-green transition-colors">docs</a>
-                  <a href="#" className="hover:text-synth-green transition-colors">github</a>
-                  <a href="#" className="hover:text-synth-green transition-colors">twitter</a>
+                  <a href="/docs" className="hover:text-synth-green transition-colors">docs</a>
+                  <a href="https://github.com/V-SK/synthlaunch" target="_blank" rel="noopener noreferrer" className="hover:text-synth-green transition-colors">github</a>
+                  <a href="https://x.com/synth_fun" target="_blank" rel="noopener noreferrer" className="hover:text-synth-green transition-colors">twitter</a>
                 </div>
               </div>
             </footer>

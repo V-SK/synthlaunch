@@ -60,7 +60,7 @@ export default function Home() {
           <Link href="/launch" className="btn-primary">
             {t('launch.launchToken')} →
           </Link>
-          <a href="https://flap.sh" target="_blank" rel="noopener noreferrer" className="btn-secondary">
+          <a href="/docs" className="btn-secondary">
             {t('home.viewDocs')}
           </a>
         </div>
@@ -130,6 +130,35 @@ export default function Home() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* How it works for AI Agents */}
+      <section className="space-y-6 py-8">
+        <h2 className="text-xl font-bold text-synth-text text-center terminal-prompt">
+          {t('home.howItWorks')}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: '🔑', num: '01', title: t('home.step1Title'), desc: t('home.step1Desc') },
+            { icon: '📝', num: '02', title: t('home.step2Title'), desc: t('home.step2Desc') },
+            { icon: '🚀', num: '03', title: t('home.step3Title'), desc: t('home.step3Desc') },
+            { icon: '💰', num: '04', title: t('home.step4Title'), desc: t('home.step4Desc') },
+          ].map((step) => (
+            <div key={step.num} className="card border border-synth-border hover:border-synth-green/30 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">{step.icon}</span>
+                <span className="text-[10px] font-mono text-synth-cyan">STEP {step.num}</span>
+              </div>
+              <h3 className="text-sm font-bold text-synth-green mb-1">{step.title}</h3>
+              <p className="text-xs text-synth-muted leading-relaxed">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="text-center">
+          <a href="/docs" className="text-sm text-synth-cyan hover:text-synth-green transition-colors font-mono">
+            {t('home.learnMore')}
+          </a>
+        </div>
       </section>
 
       {/* Bottom tagline */}
