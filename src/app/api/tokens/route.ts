@@ -248,9 +248,33 @@ async function refreshTokens(): Promise<void> {
               k,
               dexSupplyThreshold,
             } as CachedToken;
-          } catch (e) {
-            console.error(`[tokens] Failed to fetch on-chain data for ${info.address}:`, e);
-            return null;
+          } catch (e: any) {
+            console.error(`[tokens] Failed for ${info.address}: ${e.message || e}`);
+            // Return a minimal entry so the token still shows
+            return {
+              address: info.address,
+              name: info.name || info.agent_name || 'Unknown',
+              symbol: info.symbol || '???',
+              meta: '',
+              image: '',
+              description: '',
+              creator: info.creator || '',
+              agent_name: info.agent_name || '',
+              taxRate: (info.tax_rate || 0) / 100,
+              price: 0,
+              priceUsd: 0,
+              marketCap: 0,
+              marketCapBnb: 0,
+              circulatingSupply: 0,
+              status: -1,
+              progress: 0,
+              createdAt: info.created_at ? Math.floor(new Date(info.created_at).getTime() / 1000) : 0,
+              reserve: 0,
+              r: 0,
+              h: 0,
+              k: 0,
+              dexSupplyThreshold: 0,
+            } as CachedToken;
           }
         })
       );
