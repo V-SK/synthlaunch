@@ -5,7 +5,7 @@ import { parseEther } from 'viem';
 import { FLAP_ADDRESS, FLAP_ABI } from '@/lib/contracts';
 import { CUSTODY_ADDRESS } from '@/lib/custody';
 import { findVanitySalt } from '@/lib/salt';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface LaunchTokenParams {
   metaCid: string;
@@ -24,44 +24,53 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
 export function useLaunchToken() {
   const { address } = useAccount();
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const paramsRef = useRef<LaunchTokenParams | null>(null);
+  const [launchParams, setLaunchParams] = useState<LaunchTokenParams | null>(null);
+  const [registered, setRegistered] = useState(false);
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
   // Register token to Supabase after tx confirms
-  useEffect(() => {
-    if (isSuccess && hash && paramsRef.current && address) {
-      const params = paramsRef.current;
-      const taxBps = Math.round(params.taxRate * 100);
-      const hasTax = taxBps > 0;
-      const selfMode = !params.agentId || params.launchType === 'client';
-      
-      fetch('/api/tokens/register', {
+  const registerToken = useCallback(async (txHash: string, params: LaunchTokenParams, creator: string) => {
+    const taxBps = Math.round(params.taxRate * 100);
+    const hasTax = taxBps > 0;
+    const selfMode = !params.agentId || params.launchType === 'client';
+
+    console.log('[register] Registering token...', { txHash, name: params.name, symbol: params.symbol });
+
+    try {
+      const res = await fetch('/api/tokens/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: params.name,
           symbol: params.symbol,
           meta: params.metaCid,
-          creator: address,
+          creator,
           agent_name: params.agentId || '',
           tax_rate: taxBps,
-          beneficiary: (hasTax && !selfMode) ? CUSTODY_ADDRESS : address,
-          tx_hash: hash,
+          beneficiary: (hasTax && !selfMode) ? CUSTODY_ADDRESS : creator,
+          tx_hash: txHash,
           launch_type: params.launchType || 'client',
         }),
-      })
-        .then(res => res.json())
-        .then(data => {
-          console.log('[register] Success:', data);
-          // Bust token cache so homepage shows new token immediately
-          fetch('/api/tokens?refresh=1').catch(() => {});
-        })
-        .catch(err => console.error('[register] Failed:', err));
+      });
+      const data = await res.json();
+      console.log('[register] Success:', data);
+      setRegistered(true);
+      // Bust token cache so homepage shows new token immediately
+      fetch('/api/tokens?refresh=1').catch(() => {});
+    } catch (err) {
+      console.error('[register] Failed:', err);
     }
-  }, [isSuccess, hash, address]);
+  }, []);
+
+  useEffect(() => {
+    if (isSuccess && hash && launchParams && address && !registered) {
+      console.log('[useFlap] TX confirmed, triggering registration. hash:', hash, 'params:', launchParams.symbol);
+      registerToken(hash, launchParams, address);
+    }
+  }, [isSuccess, hash, launchParams, address, registered, registerToken]);
 
   const launch = async (params: LaunchTokenParams) => {
     if (!address) throw new Error('Wallet not connected');
@@ -71,7 +80,8 @@ export function useLaunchToken() {
     const devBuyWei = parseEther(params.devBuyAmount || '0');
 
     // Save params for registration after tx confirms
-    paramsRef.current = params;
+    setLaunchParams(params);
+    setRegistered(false);
 
     // Mine a vanity salt (address must end with 7777 for tax, 8888 for non-tax)
     const salt = await findVanitySalt(hasTax);

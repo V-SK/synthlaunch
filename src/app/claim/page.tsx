@@ -66,6 +66,9 @@ export default function ClaimPage() {
   const fetchRegisteredTokens = useCallback(async () => {
     if (!publicClient) return;
     try {
+      // Use recent blocks only (custody contract is new, ~7 days lookback max)
+      const currentBlock = await publicClient.getBlockNumber();
+      const fromBlock = currentBlock - BigInt(20000 * 24 * 7); // ~7 days
       const logs = await publicClient.getLogs({
         address: CUSTODY_ADDRESS,
         event: {
@@ -76,7 +79,7 @@ export default function ClaimPage() {
             { indexed: false, name: 'agentName', type: 'string' },
           ],
         },
-        fromBlock: BigInt(48000000),
+        fromBlock,
         toBlock: 'latest',
       });
       const tokens = logs.map((log) => log.args.token as Address);
