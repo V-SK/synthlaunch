@@ -8,7 +8,7 @@ import { useI18n } from '@/lib/i18n';
 
 type ClaimTab = 'twitter' | 'agents';
 type AgentStep = 1 | 2 | 3 | 4;
-type TwitterStep = 1 | 2 | 3 | 4; // handle → tweet → verify → claim
+type TwitterStep = 1 | 2 | 3; // login → review → claim
 
 interface TokenInfo {
   token: Address;
@@ -37,12 +37,8 @@ export default function ClaimPage() {
   // Twitter flow state
   const [twitterStep, setTwitterStep] = useState<TwitterStep>(1);
   const [twitterHandle, setTwitterHandle] = useState('');
-  const [twitterCode, setTwitterCode] = useState('');
-  const [twitterTweetUrl, setTwitterTweetUrl] = useState('');
   const [twitterVerified, setTwitterVerified] = useState(false);
-  const [twitterVerifyLoading, setTwitterVerifyLoading] = useState(false);
   const [twitterVerifyError, setTwitterVerifyError] = useState('');
-  const [twitterPostedUrl, setTwitterPostedUrl] = useState('');
   const [twitterTokens, setTwitterTokens] = useState<TokenInfo[]>([]);
   const [twitterTokensLoading, setTwitterTokensLoading] = useState(false);
 
@@ -62,6 +58,33 @@ export default function ClaimPage() {
   const [claimSuccess, setClaimSuccess] = useState('');
 
   const [knownTokens, setKnownTokens] = useState<Address[]>([]);
+
+  // Handle Twitter OAuth redirect
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const isVerified = params.get('twitter_verified') === 'true';
+    const handle = params.get('handle');
+    const twitterError = params.get('twitter_error');
+
+    if (twitterError) {
+      setTwitterVerifyError(`Twitter login failed: ${twitterError}`);
+      setTab('twitter');
+      // Clean URL
+      window.history.replaceState({}, '', '/claim');
+      return;
+    }
+
+    if (isVerified && handle) {
+      const cleanHandle = handle.replace('@', '').trim().toLowerCase();
+      setTwitterHandle(cleanHandle);
+      setTwitterVerified(true);
+      setTwitterStep(2);
+      setTab('twitter');
+      // Clean URL
+      window.history.replaceState({}, '', '/claim');
+    }
+  }, []);
 
   // Fetch all registered tokens
   const fetchRegisteredTokens = useCallback(async () => {
@@ -93,6 +116,15 @@ export default function ClaimPage() {
   useEffect(() => {
     fetchRegisteredTokens();
   }, [fetchRegisteredTokens]);
+
+  // When twitter is verified and tokens are loaded, fetch twitter token data
+  useEffect(() => {
+    if (twitterVerified && twitterHandle && knownTokens.length > 0) {
+      const cleanHandle = twitterHandle.replace('@', '').trim().toLowerCase();
+      fetchTwitterTokens(cleanHandle);
+      checkBoundWallet(`tw:${cleanHandle}`);
+    }
+  }, [twitterVerified, twitterHandle, knownTokens, fetchTwitterTokens, checkBoundWallet]);
 
   // Fetch token info for agent name
   const fetchTokensByAgent = useCallback(async (agentName: string) => {
@@ -164,57 +196,6 @@ export default function ClaimPage() {
       console.error('Failed to check bound wallet:', err);
     }
   }, [publicClient]);
-
-  // === Twitter flow handlers ===
-  const handleTwitterGenerate = async () => {
-    if (!twitterHandle.trim()) return;
-    setTwitterVerifyError('');
-    try {
-      const res = await fetch('/api/twitter/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: twitterHandle.trim(), action: 'generate' }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setTwitterVerifyError(data.error || t('claim.failedToGenerate'));
-        return;
-      }
-      setTwitterCode(data.code);
-      setTwitterTweetUrl(data.tweetUrl);
-      setTwitterStep(2);
-    } catch {
-      setTwitterVerifyError(t('claim.failedToGenerate'));
-    }
-  };
-
-  const handleTwitterVerify = async () => {
-    setTwitterVerifyLoading(true);
-    setTwitterVerifyError('');
-    try {
-      const res = await fetch('/api/twitter/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: twitterHandle.trim(), action: 'verify', tweetUrl: twitterPostedUrl.trim() || undefined }),
-      });
-      const data = await res.json();
-      if (data.verified) {
-        setTwitterVerified(true);
-        setTwitterStep(3);
-        const cleanHandle = twitterHandle.replace('@', '').trim().toLowerCase();
-        await Promise.all([
-          fetchTwitterTokens(cleanHandle),
-          checkBoundWallet(`tw:${cleanHandle}`),
-        ]);
-      } else {
-        setTwitterVerifyError(data.error || t('claim.verificationFailed'));
-      }
-    } catch {
-      setTwitterVerifyError(t('claim.verificationRequestFailed'));
-    } finally {
-      setTwitterVerifyLoading(false);
-    }
-  };
 
   // Bind wallet (Twitter flow)
   const handleTwitterBindWallet = async () => {
@@ -379,10 +360,9 @@ export default function ClaimPage() {
   ];
 
   const twitterSteps = [
-    { num: 1, label: t('claim.stepHandle') },
-    { num: 2, label: t('claim.stepTweet') },
-    { num: 3, label: t('claim.stepReview') },
-    { num: 4, label: t('claim.stepClaim') },
+    { num: 1, label: t('claim.stepLogin') },
+    { num: 2, label: t('claim.stepReview') },
+    { num: 3, label: t('claim.stepClaim') },
   ];
 
   const agentSteps = [
@@ -579,106 +559,35 @@ export default function ClaimPage() {
         <div className="space-y-6">
           {renderSteps(twitterSteps, twitterStep)}
 
-          {/* Step 1: Enter handle */}
+          {/* Step 1: Login with Twitter */}
           {twitterStep === 1 && (
             <div className="card space-y-4">
               <h2 className="text-sm font-bold text-synth-cyan">{t('claim.step')} 1: {t('claim.enterHandle')}</h2>
               <p className="text-sm text-synth-muted">
-                {t('claim.handleHint')}
+                {t('claim.loginWithTwitter')}
               </p>
-              <div className="space-y-1">
-                <label className="text-xs text-synth-muted">{t('claim.twitterHandle')}</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-synth-muted">@</span>
-                  <input
-                    type="text"
-                    placeholder="your_handle"
-                    value={twitterHandle}
-                    onChange={(e) => setTwitterHandle(e.target.value.replace('@', ''))}
-                    className="input-field flex-1"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleTwitterGenerate}
-                disabled={!twitterHandle.trim()}
-                className="btn-primary"
-              >
-                {t('claim.generateCode')}
-              </button>
+
               {twitterVerifyError && (
                 <div className="text-xs text-red-400">{twitterVerifyError}</div>
               )}
-            </div>
-          )}
-
-          {/* Step 2: Post tweet */}
-          {twitterStep === 2 && (
-            <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-cyan">{t('claim.step')} 2: {t('claim.postTweet')}</h2>
-              <p className="text-sm text-synth-muted">
-                {t('claim.postTweetHint')}
-              </p>
-
-              <div className="bg-synth-bg rounded-lg p-4 space-y-3">
-                <div className="text-xs text-synth-muted">{t('claim.verificationCode')}</div>
-                <div className="text-lg font-mono text-synth-green text-center py-2 bg-synth-surface rounded border border-synth-green/30">
-                  {twitterCode}
-                </div>
-              </div>
 
               <a
-                href={twitterTweetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/api/twitter/auth"
                 className="btn-primary w-full text-center block"
               >
-                {t('claim.postBtn')}
+                🐦 {t('claim.enterHandle')}
               </a>
-
-              <div className="text-[10px] text-synth-muted text-center">
-                {t('claim.afterPost')}
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs text-synth-muted">{t('claim.pasteTweetUrl')}</label>
-                <input
-                  type="text"
-                  placeholder="https://x.com/yourhandle/status/123..."
-                  value={twitterPostedUrl}
-                  onChange={(e) => setTwitterPostedUrl(e.target.value)}
-                  className="input-field w-full"
-                />
-                <div className="text-[10px] text-synth-muted">{t('claim.pasteTweetUrlHint')}</div>
-              </div>
-
-              {twitterVerifyError && (
-                <div className="text-xs text-red-400">{twitterVerifyError}</div>
-              )}
-
-              <div className="flex gap-3">
-                <button onClick={() => setTwitterStep(1)} className="btn-secondary">
-                  {t('claim.back')}
-                </button>
-                <button
-                  onClick={handleTwitterVerify}
-                  disabled={twitterVerifyLoading || !twitterPostedUrl.trim()}
-                  className="btn-purple flex-1"
-                >
-                  {twitterVerifyLoading ? t('claim.checking') : t('claim.verifyTweet')}
-                </button>
-              </div>
             </div>
           )}
 
-          {/* Step 3: Review */}
-          {twitterStep === 3 && (
+          {/* Step 2: Review (after OAuth redirect) */}
+          {twitterStep === 2 && (
             <div className="card space-y-4">
-              <h2 className="text-sm font-bold text-synth-green">{t('claim.step')} 3: {t('claim.verified')}</h2>
+              <h2 className="text-sm font-bold text-synth-green">{t('claim.step')} 2: {t('claim.verified')}</h2>
               <div className="bg-synth-bg rounded-lg p-3 flex items-center gap-3">
                 <span className="text-synth-green text-lg">✓</span>
                 <div>
-                  <span className="text-sm text-synth-text">{t('claim.verifiedAs')} </span>
+                  <span className="text-sm text-synth-text">{t('claim.twitterVerified')} </span>
                   <span className="text-sm text-synth-cyan font-bold">@{twitterHandle}</span>
                   {isBound && boundWallet && (
                     <div className="text-[10px] text-synth-muted mt-0.5">
@@ -704,18 +613,18 @@ export default function ClaimPage() {
               )}
 
               <div className="flex gap-3">
-                <button onClick={() => { setTwitterStep(1); setTwitterVerified(false); }} className="btn-secondary">
+                <button onClick={() => { setTwitterStep(1); setTwitterVerified(false); setTwitterHandle(''); }} className="btn-secondary">
                   {t('claim.back')}
                 </button>
-                <button onClick={() => setTwitterStep(4)} className="btn-primary">
+                <button onClick={() => setTwitterStep(3)} className="btn-primary">
                   {isBound ? t('claim.claimFees') : t('claim.bindAndClaim')}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 4: Bind + Claim */}
-          {twitterStep === 4 && (
+          {/* Step 3: Bind + Claim */}
+          {twitterStep === 3 && (
             <>
               {renderClaimSection(
                 `tw:${twitterHandle.replace('@', '').trim().toLowerCase()}`,
@@ -723,7 +632,7 @@ export default function ClaimPage() {
                 twitterTokensLoading,
                 handleTwitterBindWallet,
               )}
-              <button onClick={() => setTwitterStep(3)} className="btn-secondary">
+              <button onClick={() => setTwitterStep(2)} className="btn-secondary">
                 {t('claim.back')}
               </button>
             </>

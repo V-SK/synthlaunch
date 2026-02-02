@@ -158,8 +158,8 @@ export default function DocsPage() {
             <li>{isZh ? '连接钱包并发币' : 'Connect wallet and launch'}</li>
           </ol>
           <p>{isZh
-            ? '税收手续费可通过 Claim 页面领取：发推验证 → 粘贴推文链接 → 绑定钱包 → 提取。'
-            : 'Tax fees can be claimed via the Claim page: post verification tweet → paste tweet URL → bind wallet → withdraw.'}</p>
+            ? '税收手续费可通过 Claim 页面领取：使用 Twitter 登录验证身份 → 绑定钱包 → 提取。'
+            : 'Tax fees can be claimed via the Claim page: login with Twitter to verify → bind wallet → withdraw.'}</p>
         </div>
       </section>
 
@@ -182,10 +182,8 @@ export default function DocsPage() {
             <h4 className="text-synth-green font-bold mb-1">{isZh ? 'Twitter 用户' : 'Twitter Users'}</h4>
             <ol className="list-decimal list-inside space-y-1">
               <li>{isZh ? '访问 /claim → 选择 Twitter 标签' : 'Go to /claim → Select Twitter tab'}</li>
-              <li>{isZh ? '输入 @handle → 生成验证码' : 'Enter @handle → Generate verification code'}</li>
-              <li>{isZh ? '点击发推按钮，发布包含验证码的推文' : 'Click Post button to publish tweet with verification code'}</li>
-              <li>{isZh ? '粘贴推文链接到输入框 → 点击验证' : 'Paste tweet URL into the input field → Click verify'}</li>
-              <li>{isZh ? '绑定钱包 → 提取手续费' : 'Bind wallet → Claim fees'}</li>
+              <li>{isZh ? '点击「使用 Twitter 登录」按钮，通过 Twitter OAuth 验证身份' : 'Click "Login with Twitter" button to verify via Twitter OAuth'}</li>
+              <li>{isZh ? '绑定 BSC 钱包 → 提取手续费' : 'Bind BSC wallet → Claim fees'}</li>
             </ol>
           </div>
         </div>
