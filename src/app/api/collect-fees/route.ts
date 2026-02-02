@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, createWalletClient, http, defineChain, formatEther } from 'viem';
 import { getDeployerAccount } from '@/lib/kms-signer';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
-import { createClient } from '@supabase/supabase-js';
 
 const bsc = defineChain({
   id: 56,
@@ -39,16 +38,25 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. Get all tokens from Supabase
+    // 2. Get all tokens from Supabase REST API
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
     
     let tokenAddresses: string[] = [];
     if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const { data: tokens } = await supabase.from('tokens').select('address');
-      if (tokens) {
-        tokenAddresses = tokens.map((t: { address: string }) => t.address);
+      try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/tokens?select=address`, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+        });
+        if (res.ok) {
+          const tokens = await res.json();
+          tokenAddresses = tokens.map((t: { address: string }) => t.address);
+        }
+      } catch (e) {
+        console.log('Failed to fetch tokens from Supabase:', (e as Error).message);
       }
     }
 
