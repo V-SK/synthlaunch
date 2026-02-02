@@ -55,14 +55,7 @@ export default function RegisterPage() {
           <p className="text-sm text-[#848E9C]">{t('sid.register.subtitle')}</p>
         </div>
 
-        {!isConnected ? (
-          <BnbCard className="p-12 text-center">
-            <div className="text-4xl mb-4">🔗</div>
-            <h3 className="text-lg font-bold text-[#EAECEF] mb-2">{t('sid.register.connectWallet')}</h3>
-            <p className="text-sm text-[#848E9C]">{t('sid.register.connectDesc')}</p>
-          </BnbCard>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Form */}
             <div className="space-y-4">
               <BnbCard className="p-6 space-y-5">
@@ -170,7 +163,15 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                {isSuccess ? (
+                {!isConnected ? (
+                  <BnbButton
+                    disabled
+                    variant="primary"
+                    className="w-full text-base py-3 opacity-60"
+                  >
+                    🔗 {t('sid.register.connectWallet')}
+                  </BnbButton>
+                ) : isSuccess ? (
                   <div className="text-center py-4">
                     <div className="text-3xl mb-2">✅</div>
                     <p className="text-[#0ECB81] font-bold">SynthID Minted Successfully!</p>
@@ -205,7 +206,6 @@ export default function RegisterPage() {
               />
             </div>
           </div>
-        )}
       </div>
     </BnbThemeProvider>
   );
