@@ -11,8 +11,9 @@ import { SearchBar } from '@/components/identity/SearchBar';
 import { StatsCards } from '@/components/identity/StatsCards';
 import { AgentCardCompact } from '@/components/identity/AgentCard';
 import { FeatureCards } from '@/components/identity/FeatureCards';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-export default function IdentityPage() {
+function IdentityPageInner() {
   const { t } = useI18n();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { agents, isLoading, totalMinted, activeCount } = useAllAgents();
@@ -158,5 +159,13 @@ export default function IdentityPage() {
         </footer>
       </div>
     </BnbThemeProvider>
+  );
+}
+
+export default function IdentityPage() {
+  return (
+    <ErrorBoundary>
+      <IdentityPageInner />
+    </ErrorBoundary>
   );
 }

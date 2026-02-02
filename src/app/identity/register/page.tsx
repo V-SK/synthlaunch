@@ -8,6 +8,7 @@ import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
 import { BnbThemeProvider, BnbCard, BnbButton } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
 import { AgentPreviewCard } from '@/components/identity/AgentPreviewCard';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const LIMITS = {
   name: 32,
@@ -30,7 +31,7 @@ interface MoltbookAgent {
   x_handle: string;
 }
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const { t, locale } = useI18n();
   const isZh = locale === 'zh';
   const { isConnected, address } = useAccount();
@@ -663,5 +664,13 @@ export default function RegisterPage() {
           </div>
       </div>
     </BnbThemeProvider>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <ErrorBoundary>
+      <RegisterPageInner />
+    </ErrorBoundary>
   );
 }

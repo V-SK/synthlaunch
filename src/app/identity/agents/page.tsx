@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n';
 import { useAllAgents, type OnChainAgent } from '@/hooks/useSynthID';
 import { BnbThemeProvider, BnbCard, BscChainBadge, PlatformBadge, BnbButton } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -331,8 +332,10 @@ function AgentsPageInner() {
 
 export default function AgentsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0B0E11]" />}>
-      <AgentsPageInner />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<div className="min-h-screen bg-[#0B0E11]" />}>
+        <AgentsPageInner />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

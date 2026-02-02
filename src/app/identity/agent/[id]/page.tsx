@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n';
 import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
 import { BnbThemeProvider, BnbCard, BscChainBadge, PlatformBadge, BnbBadge, BnbButton } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface MoltbookData {
   found: boolean;
@@ -25,7 +26,7 @@ const PLATFORM_LINKS: Record<string, (id: string) => string> = {
   twitter: (id) => `https://x.com/${id}`,
 };
 
-export default function AgentDetailPage() {
+function AgentDetailPageInner() {
   const { t } = useI18n();
   const params = useParams();
   const agentId = Number(params.id);
@@ -343,5 +344,13 @@ export default function AgentDetailPage() {
         </div>
       </div>
     </BnbThemeProvider>
+  );
+}
+
+export default function AgentDetailPage() {
+  return (
+    <ErrorBoundary>
+      <AgentDetailPageInner />
+    </ErrorBoundary>
   );
 }
