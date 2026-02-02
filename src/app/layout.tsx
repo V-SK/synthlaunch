@@ -26,7 +26,7 @@ export default function RootLayout({
             <div className="fixed inset-0 scanline z-[5] pointer-events-none" />
             
             <Header />
-            <main className="max-w-7xl mx-auto px-4 py-8">
+            <main className="max-w-7xl mx-auto px-4 py-8 pt-22">
               {children}
             </main>
 
