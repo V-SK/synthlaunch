@@ -69,9 +69,17 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
         {taxRate > 0 && agent_name && (
           <div className="mb-3 flex items-center gap-1.5">
             <span className="text-[10px] text-synth-cyan">⚡ Fee Sharing</span>
-            <span className="text-[10px] px-1.5 py-0.5 bg-synth-purple/10 text-synth-purple rounded font-mono">
+            <a
+              href={agent_name.startsWith('tw:') 
+                ? `https://x.com/${agent_name.slice(3)}` 
+                : `https://moltbook.com/u/${agent_name}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] px-1.5 py-0.5 bg-synth-purple/10 text-synth-purple rounded font-mono hover:bg-synth-purple/20 transition-colors"
+            >
               {agent_name.startsWith('tw:') ? `🐦 @${agent_name.slice(3)}` : `🦞 ${agent_name}`}
-            </span>
+            </a>
           </div>
         )}
 

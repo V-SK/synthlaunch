@@ -160,13 +160,19 @@ export default function TokenPage({ params }: { params: { address: string } }) {
                 {token.taxRate}% {isZh ? '交易税分润给' : 'trading tax shared with'}
               </p>
             </div>
-            <div className="ml-auto">
-              <span className="text-sm px-3 py-1.5 bg-synth-purple/10 text-synth-purple rounded-lg font-mono">
-                {token.agent_name.startsWith('tw:') 
-                  ? `🐦 @${token.agent_name.slice(3)}` 
-                  : `🦞 ${token.agent_name}`}
-              </span>
-            </div>
+            <a
+              href={token.agent_name.startsWith('tw:')
+                ? `https://x.com/${token.agent_name.slice(3)}`
+                : `https://moltbook.com/u/${token.agent_name}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto text-sm px-3 py-1.5 bg-synth-purple/10 text-synth-purple rounded-lg font-mono hover:bg-synth-purple/20 transition-colors"
+            >
+              {token.agent_name.startsWith('tw:')
+                ? `🐦 @${token.agent_name.slice(3)}`
+                : `🦞 ${token.agent_name}`}
+              <span className="ml-1 text-[10px]">↗</span>
+            </a>
           </div>
         </div>
       )}

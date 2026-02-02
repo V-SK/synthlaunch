@@ -354,6 +354,10 @@ export async function GET(request: NextRequest) {
     case 'top':
       sorted.sort((a, b) => b.marketCap - a.marketCap);
       break;
+    case 'dex':
+      sorted = sorted.filter((t) => t.status === 4);
+      sorted.sort((a, b) => b.marketCap - a.marketCap);
+      break;
     case 'new':
     default:
       sorted.sort((a, b) => b.createdAt - a.createdAt);

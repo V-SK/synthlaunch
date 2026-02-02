@@ -10,7 +10,7 @@ import { useI18n } from '@/lib/i18n';
 
 const TOKENS_PER_PAGE = 12;
 
-type SortTab = 'hot' | 'new' | 'top';
+type SortTab = 'hot' | 'new' | 'top' | 'dex';
 
 export default function Home() {
   const { t } = useI18n();
@@ -42,6 +42,7 @@ export default function Home() {
     { key: 'hot', label: t('home.sortHot'), icon: '🔥' },
     { key: 'new', label: t('home.sortNew'), icon: '🆕' },
     { key: 'top', label: t('home.sortTop'), icon: '🏆' },
+    { key: 'dex', label: 'DEX', icon: '🎓' },
   ];
 
   const totalPages = Math.ceil(tokens.length / TOKENS_PER_PAGE);
