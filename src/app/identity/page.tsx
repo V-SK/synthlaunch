@@ -1,508 +1,136 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useReadContract, useWriteContract, usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, isAddress, type Address, keccak256, encodePacked } from 'viem';
-import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
-import { IdentityCard } from '@/components/IdentityCard';
+import { useRef } from 'react';
+import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-
-interface AgentData {
-  agentId: number;
-  name: string;
-  platform: string;
-  platformId: string;
-  agentURI: string;
-  createdAt: number;
-  owner: string;
-  avatar: string;
-  description: string;
-  skills: string[];
-}
+import { MOCK_AGENTS, MOCK_STATS } from '@/lib/identity-mock';
+import { BnbThemeProvider, BnbButton, BscChainBadge } from '@/components/identity/BnbTheme';
+import { IdentityNav } from '@/components/identity/IdentityNav';
+import { SearchBar } from '@/components/identity/SearchBar';
+import { StatsCards } from '@/components/identity/StatsCards';
+import { AgentCardCompact } from '@/components/identity/AgentCard';
+import { FeatureCards } from '@/components/identity/FeatureCards';
 
 export default function IdentityPage() {
   const { t } = useI18n();
-  const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  // ── Search ──
-  const [searchMode, setSearchMode] = useState<'wallet' | 'platform'>('wallet');
-  const [searchWallet, setSearchWallet] = useState('');
-  const [searchPlatform, setSearchPlatform] = useState('moltbook');
-  const [searchPlatformId, setSearchPlatformId] = useState('');
-  const [searchResult, setSearchResult] = useState<AgentData | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState('');
+  const latestAgents = [...MOCK_AGENTS].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
 
-  // ── Register ──
-  const [regName, setRegName] = useState('');
-  const [regPlatform, setRegPlatform] = useState('moltbook');
-  const [regPlatformId, setRegPlatformId] = useState('');
-  const [regAvatar, setRegAvatar] = useState('');
-  const [regDescription, setRegDescription] = useState('');
-  const [regError, setRegError] = useState('');
+  const stats = [
+    { label: t('sid.statsAgents'), value: MOCK_STATS.totalAgents, icon: '🤖' },
+    { label: t('sid.statsMints'), value: MOCK_STATS.totalMints, icon: '🔨' },
+    { label: t('sid.statsActive'), value: MOCK_STATS.activeOnBsc, icon: '⚡' },
+  ];
 
-  // ── My Identity ──
-  const [myAgent, setMyAgent] = useState<AgentData | null>(null);
-  const [myLoading, setMyLoading] = useState(false);
-
-  // ── Edit mode ──
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editAvatar, setEditAvatar] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editSkills, setEditSkills] = useState('');
-
-  // Read mint fee
-  const { data: mintFee } = useReadContract({
-    address: SYNTHID_ADDRESS,
-    abi: SYNTHID_ABI,
-    functionName: 'mintFee',
-  });
-
-  // Read total minted
-  const { data: totalMinted } = useReadContract({
-    address: SYNTHID_ADDRESS,
-    abi: SYNTHID_ABI,
-    functionName: 'totalMinted',
-  });
-
-  // Write: register
-  const { writeContract: writeRegister, data: registerHash, isPending: registerPending } = useWriteContract();
-  const { isSuccess: registerSuccess } = useWaitForTransactionReceipt({ hash: registerHash });
-
-  // Write: updateProfile
-  const { writeContract: writeUpdateProfile, data: updateHash, isPending: updatePending } = useWriteContract();
-  const { isSuccess: updateSuccess } = useWaitForTransactionReceipt({ hash: updateHash });
-
-  // Write: setSkills
-  const { writeContract: writeSetSkills, data: skillsHash, isPending: skillsPending } = useWriteContract();
-  const { isSuccess: skillsSuccess } = useWaitForTransactionReceipt({ hash: skillsHash });
-
-  // ── Fetch agent data by ID ──
-  const fetchAgentById = useCallback(async (agentId: number): Promise<AgentData | null> => {
-    if (!publicClient || agentId === 0) return null;
-    try {
-      const [identity, profile] = await Promise.all([
-        publicClient.readContract({
-          address: SYNTHID_ADDRESS,
-          abi: SYNTHID_ABI,
-          functionName: 'getAgentIdentity',
-          args: [BigInt(agentId)],
-        }),
-        publicClient.readContract({
-          address: SYNTHID_ADDRESS,
-          abi: SYNTHID_ABI,
-          functionName: 'getAgentProfile',
-          args: [BigInt(agentId)],
-        }),
-      ]);
-      const [name, platform, platformId, agentURI, createdAt, owner] = identity as [string, string, string, string, bigint, string];
-      const [avatar, description, skills] = profile as [string, string, string[]];
-      return {
-        agentId,
-        name,
-        platform,
-        platformId,
-        agentURI,
-        createdAt: Number(createdAt),
-        owner,
-        avatar,
-        description,
-        skills,
-      };
-    } catch {
-      return null;
-    }
-  }, [publicClient]);
-
-  // ── Search handler ──
-  const handleSearch = async () => {
-    setSearchError('');
-    setSearchResult(null);
-    setSearchLoading(true);
-    try {
-      if (searchMode === 'wallet') {
-        if (!isAddress(searchWallet)) {
-          setSearchError('Invalid wallet address');
-          return;
-        }
-        const tokenId = await publicClient!.readContract({
-          address: SYNTHID_ADDRESS,
-          abi: SYNTHID_ABI,
-          functionName: 'walletToId',
-          args: [searchWallet as Address],
-        }) as bigint;
-        if (tokenId === 0n) {
-          setSearchError(t('identity.noIdentity'));
-          return;
-        }
-        const data = await fetchAgentById(Number(tokenId));
-        setSearchResult(data);
-      } else {
-        const tokenId = await publicClient!.readContract({
-          address: SYNTHID_ADDRESS,
-          abi: SYNTHID_ABI,
-          functionName: 'getByPlatform',
-          args: [searchPlatform, searchPlatformId],
-        }) as bigint;
-        if (tokenId === 0n) {
-          setSearchError(t('identity.noIdentity'));
-          return;
-        }
-        const data = await fetchAgentById(Number(tokenId));
-        setSearchResult(data);
-      }
-    } catch (err) {
-      setSearchError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setSearchLoading(false);
+  const scrollCarousel = (dir: number) => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: dir * 240, behavior: 'smooth' });
     }
   };
-
-  // ── Load my identity ──
-  const loadMyIdentity = useCallback(async () => {
-    if (!address || !publicClient) return;
-    setMyLoading(true);
-    try {
-      const tokenId = await publicClient.readContract({
-        address: SYNTHID_ADDRESS,
-        abi: SYNTHID_ABI,
-        functionName: 'walletToId',
-        args: [address],
-      }) as bigint;
-      if (tokenId === 0n) {
-        setMyAgent(null);
-      } else {
-        const data = await fetchAgentById(Number(tokenId));
-        setMyAgent(data);
-        if (data) {
-          setEditName(data.name);
-          setEditAvatar(data.avatar);
-          setEditDescription(data.description);
-          setEditSkills(data.skills.join(', '));
-        }
-      }
-    } catch {
-      setMyAgent(null);
-    } finally {
-      setMyLoading(false);
-    }
-  }, [address, publicClient, fetchAgentById]);
-
-  useEffect(() => {
-    if (isConnected) loadMyIdentity();
-  }, [isConnected, loadMyIdentity]);
-
-  // Reload after successful register
-  useEffect(() => {
-    if (registerSuccess) {
-      loadMyIdentity();
-      setRegName('');
-      setRegPlatform('moltbook');
-      setRegPlatformId('');
-      setRegAvatar('');
-      setRegDescription('');
-    }
-  }, [registerSuccess, loadMyIdentity]);
-
-  // Reload after successful update
-  useEffect(() => {
-    if (updateSuccess || skillsSuccess) {
-      loadMyIdentity();
-      setEditing(false);
-    }
-  }, [updateSuccess, skillsSuccess, loadMyIdentity]);
-
-  // ── Register handler ──
-  const handleRegister = () => {
-    setRegError('');
-    if (!regName.trim() || !regPlatform.trim() || !regPlatformId.trim()) {
-      setRegError('Name, platform, and platform ID are required');
-      return;
-    }
-    writeRegister({
-      address: SYNTHID_ADDRESS,
-      abi: SYNTHID_ABI,
-      functionName: 'register',
-      args: [regName, regPlatform, regPlatformId, regAvatar, regDescription],
-      value: mintFee as bigint ?? parseEther('0.005'),
-    });
-  };
-
-  // ── Update handler ──
-  const handleUpdate = () => {
-    if (!myAgent) return;
-    writeUpdateProfile({
-      address: SYNTHID_ADDRESS,
-      abi: SYNTHID_ABI,
-      functionName: 'updateProfile',
-      args: [BigInt(myAgent.agentId), editName, editAvatar, editDescription],
-    });
-    const skillsArr = editSkills.split(',').map(s => s.trim()).filter(Boolean);
-    if (JSON.stringify(skillsArr) !== JSON.stringify(myAgent.skills)) {
-      writeSetSkills({
-        address: SYNTHID_ADDRESS,
-        abi: SYNTHID_ABI,
-        functionName: 'setSkills',
-        args: [BigInt(myAgent.agentId), skillsArr],
-      });
-    }
-  };
-
-  const feeDisplay = mintFee ? `${Number(mintFee) / 1e18} BNB` : '0.005 BNB';
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-synth-text terminal-prompt">{t('identity.title')}</h1>
-        <p className="text-sm text-synth-muted">{t('identity.subtitle')}</p>
-        {totalMinted !== undefined && (
-          <div className="text-xs text-synth-green font-mono">
-            {Number(totalMinted)} {t('identity.registered')}
+    <BnbThemeProvider>
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <IdentityNav />
+
+        {/* Hero */}
+        <section className="text-center py-12 relative">
+          {/* Background glow */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#F0B90B]/5 rounded-full blur-[100px]" />
           </div>
-        )}
-      </div>
 
-      {/* ═══ Search Section ═══ */}
-      <div className="card space-y-4">
-        <h2 className="text-sm font-bold text-synth-cyan">{t('identity.search')}</h2>
-
-        {/* Mode toggle */}
-        <div className="flex gap-1">
-          <button
-            onClick={() => setSearchMode('wallet')}
-            className={`px-3 py-1.5 text-xs font-mono rounded transition-colors ${
-              searchMode === 'wallet'
-                ? 'bg-synth-cyan/15 text-synth-cyan border border-synth-cyan/30'
-                : 'text-synth-muted hover:text-synth-text'
-            }`}
-          >
-            {t('identity.searchByWallet')}
-          </button>
-          <button
-            onClick={() => setSearchMode('platform')}
-            className={`px-3 py-1.5 text-xs font-mono rounded transition-colors ${
-              searchMode === 'platform'
-                ? 'bg-synth-cyan/15 text-synth-cyan border border-synth-cyan/30'
-                : 'text-synth-muted hover:text-synth-text'
-            }`}
-          >
-            {t('identity.searchByPlatform')}
-          </button>
-        </div>
-
-        {searchMode === 'wallet' ? (
-          <div className="space-y-1">
-            <label className="text-xs text-synth-muted">{t('identity.searchPlaceholder')}</label>
-            <input
-              type="text"
-              placeholder="0x..."
-              value={searchWallet}
-              onChange={(e) => setSearchWallet(e.target.value)}
-              className="input-field w-full"
-            />
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <select
-              value={searchPlatform}
-              onChange={(e) => setSearchPlatform(e.target.value)}
-              className="input-field"
-            >
-              <option value="moltbook">🦞 Moltbook</option>
-              <option value="twitter">🐦 Twitter</option>
-              <option value="custom">🔗 Custom</option>
-            </select>
-            <input
-              type="text"
-              placeholder={t('identity.platformId')}
-              value={searchPlatformId}
-              onChange={(e) => setSearchPlatformId(e.target.value)}
-              className="input-field flex-1"
-            />
-          </div>
-        )}
-
-        <button
-          onClick={handleSearch}
-          disabled={searchLoading}
-          className="btn-primary text-sm"
-        >
-          {searchLoading ? '...' : t('identity.search')}
-        </button>
-
-        {searchError && (
-          <div className="text-xs text-red-400">{searchError}</div>
-        )}
-
-        {searchResult && (
-          <IdentityCard {...searchResult} />
-        )}
-      </div>
-
-      {/* ═══ Register Section ═══ */}
-      {isConnected && !myAgent && (
-        <div className="card space-y-4">
-          <h2 className="text-sm font-bold text-synth-green">{t('identity.register')}</h2>
-          <p className="text-xs text-synth-muted">
-            {t('identity.mintFee')}: <span className="text-synth-green">{feeDisplay}</span> · {t('identity.soulbound')}
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs text-synth-muted">{t('identity.name')} *</label>
-              <input
-                type="text"
-                placeholder="My Agent"
-                value={regName}
-                onChange={(e) => setRegName(e.target.value)}
-                className="input-field w-full"
-              />
+          <div className="relative">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <BscChainBadge />
+              <span className="text-[10px] px-2 py-0.5 bg-[#0ECB81]/10 text-[#0ECB81] border border-[#0ECB81]/20 rounded font-mono">
+                ERC-8004
+              </span>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-synth-muted">{t('identity.platform')} *</label>
-              <select
-                value={regPlatform}
-                onChange={(e) => setRegPlatform(e.target.value)}
-                className="input-field w-full"
-              >
-                <option value="moltbook">🦞 Moltbook</option>
-                <option value="twitter">🐦 Twitter</option>
-                <option value="custom">🔗 Custom</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-synth-muted">{t('identity.platformId')} *</label>
-              <input
-                type="text"
-                placeholder="username"
-                value={regPlatformId}
-                onChange={(e) => setRegPlatformId(e.target.value)}
-                className="input-field w-full"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-synth-muted">{t('identity.avatar')}</label>
-              <input
-                type="text"
-                placeholder="https://..."
-                value={regAvatar}
-                onChange={(e) => setRegAvatar(e.target.value)}
-                className="input-field w-full"
-              />
-            </div>
+
+            <h1 className="text-4xl md:text-5xl font-bold text-[#EAECEF] mb-2">
+              <span className="text-[#F0B90B]">{t('sid.heroTitle')}</span>
+            </h1>
+            <h2 className="text-xl md:text-2xl text-[#EAECEF] mb-4 font-medium">
+              {t('sid.heroSubtitle')}
+            </h2>
+            <p className="text-sm md:text-base text-[#848E9C] max-w-2xl mx-auto leading-relaxed mb-8">
+              {t('sid.heroDesc')}
+            </p>
+
+            {/* Search */}
+            <SearchBar />
           </div>
+        </section>
 
-          <div className="space-y-1">
-            <label className="text-xs text-synth-muted">{t('identity.description')}</label>
-            <textarea
-              placeholder="Describe your agent..."
-              value={regDescription}
-              onChange={(e) => setRegDescription(e.target.value)}
-              rows={3}
-              className="input-field w-full resize-none"
-            />
-          </div>
+        {/* Stats */}
+        <section className="mb-12">
+          <StatsCards stats={stats} />
+        </section>
 
-          {regError && <div className="text-xs text-red-400">{regError}</div>}
-
-          <button
-            onClick={handleRegister}
-            disabled={registerPending}
-            className="btn-primary w-full"
-          >
-            {registerPending ? '...' : `${t('identity.mint')} (${feeDisplay})`}
-          </button>
-
-          {registerSuccess && (
-            <div className="text-xs text-synth-green">✅ {t('identity.registered')}!</div>
-          )}
-        </div>
-      )}
-
-      {!isConnected && (
-        <div className="card text-center py-8 space-y-2">
-          <span className="text-2xl">🔗</span>
-          <p className="text-synth-muted text-sm">{t('common.connectWallet')}</p>
-          <p className="text-xs text-synth-muted">{t('identity.subtitle')}</p>
-        </div>
-      )}
-
-      {/* ═══ My Identity Section ═══ */}
-      {isConnected && myAgent && (
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-synth-purple">{t('identity.myIdentity')}</h2>
-            <button
-              onClick={() => setEditing(!editing)}
-              className="text-xs text-synth-cyan hover:underline font-mono"
-            >
-              {editing ? '✕ Cancel' : '✎ Edit'}
-            </button>
-          </div>
-
-          {!editing ? (
-            <IdentityCard {...myAgent} />
-          ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs text-synth-muted">{t('identity.name')}</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="input-field w-full"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-synth-muted">{t('identity.avatar')}</label>
-                  <input
-                    type="text"
-                    value={editAvatar}
-                    onChange={(e) => setEditAvatar(e.target.value)}
-                    className="input-field w-full"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-synth-muted">{t('identity.description')}</label>
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={3}
-                  className="input-field w-full resize-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-synth-muted">{t('identity.skills')} (comma-separated)</label>
-                <input
-                  type="text"
-                  placeholder="trading, DeFi, NFTs"
-                  value={editSkills}
-                  onChange={(e) => setEditSkills(e.target.value)}
-                  className="input-field w-full"
-                />
-              </div>
-              <button
-                onClick={handleUpdate}
-                disabled={updatePending || skillsPending}
-                className="btn-purple w-full"
-              >
-                {updatePending || skillsPending ? 'Updating...' : 'Save Changes'}
+        {/* Latest Agents Carousel */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-[#EAECEF]">{t('sid.latestAgents')}</h2>
+            <div className="flex items-center gap-2">
+              <button onClick={() => scrollCarousel(-1)} className="w-8 h-8 rounded-lg bg-[#1E2329] border border-[#2B3139] text-[#848E9C] hover:text-[#EAECEF] hover:border-[#F0B90B]/40 transition-all flex items-center justify-center">
+                ‹
               </button>
+              <button onClick={() => scrollCarousel(1)} className="w-8 h-8 rounded-lg bg-[#1E2329] border border-[#2B3139] text-[#848E9C] hover:text-[#EAECEF] hover:border-[#F0B90B]/40 transition-all flex items-center justify-center">
+                ›
+              </button>
+              <Link href="/identity/agents" className="text-sm text-[#F0B90B] hover:text-[#F0B90B]/80 transition-colors ml-2">
+                {t('sid.viewAll')}
+              </Link>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+          <div
+            ref={carouselRef}
+            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {latestAgents.map(agent => (
+              <AgentCardCompact key={agent.agentId} agent={agent} />
+            ))}
+          </div>
+        </section>
 
-      {isConnected && !myAgent && !myLoading && (
-        <div className="text-center py-4">
-          <p className="text-xs text-synth-muted">{t('identity.noIdentity')}</p>
-        </div>
-      )}
-    </div>
+        {/* Register CTA */}
+        <section className="mb-12">
+          <div className="bg-gradient-to-r from-[#F0B90B]/10 via-[#F0B90B]/5 to-transparent border border-[#F0B90B]/20 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-bold text-[#EAECEF] mb-1">{t('sid.registerCta')}</h3>
+              <p className="text-sm text-[#848E9C]">{t('sid.registerCtaDesc')}</p>
+            </div>
+            <Link href="/identity/register">
+              <BnbButton variant="primary" className="whitespace-nowrap text-base px-8 py-3">
+                {t('sid.registerCta')} →
+              </BnbButton>
+            </Link>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="mb-12">
+          <FeatureCards />
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-[#2B3139] pt-6 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#848E9C]">
+          <div className="flex items-center gap-4">
+            <span className="text-[#F0B90B] font-bold">SynthID</span>
+            <span>{t('sid.footerBuilt')}</span>
+            <span>{t('sid.footerProtocol')}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/identity/agents" className="hover:text-[#EAECEF] transition-colors">Registry</Link>
+            <Link href="/identity/register" className="hover:text-[#EAECEF] transition-colors">Register</Link>
+            <a href="https://github.com/V-SK/synthlaunch" target="_blank" rel="noopener noreferrer" className="hover:text-[#EAECEF] transition-colors">GitHub</a>
+            <a href="https://x.com/synth_fun" target="_blank" rel="noopener noreferrer" className="hover:text-[#EAECEF] transition-colors">Twitter</a>
+          </div>
+        </footer>
+      </div>
+    </BnbThemeProvider>
   );
 }
