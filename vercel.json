@@ -3,6 +3,10 @@
     {
       "path": "/api/collect-fees",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/reclaim-fees",
+      "schedule": "0 0 * * 1"
     }
   ]
 }
