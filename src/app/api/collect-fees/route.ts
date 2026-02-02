@@ -1,33 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http, formatEther } from 'viem';
-import { bsc } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
-import { CUSTODY_ADDRESS, CUSTODY_ABI } from '@/lib/custody';
+import { NextResponse } from 'next/server';
+import { createPublicClient, createWalletClient, http, defineChain, formatEther } from 'viem';
+import { getDeployerAccount } from '@/lib/kms-signer';
+import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
+import { createClient } from '@supabase/supabase-js';
 
-const CRON_SECRET = process.env.CRON_SECRET || '';
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || '';
-const PLATFORM_WALLET = process.env.PLATFORM_WALLET || '0x8028227C43947F41bB431571002D512815D77C4F';
+const bsc = defineChain({
+  id: 56,
+  name: 'BNB Smart Chain',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org/'] } },
+});
 
-export const dynamic = 'force-dynamic';
+const WITHDRAW_TO = '0xD770A87A0742258Fa850768590Be6d90a665838a' as const; // V's wallet
 
-async function collectFees() {
-  if (!DEPLOYER_PRIVATE_KEY) {
-    return NextResponse.json({ error: 'DEPLOYER_PRIVATE_KEY not configured' }, { status: 500 });
-  }
-
+export async function POST(request: Request) {
   try {
-    const account = privateKeyToAccount(DEPLOYER_PRIVATE_KEY as `0x${string}`);
-    const publicClient = createPublicClient({ chain: bsc, transport: http() });
-    const walletClient = createWalletClient({ account, chain: bsc, transport: http() });
+    // Verify cron secret
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Check platform fee balance
-    const platformFeeBalance = await publicClient.readContract({
+    const publicClient = createPublicClient({ chain: bsc, transport: http() });
+
+    // 1. Check platform fee balance
+    const platformBalance = await publicClient.readContract({
       address: CUSTODY_ADDRESS,
       abi: CUSTODY_ABI,
       functionName: 'platformFeeBalance',
     }) as bigint;
 
-    if (platformFeeBalance === BigInt(0)) {
+    if (platformBalance === 0n) {
       return NextResponse.json({ 
         success: true, 
         message: 'No platform fees to collect',
@@ -35,47 +39,81 @@ async function collectFees() {
       });
     }
 
-    // Withdraw platform fees
-    const txHash = await walletClient.writeContract({
+    // 2. Get all tokens from Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    
+    let tokenAddresses: string[] = [];
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: tokens } = await supabase.from('tokens').select('address');
+      if (tokens) {
+        tokenAddresses = tokens.map((t: { address: string }) => t.address);
+      }
+    }
+
+    // 3. Collect fees from all tokens (if any registered)
+    const account = await getDeployerAccount();
+    const walletClient = createWalletClient({ account, chain: bsc, transport: http() });
+
+    if (tokenAddresses.length > 0) {
+      try {
+        const collectHash = await walletClient.writeContract({
+          address: CUSTODY_ADDRESS,
+          abi: CUSTODY_ABI,
+          functionName: 'collectPlatformFeeBatch',
+          args: [tokenAddresses as `0x${string}`[]],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: collectHash, timeout: 30000 });
+      } catch (e) {
+        // collectPlatformFeeBatch might fail if no new fees, continue to withdraw
+        console.log('collectPlatformFeeBatch skipped:', (e as Error).message?.substring(0, 100));
+      }
+    }
+
+    // 4. Re-check balance after collection
+    const updatedBalance = await publicClient.readContract({
+      address: CUSTODY_ADDRESS,
+      abi: CUSTODY_ABI,
+      functionName: 'platformFeeBalance',
+    }) as bigint;
+
+    if (updatedBalance === 0n) {
+      return NextResponse.json({ 
+        success: true, 
+        message: 'No fees after collection',
+        balance: '0' 
+      });
+    }
+
+    // 5. Withdraw to V's wallet
+    const withdrawHash = await walletClient.writeContract({
       address: CUSTODY_ADDRESS,
       abi: CUSTODY_ABI,
       functionName: 'withdrawPlatformFee',
-      args: [PLATFORM_WALLET as `0x${string}`],
+      args: [WITHDRAW_TO],
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({ 
-      hash: txHash, 
-      confirmations: 1 
-    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: withdrawHash, timeout: 30000 });
 
     return NextResponse.json({
       success: true,
-      message: `Withdrawn ${formatEther(platformFeeBalance)} BNB to ${PLATFORM_WALLET}`,
-      amount: formatEther(platformFeeBalance),
-      txHash,
-      blockNumber: Number(receipt.blockNumber),
+      message: `Withdrew ${formatEther(updatedBalance)} BNB to ${WITHDRAW_TO}`,
+      amount: formatEther(updatedBalance),
+      txHash: withdrawHash,
+      status: receipt.status,
     });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('Collect fees error:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+
+  } catch (error) {
+    console.error('Collect fees error:', error);
+    return NextResponse.json(
+      { error: 'Failed to collect fees', details: (error as Error).message },
+      { status: 500 }
+    );
   }
 }
 
-// GET — Vercel Cron uses GET requests
-export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return collectFees();
-}
-
-// POST — manual trigger
-export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return collectFees();
+// Also support GET for Vercel Cron
+export async function GET(request: Request) {
+  return POST(request);
 }
