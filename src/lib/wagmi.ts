@@ -6,7 +6,7 @@ export const config = createConfig({
   chains: [bsc],
   connectors: [
     injected(),
-    walletConnect({ projectId: 'placeholder' }),
+    walletConnect({ projectId: 'a2e98dc7f5d6115dc0ffafed5f522fd3' }),
   ],
   transports: {
     [bsc.id]: http('https://bsc-dataseed.binance.org'),
