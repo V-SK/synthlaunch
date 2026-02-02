@@ -6,6 +6,7 @@ export interface Token {
   image: string;
   description: string;
   creator: string;
+  agent_name: string;
   taxRate: number;
   price: number;
   priceUsd: number;

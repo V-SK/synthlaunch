@@ -5,7 +5,7 @@ import type { Token } from '@/lib/api';
 import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
-export function TokenCard({ address, name, symbol, image, price, priceUsd, marketCap, taxRate, status, progress, createdAt }: Token) {
+export function TokenCard({ address, name, symbol, image, price, priceUsd, marketCap, taxRate, status, progress, createdAt, agent_name }: Token) {
   const { t } = useI18n();
   const statusText = statusLabel(status);
   const isOnDex = status === 4;
@@ -62,6 +62,16 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
                 style={{ width: `${Math.min(100, progress * 100)}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Fee Sharing */}
+        {taxRate > 0 && agent_name && (
+          <div className="mb-3 flex items-center gap-1.5">
+            <span className="text-[10px] text-synth-cyan">⚡ Fee Sharing</span>
+            <span className="text-[10px] px-1.5 py-0.5 bg-synth-purple/10 text-synth-purple rounded font-mono">
+              {agent_name.startsWith('tw:') ? `🐦 @${agent_name.slice(3)}` : `🤖 ${agent_name}`}
+            </span>
           </div>
         )}
 
