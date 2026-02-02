@@ -12,6 +12,12 @@ const TOKENS_PER_PAGE = 12;
 
 type SortTab = 'hot' | 'new' | 'top' | 'dex';
 
+interface TopEarner {
+  rank: number;
+  tokenSymbol: string;
+  totalFeesBnb: number;
+}
+
 export default function Home() {
   const { t } = useI18n();
   const [sort, setSort] = useState<SortTab>('new');
@@ -19,6 +25,21 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [topEarners, setTopEarners] = useState<TopEarner[]>([]);
+
+  useEffect(() => {
+    fetch('/api/leaderboard')
+      .then(r => r.json())
+      .then(data => {
+        const top3 = (data.entries || []).slice(0, 3).map((e: any) => ({
+          rank: e.rank,
+          tokenSymbol: e.tokenSymbol,
+          totalFeesBnb: e.totalFeesBnb,
+        }));
+        setTopEarners(top3);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -80,6 +101,34 @@ export default function Home() {
 
       {/* Stats */}
       <StatsBar />
+
+      {/* Top Earners */}
+      {topEarners.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-synth-text font-mono">🏆 {t('home.topEarners')}</h2>
+            <Link href="/leaderboard" className="text-[10px] text-synth-cyan hover:text-synth-green transition-colors font-mono">
+              View All →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {topEarners.map((earner) => {
+              const rankEmoji = earner.rank === 1 ? '🥇' : earner.rank === 2 ? '🥈' : '🥉';
+              return (
+                <Link key={earner.rank} href="/leaderboard">
+                  <div className="card border border-synth-border hover:border-synth-green/30 transition-colors cursor-pointer flex items-center gap-3 py-3">
+                    <span className="text-xl">{rankEmoji}</span>
+                    <div>
+                      <span className="text-sm font-bold text-synth-green">${earner.tokenSymbol}</span>
+                      <span className="text-xs text-synth-muted block">{earner.totalFeesBnb.toFixed(4)} BNB</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Token List */}
       <section className="space-y-4">

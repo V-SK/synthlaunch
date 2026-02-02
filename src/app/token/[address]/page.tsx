@@ -12,6 +12,11 @@ export default function TokenPage({ params }: { params: { address: string } }) {
   const [token, setToken] = useState<Token | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [taxRevenue, setTaxRevenue] = useState<{
+    totalFeesBnb: number; totalFeesUsd: number;
+    claimedBnb: number; claimedUsd: number;
+    pendingBnb: number; pendingUsd: number;
+  } | null>(null);
 
   useEffect(() => {
     fetch(`/api/tokens?address=${params.address}`)
@@ -24,6 +29,27 @@ export default function TokenPage({ params }: { params: { address: string } }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // Fetch tax revenue data
+    fetch('/api/leaderboard')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.entries) return;
+        const entry = data.entries.find(
+          (e: any) => e.tokenAddress?.toLowerCase() === params.address.toLowerCase()
+        );
+        if (entry) {
+          setTaxRevenue({
+            totalFeesBnb: entry.totalFeesBnb,
+            totalFeesUsd: entry.totalFeesUsd,
+            claimedBnb: entry.claimedBnb,
+            claimedUsd: entry.claimedUsd,
+            pendingBnb: entry.pendingBnb,
+            pendingUsd: entry.pendingUsd,
+          });
+        }
+      })
+      .catch(() => {});
   }, [params.address]);
 
   const copyAddress = () => {
@@ -173,6 +199,38 @@ export default function TokenPage({ params }: { params: { address: string } }) {
                 : `🦞 ${token.agent_name}`}
               <span className="ml-1 text-[10px]">↗</span>
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Tax Revenue */}
+      {taxRevenue && (
+        <div className="card">
+          <h2 className="text-sm font-bold text-synth-cyan uppercase tracking-wider mb-4">
+            💰 {t('token.taxRevenue')}
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
+                {t('token.totalRevenue')}
+              </span>
+              <span className="text-lg font-bold text-synth-green">{taxRevenue.totalFeesBnb.toFixed(4)} BNB</span>
+              <span className="text-xs text-synth-muted block">${taxRevenue.totalFeesUsd.toFixed(2)}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
+                {t('token.claimed')}
+              </span>
+              <span className="text-lg font-bold text-synth-cyan">{taxRevenue.claimedBnb.toFixed(4)} BNB</span>
+              <span className="text-xs text-synth-muted block">${taxRevenue.claimedUsd.toFixed(2)}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
+                {t('token.pendingClaim')}
+              </span>
+              <span className="text-lg font-bold text-synth-green">{taxRevenue.pendingBnb.toFixed(4)} BNB</span>
+              <span className="text-xs text-synth-muted block">${taxRevenue.pendingUsd.toFixed(2)}</span>
+            </div>
           </div>
         </div>
       )}

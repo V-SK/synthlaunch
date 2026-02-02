@@ -7,13 +7,21 @@ import { useI18n } from '@/lib/i18n';
 export function StatsBar() {
   const { t } = useI18n();
   const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [totalRevenueBnb, setTotalRevenueBnb] = useState<string>('0');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then(r => r.json())
-      .then(data => {
-        setStats(data);
+    Promise.all([
+      fetch('/api/stats').then(r => r.json()),
+      fetch('/api/leaderboard').then(r => r.json()).catch(() => ({ entries: [] })),
+    ])
+      .then(([statsData, lbData]) => {
+        setStats(statsData);
+        const total = (lbData.entries || []).reduce(
+          (sum: number, e: { totalFeesBnb: number }) => sum + (e.totalFeesBnb || 0),
+          0
+        );
+        setTotalRevenueBnb(total.toFixed(4));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -23,11 +31,12 @@ export function StatsBar() {
     { label: t('stats.totalTokens'), value: stats?.totalTokens?.toString() || '0', icon: '◆', color: 'text-synth-green' },
     { label: t('stats.totalReserve'), value: `${stats?.totalReserveBnb || '0'} BNB`, icon: '◈', color: 'text-synth-cyan' },
     { label: t('stats.totalMarketCap'), value: stats?.totalMarketCap || '$0', icon: '◇', color: 'text-synth-purple' },
+    { label: t('stats.totalRevenue'), value: `${totalRevenueBnb} BNB`, icon: '💰', color: 'text-synth-cyan' },
     { label: t('stats.activeDex'), value: `${stats?.activeTokens || 0} / ${stats?.dexTokens || 0}`, icon: '▲', color: 'text-synth-green' },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {items.map((stat) => (
         <div
           key={stat.label}

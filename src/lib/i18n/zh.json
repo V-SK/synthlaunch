@@ -2,7 +2,8 @@
   "nav": {
     "home": "首页",
     "launch": "发币",
-    "claim": "领取"
+    "claim": "领取",
+    "leaderboard": "排行榜"
   },
   "home": {
     "heroTitle": "代币发行",
@@ -34,6 +35,7 @@
     "sortNew": "最新",
     "sortTop": "排行",
     "tokenCount": "{count} 个代币",
+    "topEarners": "税收榜",
     "builtOn": "基于 Flap Protocol · BSC 网络",
     "failedToLoad": "加载代币失败：{error}"
   },
@@ -192,6 +194,10 @@
     "notFoundDesc": "该代币可能尚未被索引，或在 Flap 平台上不存在。",
     "copied": "✓ 已复制",
     "migrated": "已迁移 ✓",
+    "taxRevenue": "税收收入",
+    "totalRevenue": "总税收",
+    "claimed": "已领取",
+    "pendingClaim": "待领取",
     "priceLabel": "价格 (USD)",
     "marketCapLabel": "市值",
     "priceBnbLabel": "价格 (BNB)",
@@ -242,6 +248,7 @@
     "totalTokens": "代币总数",
     "totalReserve": "总储备金",
     "totalMarketCap": "总市值",
-    "activeDex": "活跃 / DEX"
+    "activeDex": "活跃 / DEX",
+    "totalRevenue": "总税收"
   }
 }

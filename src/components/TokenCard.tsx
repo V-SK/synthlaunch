@@ -87,8 +87,8 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
         <div className="flex items-center justify-between pt-3 border-t border-synth-border">
           <div className="flex items-center gap-2">
             {taxRate > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 bg-synth-cyan/10 text-synth-cyan rounded">
-                {taxRate}% {t('home.tax')}
+              <span className="text-[10px] px-1.5 py-0.5 bg-synth-cyan/10 text-synth-cyan rounded border border-synth-cyan/20 font-mono font-bold">
+                ⚡ {taxRate}% {t('home.tax')}
               </span>
             )}
           </div>

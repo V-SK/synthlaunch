@@ -23,7 +23,7 @@ export function AgentSelector({ value, onChange, mode, onModeChange }: AgentSele
   const { t } = useI18n();
 
   const MODE_TABS: { key: AgentMode; icon: string; label: string }[] = [
-    { key: 'moltbook', icon: '🤖', label: t('agent.aiAgent') },
+    { key: 'moltbook', icon: '🦞', label: t('agent.aiAgent') },
     { key: 'twitter', icon: '🐦', label: t('agent.twitterTab') },
     { key: 'self', icon: '👤', label: t('agent.selfTab') },
   ];
@@ -210,7 +210,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
               <span className="text-synth-muted">{t('agent.loadingAgents')}</span>
             ) : selectedAgent ? (
               <span className="flex items-center gap-2">
-                <span className="text-synth-purple">🤖</span>
+                <span className="text-synth-purple">🦞</span>
                 {selectedAgent.name}
                 {selectedAgent.verified && (
                   <span className="text-synth-green text-xs">✓</span>
@@ -219,7 +219,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
               </span>
             ) : value ? (
               <span className="flex items-center gap-2">
-                <span className="text-synth-purple">🤖</span>
+                <span className="text-synth-purple">🦞</span>
                 {value}
                 {validationState === 'found' && <span className="text-synth-green text-xs">✓</span>}
                 {validationState === 'not-found' && <span className="text-yellow-400 text-xs">⚠</span>}
@@ -274,7 +274,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
                       value === agent.name ? 'bg-synth-green/5' : ''
                     }`}
                   >
-                    <span className="text-synth-purple">🤖</span>
+                    <span className="text-synth-purple">🦞</span>
                     <span className="text-synth-text">{agent.name}</span>
                     {agent.verified && (
                       <span className="text-synth-green text-xs">✓ verified</span>

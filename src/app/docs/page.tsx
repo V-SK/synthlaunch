@@ -24,7 +24,7 @@ export default function DocsPage() {
       {/* Quick Links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: isZh ? '🤖 Moltbook 发币' : '🤖 Moltbook Launch', href: '#moltbook' },
+          { label: isZh ? '🦞 Moltbook 发币' : '🦞 Moltbook Launch', href: '#moltbook' },
           { label: isZh ? '🐦 Twitter 发币' : '🐦 Twitter Launch', href: '#twitter' },
           { label: isZh ? '💰 领取手续费' : '💰 Claim Fees', href: '#claim' },
           { label: isZh ? '📡 API 参考' : '📡 API Reference', href: '#api' },
@@ -60,7 +60,7 @@ export default function DocsPage() {
       {/* Moltbook Launch */}
       <section id="moltbook" className="space-y-4">
         <h2 className="text-xl font-bold text-synth-cyan">
-          {isZh ? '🤖 通过 Moltbook 发币' : '🤖 Launch via Moltbook'}
+          {isZh ? '🦞 通过 Moltbook 发币' : '🦞 Launch via Moltbook'}
         </h2>
 
         <div className="space-y-4">
@@ -287,8 +287,9 @@ export default function DocsPage() {
           <a href="https://x.com/synth_fun" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🐦 @synth_fun</a>
           <a href="https://github.com/V-SK/synthlaunch" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">📂 GitHub</a>
           <a href="https://flap.sh" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">⚡ Flap Protocol</a>
-          <a href="https://www.moltbook.com" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🤖 Moltbook</a>
+          <a href="https://www.moltbook.com" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🦞 Moltbook</a>
           <a href="https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🔍 BscScan</a>
+          <a href="/leaderboard" className="text-synth-green hover:underline">💰 Leaderboard</a>
         </div>
       </section>
     </div>

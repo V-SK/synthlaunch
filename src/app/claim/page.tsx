@@ -374,7 +374,7 @@ export default function ClaimPage() {
 
   const tabs_list: { key: ClaimTab; label: string; icon: string }[] = [
     { key: 'twitter', label: t('claim.twitter'), icon: '🐦' },
-    { key: 'agents', label: t('claim.moltbook'), icon: '🤖' },
+    { key: 'agents', label: t('claim.moltbook'), icon: '🦞' },
   ];
 
   const twitterSteps = [

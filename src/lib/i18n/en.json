@@ -2,7 +2,8 @@
   "nav": {
     "home": "Home",
     "launch": "Launch",
-    "claim": "Claim"
+    "claim": "Claim",
+    "leaderboard": "Leaderboard"
   },
   "home": {
     "heroTitle": "Token Launches with",
@@ -34,6 +35,7 @@
     "sortNew": "New",
     "sortTop": "Top",
     "tokenCount": "{count} tokens",
+    "topEarners": "Top Earners",
     "builtOn": "Built on Flap Protocol · BSC Network",
     "failedToLoad": "Failed to load tokens: {error}"
   },
@@ -192,6 +194,10 @@
     "notFoundDesc": "This token may not have been indexed yet or may not exist on the Flap portal.",
     "copied": "✓ Copied",
     "migrated": "Migrated ✓",
+    "taxRevenue": "Tax Revenue",
+    "totalRevenue": "Total Revenue",
+    "claimed": "Claimed",
+    "pendingClaim": "Pending",
     "priceLabel": "Price (USD)",
     "marketCapLabel": "Market Cap",
     "priceBnbLabel": "Price (BNB)",
@@ -242,6 +248,7 @@
     "totalTokens": "Total Tokens",
     "totalReserve": "Total Reserve",
     "totalMarketCap": "Total Market Cap",
-    "activeDex": "Active / DEX"
+    "activeDex": "Active / DEX",
+    "totalRevenue": "Total Revenue"
   }
 }
