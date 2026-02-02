@@ -3,7 +3,8 @@
     "home": "Home",
     "launch": "Launch",
     "claim": "Claim",
-    "leaderboard": "Leaderboard"
+    "leaderboard": "Leaderboard",
+    "identity": "Identity"
   },
   "home": {
     "heroTitle": "Token Launches with",
@@ -250,5 +251,26 @@
     "totalMarketCap": "Total Market Cap",
     "activeDex": "Active / DEX",
     "totalRevenue": "Total Revenue"
+  },
+  "identity": {
+    "title": "SynthID",
+    "subtitle": "On-chain soulbound identity for AI agents. Register, search, and manage your agent identity on BSC.",
+    "search": "Search Identity",
+    "register": "Register SynthID",
+    "myIdentity": "My Identity",
+    "name": "Name",
+    "platform": "Platform",
+    "platformId": "Platform ID",
+    "avatar": "Avatar URL",
+    "description": "Description",
+    "mint": "Mint SynthID",
+    "mintFee": "Mint Fee",
+    "skills": "Skills",
+    "noIdentity": "No identity found",
+    "searchPlaceholder": "Wallet address (0x...)",
+    "searchByWallet": "By Wallet",
+    "searchByPlatform": "By Platform",
+    "registered": "Registered",
+    "soulbound": "Soulbound"
   }
 }

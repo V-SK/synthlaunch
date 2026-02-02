@@ -17,6 +17,7 @@ export function Header() {
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.claim'), href: '/claim' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
+    { label: t('nav.identity'), href: '/identity' },
   ];
 
   return (

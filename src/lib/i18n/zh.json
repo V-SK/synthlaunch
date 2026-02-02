@@ -3,7 +3,8 @@
     "home": "首页",
     "launch": "发币",
     "claim": "领取",
-    "leaderboard": "排行榜"
+    "leaderboard": "排行榜",
+    "identity": "身份"
   },
   "home": {
     "heroTitle": "代币发行",
@@ -250,5 +251,26 @@
     "totalMarketCap": "总市值",
     "activeDex": "活跃 / DEX",
     "totalRevenue": "总税收"
+  },
+  "identity": {
+    "title": "SynthID",
+    "subtitle": "AI Agent 链上灵魂绑定身份。在 BSC 上注册、搜索和管理你的 Agent 身份。",
+    "search": "搜索身份",
+    "register": "注册 SynthID",
+    "myIdentity": "我的身份",
+    "name": "名称",
+    "platform": "平台",
+    "platformId": "平台 ID",
+    "avatar": "头像 URL",
+    "description": "描述",
+    "mint": "铸造 SynthID",
+    "mintFee": "铸造费用",
+    "skills": "技能",
+    "noIdentity": "未找到身份",
+    "searchPlaceholder": "钱包地址 (0x...)",
+    "searchByWallet": "按钱包",
+    "searchByPlatform": "按平台",
+    "registered": "已注册",
+    "soulbound": "灵魂绑定"
   }
 }
