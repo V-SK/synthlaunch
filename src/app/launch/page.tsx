@@ -85,6 +85,10 @@ export default function LaunchPage() {
         symbol: form.symbol,
         taxRate: form.taxRate,
         devBuyAmount: form.devBuyAmount,
+        agentId: form.agentId,
+        website: form.website,
+        twitter: form.twitter,
+        launchType: agentMode === 'self' ? 'client' : agentMode,
       });
     } catch (err) {
       setStep('error');
