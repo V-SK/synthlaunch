@@ -1,8 +1,6 @@
 'use client';
 
 import { useReadContract, useReadContracts } from 'wagmi';
-import { createPublicClient, http } from 'viem';
-import { bsc } from 'viem/chains';
 import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
 
 export interface OnChainAgent {
@@ -114,64 +112,4 @@ export function useAllAgents() {
   return { agents, isLoading, error, totalMinted, activeCount };
 }
 
-// Server-side: fetch all agents via viem public client
-const publicClient = createPublicClient({
-  chain: bsc,
-  transport: http('https://bsc-dataseed.binance.org'),
-});
-
-export async function fetchAllAgents(): Promise<OnChainAgent[]> {
-  const nextId = await publicClient.readContract({
-    address: SYNTHID_ADDRESS,
-    abi: SYNTHID_ABI,
-    functionName: 'nextId',
-  });
-
-  const count = Number(nextId) - 1;
-  if (count <= 0) return [];
-
-  const identityCalls = Array.from({ length: count }, (_, i) => ({
-    address: SYNTHID_ADDRESS,
-    abi: SYNTHID_ABI,
-    functionName: 'getAgentIdentity' as const,
-    args: [BigInt(i + 1)] as const,
-  }));
-
-  const profileCalls = Array.from({ length: count }, (_, i) => ({
-    address: SYNTHID_ADDRESS,
-    abi: SYNTHID_ABI,
-    functionName: 'getAgentProfile' as const,
-    args: [BigInt(i + 1)] as const,
-  }));
-
-  const [identityResults, profileResults] = await Promise.all([
-    publicClient.multicall({ contracts: identityCalls }),
-    publicClient.multicall({ contracts: profileCalls }),
-  ]);
-
-  const agents: OnChainAgent[] = [];
-  for (let i = 0; i < count; i++) {
-    const id = identityResults[i];
-    const pr = profileResults[i];
-    if (id?.status === 'success' && pr?.status === 'success') {
-      const [name, platform, platformId, agentURI, createdAt, owner, revoked] =
-        id.result as [string, string, string, string, bigint, string, boolean];
-      const [avatar, description, skills] = pr.result as [string, string, string[]];
-      agents.push({
-        agentId: i + 1,
-        name,
-        platform,
-        platformId,
-        agentURI,
-        avatar,
-        description,
-        skills: skills || [],
-        createdAt: Number(createdAt),
-        owner,
-        revoked,
-      });
-    }
-  }
-
-  return agents;
-}
+// Server-side fetchAllAgents moved to /lib/synthid-server.ts
