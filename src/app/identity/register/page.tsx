@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { useI18n } from '@/lib/i18n';
 import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
@@ -19,9 +19,11 @@ const LIMITS = {
   skillCount: 10,
 };
 
+type MintStep = 'idle' | 'minting' | 'uploading-meta' | 'setting-uri' | 'done';
+
 export default function RegisterPage() {
   const { t, isZh } = useI18n();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
 
   const [name, setName] = useState('');
   const [platform, setPlatform] = useState('moltbook');
@@ -32,12 +34,27 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [bnbPrice, setBnbPrice] = useState(0);
+  const [mintStep, setMintStep] = useState<MintStep>('idle');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const skills = skillsInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, LIMITS.skillCount);
 
-  const { writeContract, data: txHash, isPending } = useWriteContract();
-  const { isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+  // Step 1: register (mint)
+  const { writeContract: writeMint, data: mintTxHash, isPending: isMinting } = useWriteContract();
+  const { isSuccess: isMintSuccess } = useWaitForTransactionReceipt({ hash: mintTxHash });
+
+  // Step 2: setAgentURI
+  const { writeContract: writeUri, data: uriTxHash, isPending: isSettingUri } = useWriteContract();
+  const { isSuccess: isUriSuccess } = useWaitForTransactionReceipt({ hash: uriTxHash });
+
+  // Read token ID after mint
+  const { data: tokenId, refetch: refetchTokenId } = useReadContract({
+    address: SYNTHID_ADDRESS,
+    abi: SYNTHID_ABI,
+    functionName: 'walletToId',
+    args: address ? [address] : undefined,
+    query: { enabled: false },
+  });
 
   // Fetch BNB price
   useEffect(() => {
@@ -53,11 +70,67 @@ export default function RegisterPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // After mint success → upload metadata → set URI
+  useEffect(() => {
+    if (isMintSuccess && mintStep === 'minting') {
+      handlePostMint();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMintSuccess]);
+
+  // After URI set success → done
+  useEffect(() => {
+    if (isUriSuccess && mintStep === 'setting-uri') {
+      setMintStep('done');
+    }
+  }, [isUriSuccess, mintStep]);
+
+  const handlePostMint = async () => {
+    try {
+      setMintStep('uploading-meta');
+
+      // Get token ID
+      const result = await refetchTokenId();
+      const tid = result.data ? Number(result.data) : 0;
+      if (!tid) {
+        setError(isZh ? '无法获取 Token ID' : 'Failed to get Token ID');
+        setMintStep('done'); // Still show success for mint
+        return;
+      }
+
+      // Upload metadata to IPFS
+      const res = await fetch('/api/synthid/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, platform, platformId, avatar, description, skills, tokenId: tid,
+        }),
+      });
+      const data = await res.json();
+      if (!data.uri) {
+        setError(isZh ? 'Metadata 上传失败，NFT 已铸造但头像可能不显示' : 'Metadata upload failed, NFT minted but avatar may not display');
+        setMintStep('done');
+        return;
+      }
+
+      // Set agent URI on-chain
+      setMintStep('setting-uri');
+      writeUri({
+        address: SYNTHID_ADDRESS,
+        abi: SYNTHID_ABI,
+        functionName: 'setAgentURI',
+        args: [BigInt(tid), data.uri],
+      });
+    } catch (err) {
+      console.error('Post-mint error:', err);
+      setError(isZh ? 'Metadata 设置出错，NFT 已铸造' : 'Metadata setup error, NFT already minted');
+      setMintStep('done');
+    }
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate
     if (!file.type.startsWith('image/')) {
       setError(isZh ? '请上传图片文件 (JPG/PNG/GIF/WebP)' : 'Please upload an image file (JPG/PNG/GIF/WebP)');
       return;
@@ -72,10 +145,12 @@ export default function RegisterPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('name', 'SynthID Avatar');
+      formData.append('symbol', 'SID');
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.url) {
-        setAvatar(data.url);
+      if (data.cid) {
+        setAvatar(`https://gateway.pinata.cloud/ipfs/${data.cid}`);
       } else {
         setError(isZh ? 'IPFS 上传失败' : 'IPFS upload failed');
       }
@@ -104,7 +179,8 @@ export default function RegisterPage() {
       setError(isZh ? `描述最多 ${LIMITS.description} 字符` : `Description max ${LIMITS.description} characters`);
       return;
     }
-    writeContract({
+    setMintStep('minting');
+    writeMint({
       address: SYNTHID_ADDRESS,
       abi: SYNTHID_ABI,
       functionName: 'register',
@@ -114,6 +190,15 @@ export default function RegisterPage() {
   };
 
   const feeUsd = bnbPrice > 0 ? `~$${(MINT_FEE_BNB * bnbPrice).toFixed(1)}` : '...';
+
+  const stepLabel = () => {
+    switch (mintStep) {
+      case 'minting': return isZh ? '⏳ 铸造中... (1/3)' : '⏳ Minting... (1/3)';
+      case 'uploading-meta': return isZh ? '📤 上传 Metadata... (2/3)' : '📤 Uploading metadata... (2/3)';
+      case 'setting-uri': return isZh ? '🔗 设置 NFT 头像... (3/3)' : '🔗 Setting NFT image... (3/3)';
+      default: return '';
+    }
+  };
 
   return (
     <BnbThemeProvider>
@@ -143,7 +228,8 @@ export default function RegisterPage() {
                     onChange={(e) => setName(e.target.value.slice(0, LIMITS.name + 10))}
                     placeholder={t('sid.register.agentNamePlaceholder')}
                     maxLength={LIMITS.name + 10}
-                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors"
+                    disabled={mintStep !== 'idle'}
+                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
                   />
                 </div>
 
@@ -154,7 +240,8 @@ export default function RegisterPage() {
                     <select
                       value={platform}
                       onChange={(e) => setPlatform(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors"
+                      disabled={mintStep !== 'idle'}
+                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
                     >
                       <option value="moltbook">🦞 Moltbook</option>
                       <option value="twitter">𝕏 Twitter</option>
@@ -172,7 +259,8 @@ export default function RegisterPage() {
                       onChange={(e) => setPlatformId(e.target.value.slice(0, LIMITS.platformId))}
                       placeholder={t('sid.register.platformIdPlaceholder')}
                       maxLength={LIMITS.platformId}
-                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors"
+                      disabled={mintStep !== 'idle'}
+                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -189,7 +277,8 @@ export default function RegisterPage() {
                       value={avatar}
                       onChange={(e) => setAvatar(e.target.value.slice(0, LIMITS.avatar))}
                       placeholder={isZh ? '输入 URL 或上传图片...' : 'Enter URL or upload image...'}
-                      className="flex-1 px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors"
+                      disabled={mintStep !== 'idle'}
+                      className="flex-1 px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
                     />
                     <input
                       ref={fileRef}
@@ -200,7 +289,7 @@ export default function RegisterPage() {
                     />
                     <button
                       onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
+                      disabled={uploading || mintStep !== 'idle'}
                       className="px-4 py-2.5 bg-[#2B3139] hover:bg-[#363C45] border border-[#2B3139] rounded-lg text-sm text-[#EAECEF] transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
                       {uploading ? (isZh ? '上传中...' : 'Uploading...') : (isZh ? '📁 上传' : '📁 Upload')}
@@ -227,7 +316,8 @@ export default function RegisterPage() {
                     onChange={(e) => setDescription(e.target.value.slice(0, LIMITS.description + 20))}
                     placeholder={t('sid.register.descriptionPlaceholder')}
                     rows={3}
-                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors resize-none"
+                    disabled={mintStep !== 'idle'}
+                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors resize-none disabled:opacity-50"
                   />
                 </div>
 
@@ -242,7 +332,8 @@ export default function RegisterPage() {
                     value={skillsInput}
                     onChange={(e) => setSkillsInput(e.target.value)}
                     placeholder={t('sid.register.skillsPlaceholder')}
-                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors"
+                    disabled={mintStep !== 'idle'}
+                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
                   />
                   {skills.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
@@ -284,19 +375,31 @@ export default function RegisterPage() {
                   >
                     🔗 {t('sid.register.connectWallet')}
                   </BnbButton>
-                ) : isSuccess ? (
+                ) : mintStep === 'done' ? (
                   <div className="text-center py-4">
                     <div className="text-3xl mb-2">✅</div>
-                    <p className="text-[#0ECB81] font-bold">SynthID Minted Successfully!</p>
+                    <p className="text-[#0ECB81] font-bold mb-1">
+                      {isZh ? 'SynthID 铸造成功！' : 'SynthID Minted Successfully!'}
+                    </p>
+                    <p className="text-xs text-[#848E9C]">
+                      {isZh ? 'NFT 头像已设置，钱包中即可查看' : 'NFT image set, viewable in your wallet'}
+                    </p>
+                  </div>
+                ) : mintStep !== 'idle' ? (
+                  <div className="text-center py-3">
+                    <div className="text-sm text-[#F0B90B] font-mono animate-pulse">{stepLabel()}</div>
+                    <p className="text-[10px] text-[#848E9C] mt-2">
+                      {isZh ? '请在钱包中确认交易' : 'Please confirm transaction in wallet'}
+                    </p>
                   </div>
                 ) : (
                   <BnbButton
                     onClick={handleMint}
-                    disabled={isPending}
+                    disabled={isMinting}
                     variant="primary"
                     className="w-full text-base py-3"
                   >
-                    {isPending ? t('sid.register.minting') : t('sid.register.mintButton')}
+                    {t('sid.register.mintButton')}
                   </BnbButton>
                 )}
 
