@@ -1,28 +1,11 @@
 // SynthLaunchCustody contract constants
 
-export const CUSTODY_ADDRESS = '0x1356e260622402a40f478197AFe6230B744aF02c' as const;
+export const CUSTODY_ADDRESS = '0x9d77fA2eb671f7AcE23cF6Cb296649483D1f8117' as const;
 
 export const CUSTODY_ABI = [
   {
     inputs: [{ name: 'token', type: 'address' }, { name: 'agentName', type: 'string' }],
     name: 'registerToken',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'token', type: 'address' }, { name: 'amount', type: 'uint256' }],
-    name: 'recordFee',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'tokens', type: 'address[]' },
-      { name: 'amounts', type: 'uint256[]' },
-    ],
-    name: 'recordFeeBatch',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

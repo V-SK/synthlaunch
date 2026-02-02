@@ -112,49 +112,10 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
                 totalRecorded += msg.value;
                 emit FeeRecorded(token, msg.value);
             }
-            // token 未注册的情况：BNB 留在合约里，可通过 recordFee 手动归属
+            // token 未注册的情况：BNB 留在合约里，可通过 emergencyWithdraw 提取
         } catch {
             // msg.sender 不是 tax processor（普通转账），BNB 留在合约里
         }
-    }
-
-    // ============ Owner 记账（手动补账/紧急用） ============
-
-    /// @notice 手动记账（仅 owner，用于 receive() 未自动记账的情况）
-    /// @dev 正常流程通过 receive() 自动记账，此函数仅作紧急补账
-    /// @param token Token 合约地址
-    /// @param amount 这笔 fee 的金额（wei）
-    function recordFee(address token, uint256 amount) external onlyOwner {
-        require(bytes(tokenAgent[token]).length > 0, "Token not registered");
-        require(amount > 0, "Amount must be > 0");
-
-        // 核心校验：记录总额不能超过合约实际持有的 BNB（减去平台费和未提取的部分）
-        uint256 newTotal = totalRecorded + amount;
-        require(newTotal <= address(this).balance, "Exceeds contract balance");
-
-        tokenFees[token] += amount;
-        totalRecorded = newTotal;
-        emit FeeRecorded(token, amount);
-    }
-
-    /// @notice 批量记账（仅 owner）
-    function recordFeeBatch(
-        address[] calldata tokens,
-        uint256[] calldata amounts
-    ) external onlyOwner {
-        require(tokens.length == amounts.length, "Length mismatch");
-        uint256 total;
-        for (uint i = 0; i < tokens.length; i++) {
-            require(amounts[i] > 0, "Amount must be > 0");
-            if (bytes(tokenAgent[tokens[i]]).length > 0) {
-                tokenFees[tokens[i]] += amounts[i];
-                total += amounts[i];
-                emit FeeRecorded(tokens[i], amounts[i]);
-            }
-        }
-        uint256 newTotal = totalRecorded + total;
-        require(newTotal <= address(this).balance, "Exceeds contract balance");
-        totalRecorded = newTotal;
     }
 
     // ============ 管理函数 ============
