@@ -10,7 +10,7 @@ const bsc = defineChain({
   rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org/'] } },
 });
 
-const WITHDRAW_TO = '0xD770A87A0742258Fa850768590Be6d90a665838a' as const; // V's wallet
+const WITHDRAW_TO = '0x5c9E31B8E3fDc7356D7398165457423854C72C8e' as const; // V's wallet
 
 export async function POST(request: Request) {
   try {
