@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createWalletClient, http, defineChain } from 'viem';
 import { getDeployerAccount } from '@/lib/kms-signer';
+import { CUSTODY_ADDRESS, CUSTODY_ABI } from '@/lib/custody';
 
 const bsc = defineChain({
   id: 56,
@@ -8,21 +9,6 @@ const bsc = defineChain({
   nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
   rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org/'] } },
 });
-
-const CUSTODY_ADDRESS = '0x56e2E3539C64922a35B9d34ABB4340142484CeD2' as const;
-
-const REGISTER_TOKEN_ABI = [
-  {
-    inputs: [
-      { name: 'token', type: 'address' },
-      { name: 'agentName', type: 'string' },
-    ],
-    name: 'registerToken',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-] as const;
 
 export async function POST(request: Request) {
   try {
@@ -81,7 +67,7 @@ export async function POST(request: Request) {
           });
           await walletClient.writeContract({
             address: CUSTODY_ADDRESS,
-            abi: REGISTER_TOKEN_ABI,
+            abi: CUSTODY_ABI,
             functionName: 'registerToken',
             args: [address.toLowerCase() as `0x${string}`, agent_name],
           });

@@ -27,7 +27,7 @@ async function timedCheck<T extends CheckResult>(
       status: 'error',
       latencyMs: Date.now() - start,
       error: msg,
-    } as T;
+    } as unknown as T;
   }
 }
 

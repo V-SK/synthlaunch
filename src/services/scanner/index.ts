@@ -131,7 +131,7 @@ async function processBlock(blockNumber: bigint): Promise<void> {
     }
 
     // 批量记账
-    for (const [token, totalFee] of feeByToken) {
+    for (const [token, totalFee] of Array.from(feeByToken.entries())) {
       if (totalFee > BigInt(0)) {
         await recordFee(token, totalFee);
       }

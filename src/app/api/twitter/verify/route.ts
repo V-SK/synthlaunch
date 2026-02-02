@@ -8,7 +8,7 @@ const verificationCodes = new Map<string, { code: string; handle: string; create
 // Clean up expired codes (older than 30 minutes)
 function cleanup() {
   const now = Date.now();
-  for (const [key, val] of verificationCodes) {
+  for (const [key, val] of Array.from(verificationCodes.entries())) {
     if (now - val.createdAt > 30 * 60 * 1000) {
       verificationCodes.delete(key);
     }

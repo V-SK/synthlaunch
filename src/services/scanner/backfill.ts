@@ -50,7 +50,7 @@ async function backfill(fromBlock: number, toBlock: number, tokenFilter?: string
 
   // 输出结果
   console.log('\n[Backfill] Results:');
-  for (const [token, totalFee] of feeByToken) {
+  for (const [token, totalFee] of Array.from(feeByToken.entries())) {
     console.log(`  ${token}: ${formatEther(totalFee)} BNB`);
   }
 }

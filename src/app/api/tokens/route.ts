@@ -39,7 +39,7 @@ interface CachedToken {
   circulatingSupply: number;
   status: number;
   progress: number;
-  createdAt: string;
+  createdAt: number;
   reserve: number;
   r: number;
   h: number;
@@ -339,7 +339,7 @@ export async function GET(request: NextRequest) {
       break;
     case 'new':
     default:
-      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      sorted.sort((a, b) => b.createdAt - a.createdAt);
       break;
   }
 

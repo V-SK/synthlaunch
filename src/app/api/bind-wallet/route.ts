@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Sign with EIP-191 personal sign (ethSign style, matching contract's toEthSignedMessageHash)
-    const signature = await account.signMessage({ message: { raw: messageHash as `0x${string}` } });
+    const signature = await account.signMessage!({ message: { raw: messageHash as `0x${string}` } });
 
     console.log(`[bind-wallet] Signature generated for ${agentName} -> ${wallet}`);
 
