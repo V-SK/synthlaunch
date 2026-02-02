@@ -1,12 +1,24 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useReadContract } from 'wagmi';
 import { useI18n } from '@/lib/i18n';
 import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
 import { BnbThemeProvider, BnbCard, BscChainBadge, PlatformBadge, BnbBadge, BnbButton } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
+
+interface MoltbookData {
+  found: boolean;
+  name?: string;
+  karma?: number;
+  is_claimed?: boolean;
+  avatar_url?: string;
+  bio?: string;
+  post_count?: number;
+  comment_count?: number;
+}
 
 const PLATFORM_LINKS: Record<string, (id: string) => string> = {
   moltbook: (id) => `https://www.moltbook.com/u/${id}`,
@@ -101,6 +113,20 @@ export default function AgentDetailPage() {
       </BnbThemeProvider>
     );
   }
+
+  const [moltbookData, setMoltbookData] = useState<MoltbookData | null>(null);
+  const [moltbookLoading, setMoltbookLoading] = useState(false);
+
+  useEffect(() => {
+    if (platform === 'moltbook' && platformId) {
+      setMoltbookLoading(true);
+      fetch(`/api/synthid/moltbook?name=${encodeURIComponent(platformId)}`)
+        .then(r => r.json())
+        .then(d => setMoltbookData(d))
+        .catch(() => setMoltbookData({ found: false }))
+        .finally(() => setMoltbookLoading(false));
+    }
+  }, [platform, platformId]);
 
   const dateStr = new Date(createdAt * 1000).toLocaleString();
   const platformLink = PLATFORM_LINKS[platform]?.(platformId) || '#';
@@ -259,22 +285,55 @@ export default function AgentDetailPage() {
               </BnbCard>
             </a>
 
-            {/* Platform link */}
-            {platformLink !== '#' && (
-              <a
-                href={platformLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
+            {/* Moltbook Verification Card */}
+            {platform === 'moltbook' && (
+              <BnbCard className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🦞</span>
+                  <h3 className="text-sm font-bold text-[#EAECEF]">Moltbook Verification</h3>
+                </div>
+                {moltbookLoading ? (
+                  <div className="space-y-2 animate-pulse">
+                    <div className="h-3 w-24 bg-[#2B3139] rounded" />
+                    <div className="h-3 w-32 bg-[#2B3139] rounded" />
+                  </div>
+                ) : moltbookData?.found ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-2.5 bg-[#0ECB81]/5 border border-[#0ECB81]/20 rounded-lg">
+                      <span className="text-[#0ECB81] text-base">✓</span>
+                      <span className="text-xs text-[#0ECB81] font-medium">
+                        {moltbookData.is_claimed ? 'Verified & Claimed' : 'Registered'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 bg-[#0B0E11] rounded-lg text-center">
+                        <div className="text-sm font-bold text-[#F0B90B]">{moltbookData.karma || 0}</div>
+                        <div className="text-[10px] text-[#848E9C]">Karma</div>
+                      </div>
+                      <div className="p-2 bg-[#0B0E11] rounded-lg text-center">
+                        <div className="text-sm font-bold text-[#EAECEF]">{(moltbookData.post_count || 0) + (moltbookData.comment_count || 0)}</div>
+                        <div className="text-[10px] text-[#848E9C]">Activity</div>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-[#848E9C] flex items-center gap-1">
+                      🔗 Data from <span className="text-[#F0B90B]">moltbook.com</span> API · Live
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-[#F6465D]/5 border border-[#F6465D]/20 rounded-lg">
+                    <span className="text-xs text-[#F6465D]">⚠ Unable to verify on Moltbook</span>
+                  </div>
+                )}
+              </BnbCard>
+            )}
+
+            {/* Twitter link (non-moltbook platforms) */}
+            {platform === 'twitter' && platformLink !== '#' && (
+              <a href={platformLink} target="_blank" rel="noopener noreferrer" className="block">
                 <BnbCard hover className="p-4 flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#F0B90B]/10 flex items-center justify-center text-sm">
-                      {platform === 'moltbook' ? '🦞' : '𝕏'}
-                    </div>
-                    <span className="text-sm text-[#EAECEF] group-hover:text-[#F0B90B] transition-colors">
-                      View on {platform === 'moltbook' ? 'Moltbook' : 'Twitter'}
-                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-[#F0B90B]/10 flex items-center justify-center text-sm">𝕏</div>
+                    <span className="text-sm text-[#EAECEF] group-hover:text-[#F0B90B] transition-colors">View on Twitter</span>
                   </div>
                   <span className="text-[#848E9C] group-hover:text-[#F0B90B] transition-colors">↗</span>
                 </BnbCard>
