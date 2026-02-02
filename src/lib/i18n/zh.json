@@ -141,7 +141,7 @@
     "howItWorks": "工作原理",
     "howStep1": "代币创建者在发币时指定 AI Agent 和税率（0-5%）",
     "howStep2": "交易手续费发送到 SynthLaunch 托管合约",
-    "howStep3Twitter": "Twitter：发推验证所有权 → 绑定钱包 → 领取",
+    "howStep3Twitter": "Twitter：发推验证所有权 → 粘贴推文链接验证 → 绑定钱包 → 领取",
     "howStep3Moltbook": "Moltbook：通过 API Key 验证 → 绑定钱包 → 链上领取",
     "loadingTokens": "加载代币中...",
     "walletBoundSuccess": "钱包绑定成功！",

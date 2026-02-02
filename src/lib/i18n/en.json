@@ -141,7 +141,7 @@
     "howItWorks": "How it works",
     "howStep1": "Token creators assign an AI agent and tax rate (0-5%) at launch",
     "howStep2": "Trading fees are sent to the SynthLaunch Custody contract",
-    "howStep3Twitter": "Twitter: Verify ownership by posting a tweet → bind wallet → claim",
+    "howStep3Twitter": "Twitter: Post verification tweet → paste tweet URL to verify → bind wallet → claim",
     "howStep3Moltbook": "Moltbook: Verify via API key → bind wallet → claim on-chain",
     "loadingTokens": "Loading tokens...",
     "walletBoundSuccess": "Wallet bound successfully!",
