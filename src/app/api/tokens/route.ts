@@ -211,13 +211,30 @@ async function refreshTokens(): Promise<void> {
             const k = parseFloat(formatEther(result[7]));
             const dexSupplyThreshold = parseFloat(formatEther(result[8]));
 
-            const priceUsd = priceBnb * bnbPrice;
-            const marketCapBnb = priceBnb * BILLION;
-            const marketCapUsd = marketCapBnb * bnbPrice;
+            let priceUsd = priceBnb * bnbPrice;
+            let marketCapBnb = priceBnb * BILLION;
+            let marketCapUsd = marketCapBnb * bnbPrice;
 
             let progress = 0;
             if (status === 4) {
               progress = 1;
+              // DEX tokens: bonding curve data is zeroed, try DexScreener
+              if (marketCapUsd === 0) {
+                try {
+                  const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${info.address}`, {
+                    signal: AbortSignal.timeout(5000),
+                  });
+                  const dexData = await dexRes.json();
+                  const pair = dexData.pairs?.[0];
+                  if (pair) {
+                    priceUsd = parseFloat(pair.priceUsd || '0');
+                    marketCapUsd = pair.fdv || pair.marketCap || 0;
+                    marketCapBnb = bnbPrice > 0 ? marketCapUsd / bnbPrice : 0;
+                  }
+                } catch {
+                  // DexScreener unavailable, keep zeros
+                }
+              }
             } else if (dexSupplyThreshold > 0) {
               const currentReserve = estimateReserve(r, h, k, circulatingSupply);
               const targetReserve = estimateReserve(r, h, k, dexSupplyThreshold);

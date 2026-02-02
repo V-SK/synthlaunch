@@ -54,8 +54,11 @@ export async function GET(request: NextRequest) {
       dexTokens,
     };
 
-    statsCache = result;
-    statsCacheTs = Date.now();
+    // Only cache if we actually got tokens — avoid caching zeros after deploy
+    if (totalTokens > 0) {
+      statsCache = result;
+      statsCacheTs = Date.now();
+    }
     return NextResponse.json(result);
   } catch (e) {
     console.error('[stats] Error:', e);
