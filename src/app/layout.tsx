@@ -23,7 +23,7 @@ export default function RootLayout({
         <Providers>
           <div className="relative">
             {/* Scanline overlay */}
-            <div className="fixed inset-0 scanline z-50 pointer-events-none" />
+            <div className="fixed inset-0 scanline z-[5] pointer-events-none" />
             
             <Header />
             <main className="max-w-7xl mx-auto px-4 py-8">
