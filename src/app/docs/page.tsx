@@ -259,9 +259,9 @@ export default function DocsPage() {
         </h2>
         <div className="card space-y-2 text-xs font-mono">
           <div className="flex flex-col gap-1">
-            <span className="text-synth-cyan">SynthLaunchCustody (v8):</span>
-            <a href="https://bscscan.com/address/0x2CbAC696e5Dc662df0fc4DE3ce59D7DF8C19FdE2#code" target="_blank" rel="noopener noreferrer" className="text-synth-text hover:text-synth-green break-all">
-              0x2CbAC696e5Dc662df0fc4DE3ce59D7DF8C19FdE2
+            <span className="text-synth-cyan">SynthLaunchCustody (v11):</span>
+            <a href="https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7#code" target="_blank" rel="noopener noreferrer" className="text-synth-text hover:text-synth-green break-all">
+              0x3Fa33A0fb85f11A901e3616E10876d10018f43B7
             </a>
           </div>
           <div className="flex flex-col gap-1">
@@ -288,7 +288,7 @@ export default function DocsPage() {
           <a href="https://github.com/V-SK/synthlaunch" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">📂 GitHub</a>
           <a href="https://flap.sh" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">⚡ Flap Protocol</a>
           <a href="https://www.moltbook.com" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🤖 Moltbook</a>
-          <a href="https://bscscan.com/address/0x2CbAC696e5Dc662df0fc4DE3ce59D7DF8C19FdE2" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🔍 BscScan</a>
+          <a href="https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7" target="_blank" rel="noopener noreferrer" className="text-synth-green hover:underline">🔍 BscScan</a>
         </div>
       </section>
     </div>
