@@ -7,7 +7,8 @@ import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel } from '@/lib/
 import { useI18n } from '@/lib/i18n';
 
 export default function TokenPage({ params }: { params: { address: string } }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const isZh = locale === 'zh';
   const [token, setToken] = useState<Token | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -144,6 +145,28 @@ export default function TokenPage({ params }: { params: { address: string } }) {
           <div className="flex justify-between text-[10px] text-synth-muted mt-2">
             <span>{t('token.reserve')}: {token.reserve?.toFixed(4)} BNB</span>
             <span>{t('token.supply')}: {(token.circulatingSupply / 1e6).toFixed(1)}M / 1B</span>
+          </div>
+        </div>
+      )}
+
+      {/* Fee Sharing Info */}
+      {token.taxRate > 0 && token.agent_name && (
+        <div className="card border-synth-purple/30 bg-synth-purple/5">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <h2 className="text-sm font-bold text-synth-purple uppercase tracking-wider">Fee Sharing</h2>
+              <p className="text-sm text-synth-muted mt-1">
+                {token.taxRate}% {isZh ? '交易税分润给' : 'trading tax shared with'}
+              </p>
+            </div>
+            <div className="ml-auto">
+              <span className="text-sm px-3 py-1.5 bg-synth-purple/10 text-synth-purple rounded-lg font-mono">
+                {token.agent_name.startsWith('tw:') 
+                  ? `🐦 @${token.agent_name.slice(3)}` 
+                  : `🤖 ${token.agent_name}`}
+              </span>
+            </div>
           </div>
         </div>
       )}
