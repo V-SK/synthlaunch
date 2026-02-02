@@ -117,15 +117,6 @@ export default function ClaimPage() {
     fetchRegisteredTokens();
   }, [fetchRegisteredTokens]);
 
-  // When twitter is verified and tokens are loaded, fetch twitter token data
-  useEffect(() => {
-    if (twitterVerified && twitterHandle && knownTokens.length > 0) {
-      const cleanHandle = twitterHandle.replace('@', '').trim().toLowerCase();
-      fetchTwitterTokens(cleanHandle);
-      checkBoundWallet(`tw:${cleanHandle}`);
-    }
-  }, [twitterVerified, twitterHandle, knownTokens, fetchTwitterTokens, checkBoundWallet]);
-
   // Fetch token info for agent name
   const fetchTokensByAgent = useCallback(async (agentName: string) => {
     if (!publicClient || knownTokens.length === 0) return [];
@@ -196,6 +187,15 @@ export default function ClaimPage() {
       console.error('Failed to check bound wallet:', err);
     }
   }, [publicClient]);
+
+  // When twitter is verified and tokens are loaded, fetch twitter token data
+  useEffect(() => {
+    if (twitterVerified && twitterHandle && knownTokens.length > 0) {
+      const cleanHandle = twitterHandle.replace('@', '').trim().toLowerCase();
+      fetchTwitterTokens(cleanHandle);
+      checkBoundWallet(`tw:${cleanHandle}`);
+    }
+  }, [twitterVerified, twitterHandle, knownTokens, fetchTwitterTokens, checkBoundWallet]);
 
   // Bind wallet (Twitter flow)
   const handleTwitterBindWallet = async () => {
