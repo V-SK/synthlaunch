@@ -16,7 +16,7 @@ interface IdentityCardProps {
 
 const PLATFORM_BADGES: Record<string, { emoji: string; label: string; link: (id: string) => string }> = {
   moltbook: { emoji: '🦞', label: 'Moltbook', link: (id) => `https://moltbook.com/u/${id}` },
-  twitter: { emoji: '🐦', label: 'Twitter', link: (id) => `https://x.com/@${id}` },
+  twitter: { emoji: '🐦', label: 'Twitter', link: (id) => `https://x.com/${id}` },
 };
 
 export function IdentityCard({
