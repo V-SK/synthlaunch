@@ -29,6 +29,8 @@ interface SupabaseToken {
   created_at: string;
 }
 
+const PLATFORM_FEE_RATE = 0.20; // 20% platform protocol fee
+
 interface LeaderboardEntry {
   rank: number;
   agentName: string;
@@ -128,12 +130,15 @@ async function refreshLeaderboard(): Promise<void> {
       const feesResult = results[i * 2];
       const claimedResult = results[i * 2 + 1];
 
-      const totalFeesBnb = feesResult.status === 'success'
+      const rawFeesBnb = feesResult.status === 'success'
         ? parseFloat(formatEther(feesResult.result as bigint))
         : 0;
-      const claimedBnb = claimedResult.status === 'success'
+      const rawClaimedBnb = claimedResult.status === 'success'
         ? parseFloat(formatEther(claimedResult.result as bigint))
         : 0;
+      // Show agent's share after deducting platform fee (20%)
+      const totalFeesBnb = rawFeesBnb * (1 - PLATFORM_FEE_RATE);
+      const claimedBnb = rawClaimedBnb * (1 - PLATFORM_FEE_RATE);
       const pendingBnb = totalFeesBnb - claimedBnb;
 
       entries.push({

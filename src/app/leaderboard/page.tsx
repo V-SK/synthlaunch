@@ -116,8 +116,8 @@ export default function LeaderboardPage() {
         </h1>
         <p className="text-sm text-synth-muted">
           {isZh
-            ? '所有代币累计交易税收排名 — 数据实时来自链上托管合约'
-            : 'All tokens ranked by accumulated trading tax revenue — live from on-chain custody contract'}
+            ? '所有代币累计交易税收排名 — 数据实时来自链上托管合约（已扣除20%平台协议费）'
+            : 'All tokens ranked by accumulated trading tax revenue — live on-chain (after 20% platform fee)'}
         </p>
         {!loading && (
           <p className="text-xs text-synth-muted/60">
