@@ -365,6 +365,7 @@ export async function POST(request: NextRequest) {
             name: tokenDetails.name,
             symbol: tokenDetails.symbol,
             meta: cid,
+            creator: account.address,
             agent_name: agentName,
             tx_hash: txHash,
             launch_type: 'api',
