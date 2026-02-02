@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http, defineChain, decodeEventLog } from 'viem';
+import { createPublicClient, createWalletClient, http, defineChain, decodeEventLog, parseAbi, type Address, getAddress } from 'viem';
 import { getDeployerAccount } from '@/lib/kms-signer';
 import { CUSTODY_ADDRESS, CUSTODY_ABI } from '@/lib/custody';
 
@@ -9,6 +9,11 @@ const bsc = defineChain({
   nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
   rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org/'] } },
 });
+
+const PORTAL_ADDRESS = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as Address;
+const PORTAL_ABI = parseAbi([
+  'function getTokenV5(address token) external view returns ((uint8,uint256,uint256,uint256,uint8,uint256,uint256,uint256,uint256,address,bool,bytes32))',
+]);
 
 const TOKEN_CREATED_TOPIC = '0xb48e5ee3c728ab39908c38d51d4be5fcf41950f5894e3b1e6a52e18e0e1be050'; // TokenCreated event
 
@@ -50,7 +55,13 @@ async function getTokenAddressFromTx(txHash: string): Promise<string | null> {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    let { address, name, symbol, meta, creator, agent_name, tax_rate, beneficiary, tx_hash, launch_type } = body;
+    let { address, name, symbol, meta, creator, agent_name, tax_rate, beneficiary, tx_hash, launch_type, _rk } = body;
+
+    // Verify register key — only our frontend/API should register tokens
+    const REGISTER_KEY = process.env.REGISTER_SECRET || process.env.ADMIN_SECRET || '';
+    if (!_rk || _rk !== REGISTER_KEY) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
 
     // If no address but have tx_hash, extract token address from chain
     if (!address && tx_hash) {
@@ -63,6 +74,24 @@ export async function POST(request: Request) {
 
     if (!address) {
       return NextResponse.json({ error: 'address required (could not extract from tx)' }, { status: 400 });
+    }
+
+    // === ON-CHAIN VERIFICATION: token must exist on Flap Portal ===
+    try {
+      const publicClient = createPublicClient({ chain: bsc, transport: http() });
+      const result = await publicClient.readContract({
+        address: PORTAL_ADDRESS,
+        abi: PORTAL_ABI,
+        functionName: 'getTokenV5',
+        args: [getAddress(address) as Address],
+      }) as any;
+      const status = Number(result[0]);
+      if (status === 0) {
+        return NextResponse.json({ error: 'Token not found on-chain. Only real Flap tokens can be registered.' }, { status: 403 });
+      }
+    } catch (e) {
+      console.error('[register] On-chain verification failed:', (e as Error).message?.substring(0, 100));
+      return NextResponse.json({ error: 'Failed to verify token on-chain' }, { status: 502 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

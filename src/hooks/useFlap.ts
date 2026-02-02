@@ -53,6 +53,7 @@ export function useLaunchToken() {
           beneficiary: (hasTax && !selfMode) ? CUSTODY_ADDRESS : creator,
           tx_hash: txHash,
           launch_type: params.launchType || 'client',
+          _rk: process.env.NEXT_PUBLIC_REGISTER_KEY || '',
         }),
       });
       const data = await res.json();
