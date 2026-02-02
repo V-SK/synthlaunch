@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createWalletClient, http, defineChain } from 'viem';
+import { createPublicClient, createWalletClient, http, defineChain, decodeEventLog } from 'viem';
 import { getDeployerAccount } from '@/lib/kms-signer';
 import { CUSTODY_ADDRESS, CUSTODY_ABI } from '@/lib/custody';
 
@@ -10,13 +10,59 @@ const bsc = defineChain({
   rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org/'] } },
 });
 
+const TOKEN_CREATED_TOPIC = '0xb48e5ee3c728ab39908c38d51d4be5fcf41950f5894e3b1e6a52e18e0e1be050'; // TokenCreated event
+
+// Extract token address from tx receipt logs
+async function getTokenAddressFromTx(txHash: string): Promise<string | null> {
+  try {
+    const publicClient = createPublicClient({ chain: bsc, transport: http() });
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+    
+    // Look for TokenCreated or similar event - token address is usually in the first CREATE2 log
+    // The new token address appears as a topic in Transfer events (first transfer = minting)
+    for (const log of receipt.logs) {
+      // Look for Transfer event from zero address (mint) - topic0 = Transfer(address,address,uint256)
+      if (log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+        // Transfer from 0x0 = mint, the log.address IS the new token
+        const from = log.topics[1];
+        if (from === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          return log.address;
+        }
+      }
+    }
+    
+    // Fallback: look for any contract creation in internal txns
+    // The token address usually ends with 7777 or 8888
+    for (const log of receipt.logs) {
+      const addr = log.address.toLowerCase();
+      if (addr.endsWith('7777') || addr.endsWith('8888')) {
+        return addr;
+      }
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('[register] Failed to get token from tx:', (e as Error).message?.substring(0, 100));
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { address, name, symbol, meta, creator, agent_name, tax_rate, beneficiary, tx_hash, launch_type } = body;
+    let { address, name, symbol, meta, creator, agent_name, tax_rate, beneficiary, tx_hash, launch_type } = body;
+
+    // If no address but have tx_hash, extract token address from chain
+    if (!address && tx_hash) {
+      const extracted = await getTokenAddressFromTx(tx_hash);
+      if (extracted) {
+        address = extracted;
+        console.log(`[register] Extracted token address from tx: ${address}`);
+      }
+    }
 
     if (!address) {
-      return NextResponse.json({ error: 'address required' }, { status: 400 });
+      return NextResponse.json({ error: 'address required (could not extract from tx)' }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

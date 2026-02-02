@@ -36,6 +36,7 @@ export function useLaunchToken() {
       const params = paramsRef.current;
       const taxBps = Math.round(params.taxRate * 100);
       const hasTax = taxBps > 0;
+      const selfMode = !params.agentId || params.launchType === 'client';
       
       fetch('/api/tokens/register', {
         method: 'POST',
@@ -47,12 +48,14 @@ export function useLaunchToken() {
           creator: address,
           agent_name: params.agentId || '',
           tax_rate: taxBps,
-          beneficiary: (hasTax && !isSelfMode) ? CUSTODY_ADDRESS : address,
+          beneficiary: (hasTax && !selfMode) ? CUSTODY_ADDRESS : address,
           tx_hash: hash,
           launch_type: params.launchType || 'client',
         }),
       })
-        .then(() => {
+        .then(res => res.json())
+        .then(data => {
+          console.log('[register] Success:', data);
           // Bust token cache so homepage shows new token immediately
           fetch('/api/tokens?refresh=1').catch(() => {});
         })
