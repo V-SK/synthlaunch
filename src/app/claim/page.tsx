@@ -42,6 +42,7 @@ export default function ClaimPage() {
   const [twitterVerified, setTwitterVerified] = useState(false);
   const [twitterVerifyLoading, setTwitterVerifyLoading] = useState(false);
   const [twitterVerifyError, setTwitterVerifyError] = useState('');
+  const [twitterPostedUrl, setTwitterPostedUrl] = useState('');
   const [twitterTokens, setTwitterTokens] = useState<TokenInfo[]>([]);
   const [twitterTokensLoading, setTwitterTokensLoading] = useState(false);
 
@@ -194,7 +195,7 @@ export default function ClaimPage() {
       const res = await fetch('/api/twitter/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: twitterHandle.trim(), action: 'verify' }),
+        body: JSON.stringify({ handle: twitterHandle.trim(), action: 'verify', tweetUrl: twitterPostedUrl.trim() || undefined }),
       });
       const data = await res.json();
       if (data.verified) {
@@ -639,6 +640,18 @@ export default function ClaimPage() {
                 {t('claim.afterPost')}
               </div>
 
+              <div className="space-y-1">
+                <label className="text-xs text-synth-muted">{t('claim.pasteTweetUrl')}</label>
+                <input
+                  type="text"
+                  placeholder="https://x.com/yourhandle/status/123..."
+                  value={twitterPostedUrl}
+                  onChange={(e) => setTwitterPostedUrl(e.target.value)}
+                  className="input-field w-full"
+                />
+                <div className="text-[10px] text-synth-muted">{t('claim.pasteTweetUrlHint')}</div>
+              </div>
+
               {twitterVerifyError && (
                 <div className="text-xs text-red-400">{twitterVerifyError}</div>
               )}
@@ -649,7 +662,7 @@ export default function ClaimPage() {
                 </button>
                 <button
                   onClick={handleTwitterVerify}
-                  disabled={twitterVerifyLoading}
+                  disabled={twitterVerifyLoading || !twitterPostedUrl.trim()}
                   className="btn-purple flex-1"
                 >
                   {twitterVerifyLoading ? t('claim.checking') : t('claim.verifyTweet')}

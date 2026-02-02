@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
     }
 
-    const { handle, action } = await req.json();
+    const { handle, action, tweetUrl: bodyTweetUrl } = await req.json();
 
     if (!handle || typeof handle !== 'string') {
       return NextResponse.json({ error: 'Missing handle' }, { status: 400 });
@@ -62,16 +62,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Verification code expired. Please generate a new one.' }, { status: 400 });
       }
 
-      // Try to fetch user's tweets and find the code
-      const verified = await checkTweetForCode(cleanHandle, stored.code);
+      // Use tweetUrl from request body
+      const tweetUrl = bodyTweetUrl;
+
+      // Validate tweet URL if provided
+      if (tweetUrl && !/^https?:\/\/(x\.com|twitter\.com)\/\w+\/status\/\d+/.test(tweetUrl)) {
+        return NextResponse.json({ error: 'Invalid tweet URL format.' }, { status: 400 });
+      }
+
+      // Try to verify the tweet
+      const verified = await checkTweetForCode(cleanHandle, stored.code, tweetUrl);
 
       if (verified) {
-        // Don't delete code yet — they might need to retry bind wallet
         return NextResponse.json({ verified: true, handle: cleanHandle });
       } else {
         return NextResponse.json({
           verified: false,
-          error: 'Verification tweet not found. Make sure you posted the tweet and try again in a few seconds.',
+          error: tweetUrl 
+            ? 'Could not verify the tweet. Make sure the tweet contains the verification code and is public.'
+            : 'Verification tweet not found. Please paste your tweet URL to verify.',
+          needsTweetUrl: !tweetUrl,
         });
       }
     }
@@ -83,45 +93,43 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function checkTweetForCode(handle: string, code: string): Promise<boolean> {
+async function checkTweetForCode(handle: string, code: string, tweetUrl?: string): Promise<boolean> {
   try {
-    // Method 1: Try Twitter syndication API (no auth needed)
-    const syndicationUrl = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${handle}`;
-    const res = await fetch(syndicationUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (res.ok) {
-      const html = await res.text();
-      if (html.includes(code)) {
-        return true;
+    // Method 1: oEmbed API with tweet URL (most reliable, no auth needed)
+    if (tweetUrl) {
+      try {
+        const oembedUrl = `https://publish.twitter.com/oembed?url=${encodeURIComponent(tweetUrl)}&omit_script=true`;
+        const res = await fetch(oembedUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // oEmbed returns { html: "<blockquote>...</blockquote>" } containing tweet text
+          if (data.html && data.html.includes(code)) {
+            // Also verify the tweet author matches the handle
+            const authorMatch = data.author_url?.toLowerCase().includes(handle.toLowerCase());
+            if (authorMatch) return true;
+          }
+        }
+      } catch (e) {
+        console.error('oEmbed check failed:', e);
       }
     }
 
-    // Method 2: Try nitter instances
-    const nitterInstances = [
-      `https://nitter.net/${handle}`,
-      `https://nitter.privacydev.net/${handle}`,
-    ];
-
-    for (const url of nitterInstances) {
-      try {
-        const nRes = await fetch(url, {
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (nRes.ok) {
-          const html = await nRes.text();
-          if (html.includes(code)) {
-            return true;
-          }
-        }
-      } catch {
-        // Try next instance
+    // Method 2: Try syndication API as fallback (profile scrape)
+    try {
+      const syndicationUrl = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${handle}`;
+      const res = await fetch(syndicationUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const html = await res.text();
+        if (html.includes(code)) return true;
       }
+    } catch {
+      // fallback failed
     }
 
     return false;
