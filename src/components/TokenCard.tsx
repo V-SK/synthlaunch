@@ -70,7 +70,7 @@ export function TokenCard({ address, name, symbol, image, price, priceUsd, marke
           <div className="mb-3 flex items-center gap-1.5">
             <span className="text-[10px] text-synth-cyan">⚡ Fee Sharing</span>
             <span className="text-[10px] px-1.5 py-0.5 bg-synth-purple/10 text-synth-purple rounded font-mono">
-              {agent_name.startsWith('tw:') ? `🐦 @${agent_name.slice(3)}` : `🤖 ${agent_name}`}
+              {agent_name.startsWith('tw:') ? `🐦 @${agent_name.slice(3)}` : `🦞 ${agent_name}`}
             </span>
           </div>
         )}
