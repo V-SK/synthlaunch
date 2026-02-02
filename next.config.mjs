@@ -13,9 +13,8 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
     optimizePackageImports: ['wagmi', '@tanstack/react-query', 'viem'],
+    serverComponentsExternalPackages: ['@aws-sdk/client-kms', '@aws-sdk/client-iam', 'asn1.js', 'aws-kms-signer', 'ethers'],
   },
-  // Keep heavy server-only packages out of client bundles
-  serverExternalPackages: ['@aws-sdk/client-kms', '@aws-sdk/client-iam', 'asn1.js', 'aws-kms-signer', 'ethers'],
 };
 
 export default nextConfig;
