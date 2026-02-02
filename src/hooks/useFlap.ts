@@ -47,11 +47,16 @@ export function useLaunchToken() {
           creator: address,
           agent_name: params.agentId || '',
           tax_rate: taxBps,
-          beneficiary: hasTax ? CUSTODY_ADDRESS : address,
+          beneficiary: (hasTax && !isSelfMode) ? CUSTODY_ADDRESS : address,
           tx_hash: hash,
           launch_type: params.launchType || 'client',
         }),
-      }).catch(err => console.error('[register] Failed:', err));
+      })
+        .then(() => {
+          // Bust token cache so homepage shows new token immediately
+          fetch('/api/tokens?refresh=1').catch(() => {});
+        })
+        .catch(err => console.error('[register] Failed:', err));
     }
   }, [isSuccess, hash, address]);
 

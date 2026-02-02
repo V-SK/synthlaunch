@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 const PORTAL_ADDRESS = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as Address;
 const BSC_RPC = 'https://bsc-dataseed.binance.org';
 const BILLION = 1000000000;
-const CACHE_TTL = 45000; // 45 seconds
+const CACHE_TTL = 15000; // 45 seconds
 
 const PORTAL_ABI = parseAbi([
   'function getTokenV5(address token) external view returns ((uint8,uint256,uint256,uint256,uint8,uint256,uint256,uint256,uint256,address,bool,bytes32))',
