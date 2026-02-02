@@ -319,7 +319,7 @@ export default function LaunchPage() {
             onModeChange={(mode) => {
               setAgentMode(mode);
               if (mode === 'self') {
-                setForm(prev => ({ ...prev, agentId: '', taxRate: 0 }));
+                setForm(prev => ({ ...prev, agentId: '' }));
               }
             }}
           />

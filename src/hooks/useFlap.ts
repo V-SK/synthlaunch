@@ -68,8 +68,9 @@ export function useLaunchToken() {
     // Mine a vanity salt (address must end with 7777 for tax, 8888 for non-tax)
     const salt = await findVanitySalt(hasTax);
 
-    // Tax tokens → beneficiary is custody contract; no-tax → user wallet
-    const beneficiary = hasTax ? CUSTODY_ADDRESS : address;
+    // Agent/Twitter mode with tax → custody contract; self mode → user wallet
+    const isSelfMode = !params.agentId || params.launchType === 'client';
+    const beneficiary = (hasTax && !isSelfMode) ? CUSTODY_ADDRESS : address;
 
     writeContract({
       address: FLAP_ADDRESS,
