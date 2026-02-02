@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
       }
 
       const meData = await meRes.json();
-      const verifiedName = meData.username || meData.name;
+      const agentObj = meData.agent || meData;
+      const verifiedName = agentObj.username || agentObj.name;
 
       if (verifiedName !== agentName) {
         console.log(`[bind-wallet] Agent name mismatch: expected ${agentName}, got ${verifiedName}`);
