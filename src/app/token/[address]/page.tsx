@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { Token } from '@/lib/api';
 import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
-export default function TokenPage({ params }: { params: { address: string } }) {
+function TokenPageInner({ params }: { params: { address: string } }) {
   const { t, locale } = useI18n();
   const isZh = locale === 'zh';
   const [token, setToken] = useState<Token | null>(null);
@@ -347,5 +348,14 @@ export default function TokenPage({ params }: { params: { address: string } }) {
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function TokenPage({ params }: { params: { address: string } }) {
+  return (
+    <ErrorBoundary>
+      <TokenPageInner params={params} />
+    </ErrorBoundary>
   );
 }

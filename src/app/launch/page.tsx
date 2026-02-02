@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaxRateSlider } from '@/components/TaxRateSlider';
 import { AgentSelector } from '@/components/AgentSelector';
 import { WalletConnect } from '@/components/WalletConnect';
@@ -11,7 +12,7 @@ import { useI18n } from '@/lib/i18n';
 
 type LaunchStep = 'idle' | 'uploading' | 'mining-salt' | 'sending-tx' | 'confirming' | 'success' | 'error';
 
-export default function LaunchPage() {
+function LaunchPageInner() {
   const { t } = useI18n();
   const { isConnected, address } = useAccount();
   const { launch, hash, isPending, isConfirming, isSuccess, error: txError, reset } = useLaunchToken();
@@ -384,5 +385,14 @@ export default function LaunchPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+
+export default function LaunchPage() {
+  return (
+    <ErrorBoundary>
+      <LaunchPageInner />
+    </ErrorBoundary>
   );
 }

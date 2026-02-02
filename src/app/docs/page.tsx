@@ -1,9 +1,10 @@
 'use client';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useI18n } from '@/lib/i18n';
 import Link from 'next/link';
 
-export default function DocsPage() {
+function DocsPageInner() {
   const { t, locale } = useI18n();
   const isZh = locale === 'zh';
 
@@ -292,5 +293,14 @@ export default function DocsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+
+export default function DocsPage() {
+  return (
+    <ErrorBoundary>
+      <DocsPageInner />
+    </ErrorBoundary>
   );
 }

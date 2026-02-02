@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatsBar } from '@/components/StatsBar';
 import { TokenCard } from '@/components/TokenCard';
 import { Pagination } from '@/components/Pagination';
@@ -18,7 +19,7 @@ interface TopEarner {
   totalFeesBnb: number;
 }
 
-export default function Home() {
+function HomeInner() {
   const { t } = useI18n();
   const [sort, setSort] = useState<SortTab>('new');
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -236,5 +237,14 @@ export default function Home() {
         </span>
       </div>
     </div>
+  );
+}
+
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <HomeInner />
+    </ErrorBoundary>
   );
 }

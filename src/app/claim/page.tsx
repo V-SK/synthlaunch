@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { formatEther, type Address } from 'viem';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
@@ -19,7 +20,7 @@ interface TokenInfo {
   wallet: Address;
 }
 
-export default function ClaimPage() {
+function ClaimPageInner() {
   const { t } = useI18n();
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
@@ -759,5 +760,14 @@ export default function ClaimPage() {
         </ul>
       </div>
     </div>
+  );
+}
+
+
+export default function ClaimPage() {
+  return (
+    <ErrorBoundary>
+      <ClaimPageInner />
+    </ErrorBoundary>
   );
 }
