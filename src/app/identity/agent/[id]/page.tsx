@@ -29,22 +29,26 @@ const PLATFORM_LINKS: Record<string, (id: string) => string> = {
 function AgentDetailPageInner() {
   const { t } = useI18n();
   const params = useParams();
-  const agentId = Number(params.id);
+  const rawId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '0';
+  const agentId = Number(rawId) || 0;
+  const validId = agentId > 0;
+  // Guard BigInt — never pass NaN/0
+  const safeIdBigInt = BigInt(validId ? agentId : 1);
 
   const { data: identityData, isLoading: idLoading, error: idError } = useReadContract({
     address: SYNTHID_ADDRESS,
     abi: SYNTHID_ABI,
     functionName: 'getAgentIdentity',
-    args: [BigInt(agentId)],
-    query: { enabled: agentId > 0 },
+    args: [safeIdBigInt],
+    query: { enabled: validId },
   });
 
   const { data: profileData, isLoading: profLoading } = useReadContract({
     address: SYNTHID_ADDRESS,
     abi: SYNTHID_ABI,
     functionName: 'getAgentProfile',
-    args: [BigInt(agentId)],
-    query: { enabled: agentId > 0 },
+    args: [safeIdBigInt],
+    query: { enabled: validId },
   });
 
   const isLoading = idLoading || profLoading;
@@ -53,16 +57,16 @@ function AgentDetailPageInner() {
   const identity = identityData as [string, string, string, string, bigint, string, boolean] | undefined;
   const profile = profileData as [string, string, string[]] | undefined;
 
-  const name = identity?.[0] || '';
-  const platform = identity?.[1] || '';
-  const platformId = identity?.[2] || '';
-  const agentURI = identity?.[3] || '';
+  const name = String(identity?.[0] || '');
+  const platform = String(identity?.[1] || '');
+  const platformId = String(identity?.[2] || '');
+  const agentURI = String(identity?.[3] || '');
   const createdAt = identity?.[4] ? Number(identity[4]) : 0;
-  const owner = identity?.[5] || '';
-  const revoked = identity?.[6] || false;
-  const avatar = profile?.[0] || '';
-  const description = profile?.[1] || '';
-  const skills = profile?.[2] || [];
+  const owner = String(identity?.[5] || '');
+  const revoked = Boolean(identity?.[6]);
+  const avatar = String(profile?.[0] || '');
+  const description = String(profile?.[1] || '');
+  const skills: string[] = (profile?.[2] || []).map(s => String(s));
 
   // Loading skeleton
   if (isLoading) {
