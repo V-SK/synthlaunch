@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ exists: true, tokenId: Number(tokenId) });
     }
     return NextResponse.json({ exists: false });
-  } catch {
-    return NextResponse.json({ exists: false });
+  } catch (err) {
+    return NextResponse.json({ error: 'RPC call failed' }, { status: 502 });
   }
 }

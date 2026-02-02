@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { BnbCard, BscChainBadge, PlatformBadge } from './BnbTheme';
-import type { MockAgent } from '@/lib/identity-mock';
+import type { OnChainAgent } from '@/hooks/useSynthID';
 
 function timeAgo(timestamp: number): string {
   const seconds = Math.floor(Date.now() / 1000 - timestamp);
@@ -13,7 +13,7 @@ function timeAgo(timestamp: number): string {
   return `${Math.floor(seconds / 604800)}w ago`;
 }
 
-export function AgentCard({ agent, compact = false }: { agent: MockAgent; compact?: boolean }) {
+export function AgentCard({ agent, compact = false }: { agent: OnChainAgent; compact?: boolean }) {
   return (
     <Link href={`/identity/agent/${agent.agentId}`}>
       <BnbCard hover className={`p-4 ${compact ? 'min-w-[260px]' : ''} cursor-pointer group`}>
@@ -36,6 +36,11 @@ export function AgentCard({ agent, compact = false }: { agent: MockAgent; compac
               <span className="text-[10px] px-1.5 py-0.5 bg-[#F0B90B]/10 text-[#F0B90B] border border-[#F0B90B]/20 rounded font-mono">
                 #{agent.agentId}
               </span>
+              {agent.revoked && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-[#F6465D]/10 text-[#F6465D] border border-[#F6465D]/20 rounded">
+                  REVOKED
+                </span>
+              )}
             </div>
 
             {/* Platform + chain */}
@@ -71,7 +76,7 @@ export function AgentCard({ agent, compact = false }: { agent: MockAgent; compac
 }
 
 // Compact card for the carousel
-export function AgentCardCompact({ agent }: { agent: MockAgent }) {
+export function AgentCardCompact({ agent }: { agent: OnChainAgent }) {
   return (
     <Link href={`/identity/agent/${agent.agentId}`}>
       <BnbCard hover className="p-3 min-w-[220px] max-w-[220px] cursor-pointer group">

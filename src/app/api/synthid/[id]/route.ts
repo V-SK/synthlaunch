@@ -15,10 +15,11 @@ const client = createPublicClient({
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tokenId = BigInt(params.id);
+    const { id } = await params;
+    const tokenId = BigInt(id);
 
     const [identity, profile] = await Promise.all([
       client.readContract({
@@ -39,12 +40,12 @@ export async function GET(
     const [avatar, description, skills] = profile;
 
     const metadata = {
-      name: `SynthID #${params.id}`,
+      name: `SynthID #${id}`,
       description: description
         ? `AI Agent Identity on BSC — ${name}. ${description}`
         : `AI Agent Identity on BSC — ${name}`,
       image: avatar || '',
-      external_url: `https://synthlaunch.fun/identity/agent/${params.id}`,
+      external_url: `https://synthlaunch.fun/identity/agent/${id}`,
       attributes: [
         { trait_type: 'Name', value: name },
         { trait_type: 'Platform', value: platform },

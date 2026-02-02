@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseEther } from 'viem';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useChainId } from 'wagmi';
+import { parseEther, formatEther } from 'viem';
 import { useI18n } from '@/lib/i18n';
 import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
 import { BnbThemeProvider, BnbCard, BnbButton } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
 import { AgentPreviewCard } from '@/components/identity/AgentPreviewCard';
 
-const MINT_FEE_BNB = 0.04;
 const LIMITS = {
   name: 32,
   platformId: 64,
@@ -20,7 +19,7 @@ const LIMITS = {
 };
 
 type VerifyStatus = 'idle' | 'verifying' | 'verified' | 'failed';
-type MintStep = 'idle' | 'minting' | 'setting-uri' | 'done';
+type MintStep = 'idle' | 'minting' | 'setting-uri' | 'setting-skills' | 'done';
 
 interface MoltbookAgent {
   name: string;
@@ -32,8 +31,11 @@ interface MoltbookAgent {
 }
 
 export default function RegisterPage() {
-  const { t, isZh } = useI18n();
+  const { t, locale } = useI18n();
+  const isZh = locale === 'zh';
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
+  const isWrongNetwork = isConnected && chainId !== 56;
 
   const [moltbookId, setMoltbookId] = useState('');
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>('idle');
@@ -49,18 +51,42 @@ export default function RegisterPage() {
   const [uploading, setUploading] = useState(false);
   const [bnbPrice, setBnbPrice] = useState(0);
   const [mintStep, setMintStep] = useState<MintStep>('idle');
+  const [mintedTokenId, setMintedTokenId] = useState<number>(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const skills = skillsInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, LIMITS.skillCount);
   const platform = 'moltbook';
 
+  // Read mint fee from contract (C3)
+  const { data: contractMintFee } = useReadContract({
+    address: SYNTHID_ADDRESS,
+    abi: SYNTHID_ABI,
+    functionName: 'mintFee',
+  });
+  const mintFeeBn = contractMintFee ? (contractMintFee as bigint) : parseEther('0.04');
+  const mintFeeBnbDisplay = formatEther(mintFeeBn);
+
+  // Check wallet duplicate (C5)
+  const { data: existingId } = useReadContract({
+    address: SYNTHID_ADDRESS,
+    abi: SYNTHID_ABI,
+    functionName: 'walletToId',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+  const walletHasId = existingId && Number(existingId) > 0;
+
   // Step 1: register (mint)
-  const { writeContract: writeMint, data: mintTxHash, isPending: isMinting } = useWriteContract();
+  const { writeContract: writeMint, data: mintTxHash, isPending: isMinting, error: mintError } = useWriteContract();
   const { isSuccess: isMintSuccess } = useWaitForTransactionReceipt({ hash: mintTxHash });
 
   // Step 2: setAgentURI
-  const { writeContract: writeUri, data: uriTxHash } = useWriteContract();
+  const { writeContract: writeUri, data: uriTxHash, error: uriError, reset: resetUri } = useWriteContract();
   const { isSuccess: isUriSuccess } = useWaitForTransactionReceipt({ hash: uriTxHash });
+
+  // Step 3: setSkills
+  const { writeContract: writeSkills, data: skillsTxHash, error: skillsError, reset: resetSkills } = useWriteContract();
+  const { isSuccess: isSkillsSuccess } = useWaitForTransactionReceipt({ hash: skillsTxHash });
 
   // Read token ID after mint
   const { refetch: refetchTokenId } = useReadContract({
@@ -93,12 +119,39 @@ export default function RegisterPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMintSuccess]);
 
-  // After URI set → done
+  // After URI set → set skills or done
   useEffect(() => {
     if (isUriSuccess && mintStep === 'setting-uri') {
+      if (skills.length > 0 && mintedTokenId > 0) {
+        setMintStep('setting-skills');
+        writeSkills({
+          address: SYNTHID_ADDRESS,
+          abi: SYNTHID_ABI,
+          functionName: 'setSkills',
+          args: [BigInt(mintedTokenId), skills],
+        });
+      } else {
+        setMintStep('done');
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUriSuccess, mintStep]);
+
+  // After skills set → done
+  useEffect(() => {
+    if (isSkillsSuccess && mintStep === 'setting-skills') {
       setMintStep('done');
     }
-  }, [isUriSuccess, mintStep]);
+  }, [isSkillsSuccess, mintStep]);
+
+  // Handle mint error - go back to idle
+  useEffect(() => {
+    if (mintError && mintStep === 'minting') {
+      setError(isZh ? '铸造交易失败，请重试' : 'Mint transaction failed. Please try again.');
+      setMintStep('idle');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mintError]);
 
   // ============ Moltbook Verification ============
 
@@ -138,15 +191,18 @@ export default function RegisterPage() {
         return;
       }
 
-      // Check if already registered on SynthID
+      // Check if already registered on SynthID (handle errors properly)
       const checkRes = await fetch(`/api/synthid/check?platform=moltbook&platformId=${encodeURIComponent(agent.name)}`);
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (checkData.exists) {
-          setVerifyStatus('failed');
-          setVerifyError(isZh ? `Agent "${agent.name}" 已注册 SynthID #${checkData.tokenId}` : `Agent "${agent.name}" already has SynthID #${checkData.tokenId}`);
-          return;
-        }
+      if (!checkRes.ok) {
+        setVerifyStatus('failed');
+        setVerifyError(isZh ? 'SynthID 链上检查失败，请稍后再试' : 'SynthID on-chain check failed. Please try again later.');
+        return;
+      }
+      const checkData = await checkRes.json();
+      if (checkData.exists) {
+        setVerifyStatus('failed');
+        setVerifyError(isZh ? `Agent "${agent.name}" 已注册 SynthID #${checkData.tokenId}` : `Agent "${agent.name}" already has SynthID #${checkData.tokenId}`);
+        return;
       }
 
       setAgentData(agent);
@@ -156,7 +212,7 @@ export default function RegisterPage() {
       setName(agent.name.slice(0, LIMITS.name));
       if (agent.avatar_url) setAvatar(agent.avatar_url);
       if (agent.bio) setDescription(agent.bio.slice(0, LIMITS.description));
-    } catch (err) {
+    } catch {
       setVerifyStatus('failed');
       setVerifyError(isZh ? 'Moltbook API 请求失败' : 'Moltbook API request failed');
     }
@@ -169,6 +225,7 @@ export default function RegisterPage() {
       setMintStep('setting-uri');
       const result = await refetchTokenId();
       const tid = result.data ? Number(result.data) : 0;
+      setMintedTokenId(tid);
       if (!tid) {
         setMintStep('done');
         return;
@@ -184,6 +241,32 @@ export default function RegisterPage() {
     } catch {
       setMintStep('done');
     }
+  };
+
+  // Retry URI setting
+  const handleRetryUri = () => {
+    if (!mintedTokenId) return;
+    resetUri();
+    setMintStep('setting-uri');
+    writeUri({
+      address: SYNTHID_ADDRESS,
+      abi: SYNTHID_ABI,
+      functionName: 'setAgentURI',
+      args: [BigInt(mintedTokenId), `https://synthlaunch.fun/api/synthid/${mintedTokenId}`],
+    });
+  };
+
+  // Retry skills setting
+  const handleRetrySkills = () => {
+    if (!mintedTokenId || skills.length === 0) return;
+    resetSkills();
+    setMintStep('setting-skills');
+    writeSkills({
+      address: SYNTHID_ADDRESS,
+      abi: SYNTHID_ABI,
+      functionName: 'setSkills',
+      args: [BigInt(mintedTokenId), skills],
+    });
   };
 
   // ============ Avatar Upload ============
@@ -238,17 +321,19 @@ export default function RegisterPage() {
       address: SYNTHID_ADDRESS,
       abi: SYNTHID_ABI,
       functionName: 'register',
-      args: [name, platform, moltbookId.trim(), avatar, description],
-      value: parseEther('0.04'),
+      args: [name, platform, agentData?.name || moltbookId.trim(), avatar, description],
+      value: mintFeeBn,
     });
   };
 
-  const feeUsd = bnbPrice > 0 ? `~$${(MINT_FEE_BNB * bnbPrice).toFixed(1)}` : '...';
+  const feeUsd = bnbPrice > 0 ? `~$${(Number(mintFeeBnbDisplay) * bnbPrice).toFixed(1)}` : '...';
 
   const stepLabel = () => {
+    const totalSteps = skills.length > 0 ? 3 : 2;
     switch (mintStep) {
-      case 'minting': return isZh ? '⏳ 铸造中... (1/2)' : '⏳ Minting... (1/2)';
-      case 'setting-uri': return isZh ? '🔗 设置 NFT 头像... (2/2)' : '🔗 Setting NFT image... (2/2)';
+      case 'minting': return isZh ? `⏳ 铸造中... (1/${totalSteps})` : `⏳ Minting... (1/${totalSteps})`;
+      case 'setting-uri': return isZh ? `🔗 设置 URI... (2/${totalSteps})` : `🔗 Setting URI... (2/${totalSteps})`;
+      case 'setting-skills': return isZh ? `🏷 设置技能标签... (3/${totalSteps})` : `🏷 Setting skills... (3/${totalSteps})`;
       default: return '';
     }
   };
@@ -266,6 +351,22 @@ export default function RegisterPage() {
               : 'Verify your Moltbook Agent identity and mint an on-chain ERC-721 ID on BSC'}
           </p>
         </div>
+
+        {/* Wrong network warning (M1) */}
+        {isWrongNetwork && (
+          <div className="mb-6 p-4 bg-[#F6465D]/10 border border-[#F6465D]/30 rounded-xl text-sm text-[#F6465D] flex items-center gap-2">
+            ⚠️ {isZh ? '请切换到 BSC 主网 (Chain ID: 56)' : 'Please switch to BSC Mainnet (Chain ID: 56)'}
+          </div>
+        )}
+
+        {/* Wallet already has ID warning (C5) */}
+        {walletHasId && (
+          <div className="mb-6 p-4 bg-[#F0B90B]/10 border border-[#F0B90B]/30 rounded-xl text-sm text-[#F0B90B] flex items-center gap-2">
+            ⚠️ {isZh
+              ? `此钱包已拥有 SynthID #${Number(existingId)}，每个钱包只能注册一个`
+              : `This wallet already has SynthID #${Number(existingId)}. One per wallet.`}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Form */}
@@ -446,7 +547,7 @@ export default function RegisterPage() {
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm text-[#848E9C]">{isZh ? '铸造费用' : 'Mint Fee'}</span>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-[#F0B90B]">{MINT_FEE_BNB} BNB</span>
+                    <span className="text-lg font-bold text-[#F0B90B]">{mintFeeBnbDisplay} BNB</span>
                     <span className="text-xs text-[#848E9C] ml-2">{feeUsd}</span>
                   </div>
                 </div>
@@ -461,15 +562,64 @@ export default function RegisterPage() {
                   <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-60">
                     🔗 {isZh ? '连接钱包' : 'Connect Wallet'}
                   </BnbButton>
+                ) : isWrongNetwork ? (
+                  <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-60">
+                    ⚠️ {isZh ? '请切换到 BSC 主网' : 'Switch to BSC Mainnet'}
+                  </BnbButton>
+                ) : walletHasId && mintStep === 'idle' ? (
+                  <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-40">
+                    {isZh ? `钱包已有 SynthID #${Number(existingId)}` : `Wallet has SynthID #${Number(existingId)}`}
+                  </BnbButton>
                 ) : mintStep === 'done' ? (
                   <div className="text-center py-4">
                     <div className="text-3xl mb-2">✅</div>
                     <p className="text-[#0ECB81] font-bold mb-1">
                       {isZh ? 'SynthID 铸造成功！' : 'SynthID Minted Successfully!'}
                     </p>
+                    {mintedTokenId > 0 && (
+                      <p className="text-sm text-[#F0B90B] font-mono mb-1">Token #{mintedTokenId}</p>
+                    )}
                     <p className="text-xs text-[#848E9C]">
                       {isZh ? '你的 AI Agent 链上身份已创建' : 'Your AI Agent on-chain identity is live'}
                     </p>
+                  </div>
+                ) : (uriError && mintStep === 'setting-uri') ? (
+                  <div className="text-center py-3 space-y-2">
+                    <div className="text-sm text-[#F6465D]">
+                      {isZh ? '❌ 设置 URI 失败' : '❌ Failed to set URI'}
+                    </div>
+                    {mintedTokenId > 0 && (
+                      <p className="text-xs text-[#0ECB81]">
+                        {isZh ? `✅ Token #${mintedTokenId} 已铸造成功` : `✅ Token #${mintedTokenId} minted successfully`}
+                      </p>
+                    )}
+                    <div className="flex gap-2 justify-center">
+                      <BnbButton onClick={handleRetryUri} variant="primary" className="px-6 py-2 text-sm">
+                        {isZh ? '🔄 重试' : '🔄 Retry'}
+                      </BnbButton>
+                      <BnbButton onClick={() => setMintStep('done')} variant="secondary" className="px-6 py-2 text-sm">
+                        {isZh ? '跳过' : 'Skip'}
+                      </BnbButton>
+                    </div>
+                  </div>
+                ) : (skillsError && mintStep === 'setting-skills') ? (
+                  <div className="text-center py-3 space-y-2">
+                    <div className="text-sm text-[#F6465D]">
+                      {isZh ? '❌ 设置技能失败' : '❌ Failed to set skills'}
+                    </div>
+                    {mintedTokenId > 0 && (
+                      <p className="text-xs text-[#0ECB81]">
+                        {isZh ? `✅ Token #${mintedTokenId} 已铸造 + URI 已设置` : `✅ Token #${mintedTokenId} minted + URI set`}
+                      </p>
+                    )}
+                    <div className="flex gap-2 justify-center">
+                      <BnbButton onClick={handleRetrySkills} variant="primary" className="px-6 py-2 text-sm">
+                        {isZh ? '🔄 重试' : '🔄 Retry'}
+                      </BnbButton>
+                      <BnbButton onClick={() => setMintStep('done')} variant="secondary" className="px-6 py-2 text-sm">
+                        {isZh ? '跳过' : 'Skip'}
+                      </BnbButton>
+                    </div>
                   </div>
                 ) : mintStep !== 'idle' ? (
                   <div className="text-center py-3">

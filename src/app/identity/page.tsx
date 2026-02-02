@@ -3,7 +3,8 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-import { MOCK_AGENTS, MOCK_STATS } from '@/lib/identity-mock';
+import { SYNTHID_ADDRESS } from '@/lib/synthid';
+import { useAllAgents } from '@/hooks/useSynthID';
 import { BnbThemeProvider, BnbButton, BscChainBadge } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
 import { SearchBar } from '@/components/identity/SearchBar';
@@ -14,13 +15,17 @@ import { FeatureCards } from '@/components/identity/FeatureCards';
 export default function IdentityPage() {
   const { t } = useI18n();
   const carouselRef = useRef<HTMLDivElement>(null);
+  const { agents, isLoading, totalMinted, activeCount } = useAllAgents();
 
-  const latestAgents = [...MOCK_AGENTS].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
+  const latestAgents = [...agents]
+    .filter(a => !a.revoked)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 10);
 
   const stats = [
-    { label: t('sid.statsAgents'), value: MOCK_STATS.totalAgents, icon: '🤖' },
-    { label: t('sid.statsMints'), value: MOCK_STATS.totalMints, icon: '🔨' },
-    { label: t('sid.statsActive'), value: MOCK_STATS.activeOnBsc, icon: '⚡' },
+    { label: t('sid.statsAgents'), value: isLoading ? '...' : agents.filter(a => !a.revoked).length, icon: '🤖' },
+    { label: t('sid.statsMints'), value: isLoading ? '...' : (totalMinted || agents.length), icon: '🔨' },
+    { label: t('sid.statsActive'), value: isLoading ? '...' : (activeCount || agents.filter(a => !a.revoked).length), icon: '⚡' },
   ];
 
   const scrollCarousel = (dir: number) => {
@@ -85,15 +90,28 @@ export default function IdentityPage() {
               </Link>
             </div>
           </div>
-          <div
-            ref={carouselRef}
-            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {latestAgents.map(agent => (
-              <AgentCardCompact key={agent.agentId} agent={agent} />
-            ))}
-          </div>
+
+          {isLoading ? (
+            <div className="flex gap-3 overflow-hidden">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="min-w-[220px] max-w-[220px] h-[88px] rounded-xl bg-[#1E2329] animate-pulse" />
+              ))}
+            </div>
+          ) : latestAgents.length === 0 ? (
+            <div className="text-center py-8 text-[#848E9C] text-sm">
+              {t('sid.agents.noResults') || 'No agents yet. Be the first to register!'}
+            </div>
+          ) : (
+            <div
+              ref={carouselRef}
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {latestAgents.map(agent => (
+                <AgentCardCompact key={agent.agentId} agent={agent} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Register CTA */}
@@ -124,6 +142,14 @@ export default function IdentityPage() {
             <span>{t('sid.footerProtocol')}</span>
           </div>
           <div className="flex items-center gap-4">
+            <a
+              href={`https://bscscan.com/address/${SYNTHID_ADDRESS}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#EAECEF] transition-colors font-mono text-[10px]"
+            >
+              {SYNTHID_ADDRESS.slice(0, 6)}...{SYNTHID_ADDRESS.slice(-4)}
+            </a>
             <Link href="/identity/agents" className="hover:text-[#EAECEF] transition-colors">Registry</Link>
             <Link href="/identity/register" className="hover:text-[#EAECEF] transition-colors">Register</Link>
             <a href="https://github.com/V-SK/synthlaunch" target="_blank" rel="noopener noreferrer" className="hover:text-[#EAECEF] transition-colors">GitHub</a>

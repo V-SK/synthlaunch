@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json();
-    const cid = data?.data?.create;
+    const cid = data?.data?.uploadFile?.cid || data?.data?.create || data?.cid;
     if (!cid) {
       return NextResponse.json({ error: 'No CID returned', raw: data }, { status: 502 });
     }
