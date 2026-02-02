@@ -27,6 +27,9 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     /// @notice 后端签名者地址（用于验证 agent 身份）
     address public signer;
 
+    /// @notice 操作员地址（用于日常操作如 registerToken，避免暴露 owner）
+    address public operator;
+
     /// @notice token 地址 => agent 名称
     mapping(address => string) public tokenAgent;
 
@@ -71,13 +74,22 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     event PlatformFeeUpdated(uint256 oldRate, uint256 newRate);
     event PlatformFeeWithdrawn(address to, uint256 amount);
     event EmergencyWithdrawn(address to, uint256 amount);
+    event OperatorUpdated(address oldOperator, address newOperator);
 
     // ============ 构造函数 ============
 
-    constructor(address _signer, uint256 _platformFeeRate) Ownable(msg.sender) {
+    /// @notice 仅 operator 或 owner 可调用
+    modifier onlyOperator() {
+        require(msg.sender == operator || msg.sender == owner(), "Not operator");
+        _;
+    }
+
+    constructor(address _signer, address _operator, uint256 _platformFeeRate) Ownable(msg.sender) {
         require(_signer != address(0), "Invalid signer");
+        require(_operator != address(0), "Invalid operator");
         require(_platformFeeRate <= MAX_PLATFORM_FEE, "Fee too high");
         signer = _signer;
+        operator = _operator;
         platformFeeRate = _platformFeeRate;
     }
 
@@ -123,7 +135,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     /// @notice 注册 token 和对应的 agent（仅 owner）
     /// @param token Token 合约地址
     /// @param agentName Moltbook agent 用户名
-    function registerToken(address token, string calldata agentName) external onlyOwner {
+    function registerToken(address token, string calldata agentName) external onlyOperator {
         require(token != address(0), "Invalid token");
         require(bytes(agentName).length > 0, "Invalid agent name");
         require(bytes(tokenAgent[token]).length == 0, "Token already registered");
@@ -136,7 +148,7 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
     function registerTokenBatch(
         address[] calldata tokens,
         string[] calldata agentNames
-    ) external onlyOwner {
+    ) external onlyOperator {
         require(tokens.length == agentNames.length, "Length mismatch");
         for (uint i = 0; i < tokens.length; i++) {
             if (bytes(tokenAgent[tokens[i]]).length == 0 && bytes(agentNames[i]).length > 0) {
@@ -161,6 +173,13 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
         require(_signer != address(0), "Invalid signer");
         emit SignerUpdated(signer, _signer);
         signer = _signer;
+    }
+
+    /// @notice 更新操作员地址（仅 owner）
+    function setOperator(address _operator) external onlyOwner {
+        require(_operator != address(0), "Invalid operator");
+        emit OperatorUpdated(operator, _operator);
+        operator = _operator;
     }
 
     /// @notice 更新平台手续费率
