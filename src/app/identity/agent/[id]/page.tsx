@@ -9,7 +9,7 @@ import { BnbThemeProvider, BnbCard, BscChainBadge, PlatformBadge, BnbBadge, BnbB
 import { IdentityNav } from '@/components/identity/IdentityNav';
 
 const PLATFORM_LINKS: Record<string, (id: string) => string> = {
-  moltbook: (id) => `https://moltbook.com/u/${id}`,
+  moltbook: (id) => `https://www.moltbook.com/u/${id}`,
   twitter: (id) => `https://x.com/${id}`,
 };
 
