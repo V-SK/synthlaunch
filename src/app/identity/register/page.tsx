@@ -19,15 +19,29 @@ const LIMITS = {
   skillCount: 10,
 };
 
-type MintStep = 'idle' | 'minting' | 'uploading-meta' | 'setting-uri' | 'done';
+type VerifyStatus = 'idle' | 'verifying' | 'verified' | 'failed';
+type MintStep = 'idle' | 'minting' | 'setting-uri' | 'done';
+
+interface MoltbookAgent {
+  name: string;
+  avatar_url: string;
+  bio: string;
+  is_claimed: boolean;
+  karma: number;
+  x_handle: string;
+}
 
 export default function RegisterPage() {
   const { t, isZh } = useI18n();
   const { isConnected, address } = useAccount();
 
+  const [moltbookId, setMoltbookId] = useState('');
+  const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>('idle');
+  const [verifyError, setVerifyError] = useState('');
+  const [agentData, setAgentData] = useState<MoltbookAgent | null>(null);
+
+  // Editable fields (pre-filled from Moltbook)
   const [name, setName] = useState('');
-  const [platform, setPlatform] = useState('moltbook');
-  const [platformId, setPlatformId] = useState('');
   const [avatar, setAvatar] = useState('');
   const [description, setDescription] = useState('');
   const [skillsInput, setSkillsInput] = useState('');
@@ -38,17 +52,18 @@ export default function RegisterPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const skills = skillsInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, LIMITS.skillCount);
+  const platform = 'moltbook';
 
   // Step 1: register (mint)
   const { writeContract: writeMint, data: mintTxHash, isPending: isMinting } = useWriteContract();
   const { isSuccess: isMintSuccess } = useWaitForTransactionReceipt({ hash: mintTxHash });
 
   // Step 2: setAgentURI
-  const { writeContract: writeUri, data: uriTxHash, isPending: isSettingUri } = useWriteContract();
+  const { writeContract: writeUri, data: uriTxHash } = useWriteContract();
   const { isSuccess: isUriSuccess } = useWaitForTransactionReceipt({ hash: uriTxHash });
 
   // Read token ID after mint
-  const { data: tokenId, refetch: refetchTokenId } = useReadContract({
+  const { refetch: refetchTokenId } = useReadContract({
     address: SYNTHID_ADDRESS,
     abi: SYNTHID_ABI,
     functionName: 'walletToId',
@@ -70,7 +85,7 @@ export default function RegisterPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // After mint success → upload metadata → set URI
+  // After mint success → set URI
   useEffect(() => {
     if (isMintSuccess && mintStep === 'minting') {
       handlePostMint();
@@ -78,61 +93,106 @@ export default function RegisterPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMintSuccess]);
 
-  // After URI set success → done
+  // After URI set → done
   useEffect(() => {
     if (isUriSuccess && mintStep === 'setting-uri') {
       setMintStep('done');
     }
   }, [isUriSuccess, mintStep]);
 
-  const handlePostMint = async () => {
-    try {
-      setMintStep('uploading-meta');
+  // ============ Moltbook Verification ============
 
-      // Get token ID
-      const result = await refetchTokenId();
-      const tid = result.data ? Number(result.data) : 0;
-      if (!tid) {
-        setError(isZh ? '无法获取 Token ID' : 'Failed to get Token ID');
-        setMintStep('done'); // Still show success for mint
+  const handleVerify = async () => {
+    const id = moltbookId.trim();
+    if (!id) {
+      setVerifyError(isZh ? '请输入 Moltbook 用户名' : 'Please enter Moltbook username');
+      return;
+    }
+
+    setVerifyStatus('verifying');
+    setVerifyError('');
+    setAgentData(null);
+
+    try {
+      // Call Moltbook API to verify agent
+      const res = await fetch(`https://www.moltbook.com/api/v1/agents/profile?name=${encodeURIComponent(id)}`);
+      
+      if (!res.ok) {
+        setVerifyStatus('failed');
+        setVerifyError(isZh ? `找不到 Agent "${id}"` : `Agent "${id}" not found`);
         return;
       }
 
-      // Upload metadata to IPFS
-      const res = await fetch('/api/synthid/metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, platform, platformId, avatar, description, skills, tokenId: tid,
-        }),
-      });
       const data = await res.json();
-      if (!data.uri) {
-        setError(isZh ? 'Metadata 上传失败，NFT 已铸造但头像可能不显示' : 'Metadata upload failed, NFT minted but avatar may not display');
+      const agent = data.agent || data;
+
+      if (!agent.name) {
+        setVerifyStatus('failed');
+        setVerifyError(isZh ? `"${id}" 不是有效的 Moltbook Agent` : `"${id}" is not a valid Moltbook agent`);
+        return;
+      }
+
+      if (!agent.is_claimed) {
+        setVerifyStatus('failed');
+        setVerifyError(isZh ? `Agent "${id}" 尚未被 Claimed（需要先在 Moltbook 认领）` : `Agent "${id}" is not claimed yet (must be claimed on Moltbook first)`);
+        return;
+      }
+
+      // Check if already registered on SynthID
+      const checkRes = await fetch(`/api/synthid/check?platform=moltbook&platformId=${encodeURIComponent(agent.name)}`);
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.exists) {
+          setVerifyStatus('failed');
+          setVerifyError(isZh ? `Agent "${agent.name}" 已注册 SynthID #${checkData.tokenId}` : `Agent "${agent.name}" already has SynthID #${checkData.tokenId}`);
+          return;
+        }
+      }
+
+      setAgentData(agent);
+      setVerifyStatus('verified');
+
+      // Auto-fill fields
+      setName(agent.name.slice(0, LIMITS.name));
+      if (agent.avatar_url) setAvatar(agent.avatar_url);
+      if (agent.bio) setDescription(agent.bio.slice(0, LIMITS.description));
+    } catch (err) {
+      setVerifyStatus('failed');
+      setVerifyError(isZh ? 'Moltbook API 请求失败' : 'Moltbook API request failed');
+    }
+  };
+
+  // ============ Post-Mint ============
+
+  const handlePostMint = async () => {
+    try {
+      setMintStep('setting-uri');
+      const result = await refetchTokenId();
+      const tid = result.data ? Number(result.data) : 0;
+      if (!tid) {
         setMintStep('done');
         return;
       }
 
-      // Set agent URI on-chain
-      setMintStep('setting-uri');
+      // Set agentURI to our metadata API
       writeUri({
         address: SYNTHID_ADDRESS,
         abi: SYNTHID_ABI,
         functionName: 'setAgentURI',
-        args: [BigInt(tid), data.uri],
+        args: [BigInt(tid), `https://synthlaunch.fun/api/synthid/${tid}`],
       });
-    } catch (err) {
-      console.error('Post-mint error:', err);
-      setError(isZh ? 'Metadata 设置出错，NFT 已铸造' : 'Metadata setup error, NFT already minted');
+    } catch {
       setMintStep('done');
     }
   };
+
+  // ============ Avatar Upload ============
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setError(isZh ? '请上传图片文件 (JPG/PNG/GIF/WebP)' : 'Please upload an image file (JPG/PNG/GIF/WebP)');
+      setError(isZh ? '请上传图片文件' : 'Please upload an image file');
       return;
     }
     if (file.size > 1024 * 1024) {
@@ -161,22 +221,16 @@ export default function RegisterPage() {
     }
   };
 
+  // ============ Mint ============
+
   const handleMint = () => {
     setError('');
+    if (verifyStatus !== 'verified') {
+      setError(isZh ? '请先验证 Moltbook 身份' : 'Please verify Moltbook identity first');
+      return;
+    }
     if (!name.trim()) {
-      setError(t('sid.register.nameRequired'));
-      return;
-    }
-    if (name.length > LIMITS.name) {
-      setError(isZh ? `名称最多 ${LIMITS.name} 字符` : `Name max ${LIMITS.name} characters`);
-      return;
-    }
-    if (!platformId.trim()) {
-      setError(t('sid.register.platformIdRequired'));
-      return;
-    }
-    if (description.length > LIMITS.description) {
-      setError(isZh ? `描述最多 ${LIMITS.description} 字符` : `Description max ${LIMITS.description} characters`);
+      setError(isZh ? '名称不能为空' : 'Name is required');
       return;
     }
     setMintStep('minting');
@@ -184,7 +238,7 @@ export default function RegisterPage() {
       address: SYNTHID_ADDRESS,
       abi: SYNTHID_ABI,
       functionName: 'register',
-      args: [name, platform, platformId, avatar, description],
+      args: [name, platform, moltbookId.trim(), avatar, description],
       value: parseEther('0.04'),
     });
   };
@@ -193,9 +247,8 @@ export default function RegisterPage() {
 
   const stepLabel = () => {
     switch (mintStep) {
-      case 'minting': return isZh ? '⏳ 铸造中... (1/3)' : '⏳ Minting... (1/3)';
-      case 'uploading-meta': return isZh ? '📤 上传 Metadata... (2/3)' : '📤 Uploading metadata... (2/3)';
-      case 'setting-uri': return isZh ? '🔗 设置 NFT 头像... (3/3)' : '🔗 Setting NFT image... (3/3)';
+      case 'minting': return isZh ? '⏳ 铸造中... (1/2)' : '⏳ Minting... (1/2)';
+      case 'setting-uri': return isZh ? '🔗 设置 NFT 头像... (2/2)' : '🔗 Setting NFT image... (2/2)';
       default: return '';
     }
   };
@@ -207,154 +260,191 @@ export default function RegisterPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#EAECEF] mb-1">{t('sid.register.title')}</h1>
-          <p className="text-sm text-[#848E9C]">{t('sid.register.subtitle')}</p>
+          <p className="text-sm text-[#848E9C]">
+            {isZh
+              ? '验证你的 Moltbook Agent 身份，在 BSC 上铸造链上 ERC-721 身份证'
+              : 'Verify your Moltbook Agent identity and mint an on-chain ERC-721 ID on BSC'}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Form */}
             <div className="space-y-4">
-              <BnbCard className="p-6 space-y-5">
-                {/* Agent Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-[#848E9C] flex items-center justify-between">
-                    <span>{t('sid.register.agentName')} <span className="text-[#F6465D]">*</span></span>
-                    <span className={`${name.length > LIMITS.name ? 'text-[#F6465D]' : 'text-[#848E9C]/50'}`}>
-                      {name.length}/{LIMITS.name}
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value.slice(0, LIMITS.name + 10))}
-                    placeholder={t('sid.register.agentNamePlaceholder')}
-                    maxLength={LIMITS.name + 10}
-                    disabled={mintStep !== 'idle'}
-                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
-                  />
+
+              {/* Step 1: Moltbook Verification */}
+              <BnbCard className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-[#F0B90B] bg-[#F0B90B]/10 px-2 py-0.5 rounded">STEP 1</span>
+                  <span className="text-sm font-bold text-[#EAECEF]">
+                    {isZh ? '验证 Moltbook 身份' : 'Verify Moltbook Identity'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#848E9C]">
+                  {isZh
+                    ? '输入你的 Moltbook Agent 用户名，系统将自动验证身份并获取资料'
+                    : 'Enter your Moltbook Agent username. We\'ll verify identity and fetch profile data.'}
+                </p>
+
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#848E9C] text-sm">🦞</span>
+                    <input
+                      type="text"
+                      value={moltbookId}
+                      onChange={(e) => { setMoltbookId(e.target.value); setVerifyStatus('idle'); setVerifyError(''); }}
+                      placeholder={isZh ? 'Moltbook 用户名' : 'Moltbook username'}
+                      disabled={verifyStatus === 'verified' || mintStep !== 'idle'}
+                      className="w-full pl-9 pr-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
+                      onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                    />
+                  </div>
+                  {verifyStatus === 'verified' ? (
+                    <button
+                      onClick={() => { setVerifyStatus('idle'); setAgentData(null); setName(''); setAvatar(''); setDescription(''); }}
+                      disabled={mintStep !== 'idle'}
+                      className="px-4 py-2.5 bg-[#2B3139] hover:bg-[#363C45] border border-[#2B3139] rounded-lg text-sm text-[#848E9C] transition-colors disabled:opacity-50"
+                    >
+                      {isZh ? '重置' : 'Reset'}
+                    </button>
+                  ) : (
+                    <BnbButton
+                      onClick={handleVerify}
+                      disabled={verifyStatus === 'verifying' || mintStep !== 'idle'}
+                      variant="primary"
+                      className="px-6"
+                    >
+                      {verifyStatus === 'verifying' ? (isZh ? '验证中...' : 'Verifying...') : (isZh ? '验证' : 'Verify')}
+                    </BnbButton>
+                  )}
                 </div>
 
-                {/* Platform */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-[#848E9C]">{t('sid.register.platform')}</label>
-                    <select
-                      value={platform}
-                      onChange={(e) => setPlatform(e.target.value)}
-                      disabled={mintStep !== 'idle'}
-                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
-                    >
-                      <option value="moltbook">🦞 Moltbook</option>
-                      <option value="twitter">𝕏 Twitter</option>
-                      <option value="custom">🔗 Custom</option>
-                    </select>
+                {verifyError && (
+                  <div className="text-xs text-[#F6465D] p-2 bg-[#F6465D]/10 border border-[#F6465D]/20 rounded-lg">
+                    ❌ {verifyError}
                   </div>
+                )}
+
+                {verifyStatus === 'verified' && agentData && (
+                  <div className="flex items-center gap-3 p-3 bg-[#0ECB81]/5 border border-[#0ECB81]/20 rounded-lg">
+                    {agentData.avatar_url && (
+                      <img src={agentData.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-[#EAECEF] truncate">{agentData.name}</div>
+                      <div className="text-xs text-[#848E9C]">
+                        Karma: {agentData.karma} · {agentData.is_claimed ? '✅ Claimed' : '❌ Not Claimed'}
+                      </div>
+                    </div>
+                    <span className="text-[#0ECB81] text-lg">✓</span>
+                  </div>
+                )}
+              </BnbCard>
+
+              {/* Step 2: Profile (only visible after verification) */}
+              {verifyStatus === 'verified' && (
+                <BnbCard className="p-6 space-y-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold text-[#F0B90B] bg-[#F0B90B]/10 px-2 py-0.5 rounded">STEP 2</span>
+                    <span className="text-sm font-bold text-[#EAECEF]">
+                      {isZh ? '确认资料' : 'Confirm Profile'}
+                    </span>
+                  </div>
+
+                  {/* Agent Name */}
                   <div className="space-y-1.5">
                     <label className="text-xs text-[#848E9C] flex items-center justify-between">
-                      <span>{t('sid.register.platformId')} <span className="text-[#F6465D]">*</span></span>
-                      <span className="text-[#848E9C]/50">{platformId.length}/{LIMITS.platformId}</span>
+                      <span>{isZh ? 'Agent 名称' : 'Agent Name'} <span className="text-[#F6465D]">*</span></span>
+                      <span className={`${name.length > LIMITS.name ? 'text-[#F6465D]' : 'text-[#848E9C]/50'}`}>
+                        {name.length}/{LIMITS.name}
+                      </span>
                     </label>
                     <input
                       type="text"
-                      value={platformId}
-                      onChange={(e) => setPlatformId(e.target.value.slice(0, LIMITS.platformId))}
-                      placeholder={t('sid.register.platformIdPlaceholder')}
-                      maxLength={LIMITS.platformId}
+                      value={name}
+                      onChange={(e) => setName(e.target.value.slice(0, LIMITS.name))}
+                      disabled={mintStep !== 'idle'}
+                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Avatar */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-[#848E9C] flex items-center justify-between">
+                      <span>{isZh ? '头像' : 'Avatar'}</span>
+                      <span className="text-[#848E9C]/50">JPG/PNG/GIF/WebP · max 1MB · 256×256px</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={avatar}
+                        onChange={(e) => setAvatar(e.target.value.slice(0, LIMITS.avatar))}
+                        placeholder={isZh ? '输入 URL 或上传...' : 'URL or upload...'}
+                        disabled={mintStep !== 'idle'}
+                        className="flex-1 px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
+                      />
+                      <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                      <button
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploading || mintStep !== 'idle'}
+                        className="px-4 py-2.5 bg-[#2B3139] hover:bg-[#363C45] border border-[#2B3139] rounded-lg text-sm text-[#EAECEF] transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {uploading ? '...' : '📁'}
+                      </button>
+                    </div>
+                    {avatar && avatar.startsWith('http') && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2B3139]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <span className="text-xs text-[#0ECB81]">✓</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-[#848E9C] flex items-center justify-between">
+                      <span>{isZh ? '描述 / 简介' : 'Description'}</span>
+                      <span className={`${description.length > LIMITS.description ? 'text-[#F6465D]' : 'text-[#848E9C]/50'}`}>
+                        {description.length}/{LIMITS.description}
+                      </span>
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value.slice(0, LIMITS.description))}
+                      rows={2}
+                      disabled={mintStep !== 'idle'}
+                      className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors resize-none disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Skills */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-[#848E9C] flex items-center justify-between">
+                      <span>{isZh ? '技能标签' : 'Skills'}</span>
+                      <span className="text-[#848E9C]/50">{isZh ? `最多 ${LIMITS.skillCount} 个` : `Max ${LIMITS.skillCount}`}</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={skillsInput}
+                      onChange={(e) => setSkillsInput(e.target.value)}
+                      placeholder={isZh ? '交易, DeFi, 分析 (逗号分隔)' : 'Trading, DeFi, Analytics (comma separated)'}
                       disabled={mintStep !== 'idle'}
                       className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
                     />
+                    {skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {skills.map((s, i) => (
+                          <span key={i} className="text-[11px] px-2 py-0.5 bg-[#F0B90B]/10 text-[#F0B90B] border border-[#F0B90B]/20 rounded-full">{s}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Avatar */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-[#848E9C] flex items-center justify-between">
-                    <span>{isZh ? '头像' : 'Avatar'}</span>
-                    <span className="text-[#848E9C]/50">JPG/PNG/GIF/WebP · {isZh ? '最大' : 'max'} 1MB · 256×256px {isZh ? '推荐' : 'recommended'}</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value.slice(0, LIMITS.avatar))}
-                      placeholder={isZh ? '输入 URL 或上传图片...' : 'Enter URL or upload image...'}
-                      disabled={mintStep !== 'idle'}
-                      className="flex-1 px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
-                    />
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={handleAvatarUpload}
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploading || mintStep !== 'idle'}
-                      className="px-4 py-2.5 bg-[#2B3139] hover:bg-[#363C45] border border-[#2B3139] rounded-lg text-sm text-[#EAECEF] transition-colors disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {uploading ? (isZh ? '上传中...' : 'Uploading...') : (isZh ? '📁 上传' : '📁 Upload')}
-                    </button>
-                  </div>
-                  {avatar && avatar.startsWith('http') && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <img src={avatar} alt="avatar preview" className="w-10 h-10 rounded-full object-cover border border-[#2B3139]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      <span className="text-xs text-[#0ECB81]">✓ {isZh ? '头像已设置' : 'Avatar set'}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-[#848E9C] flex items-center justify-between">
-                    <span>{t('sid.register.description')}</span>
-                    <span className={`${description.length > LIMITS.description ? 'text-[#F6465D]' : 'text-[#848E9C]/50'}`}>
-                      {description.length}/{LIMITS.description}
-                    </span>
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value.slice(0, LIMITS.description + 20))}
-                    placeholder={t('sid.register.descriptionPlaceholder')}
-                    rows={3}
-                    disabled={mintStep !== 'idle'}
-                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors resize-none disabled:opacity-50"
-                  />
-                </div>
-
-                {/* Skills */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-[#848E9C] flex items-center justify-between">
-                    <span>{t('sid.register.skills')}</span>
-                    <span className="text-[#848E9C]/50">{isZh ? `最多 ${LIMITS.skillCount} 个，每个最多 ${LIMITS.skillTag} 字符` : `Max ${LIMITS.skillCount} tags, ${LIMITS.skillTag} chars each`}</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={skillsInput}
-                    onChange={(e) => setSkillsInput(e.target.value)}
-                    placeholder={t('sid.register.skillsPlaceholder')}
-                    disabled={mintStep !== 'idle'}
-                    className="w-full px-4 py-2.5 bg-[#0B0E11] border border-[#2B3139] rounded-lg text-[#EAECEF] placeholder-[#848E9C] text-sm focus:outline-none focus:border-[#F0B90B]/50 transition-colors disabled:opacity-50"
-                  />
-                  {skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {skills.map((s, i) => (
-                        <span key={i} className={`text-[11px] px-2 py-0.5 border rounded-full ${
-                          s.length > LIMITS.skillTag
-                            ? 'bg-[#F6465D]/10 text-[#F6465D] border-[#F6465D]/20'
-                            : 'bg-[#F0B90B]/10 text-[#F0B90B] border-[#F0B90B]/20'
-                        }`}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </BnbCard>
+                </BnbCard>
+              )}
 
               {/* Mint Fee + Button */}
               <BnbCard className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-[#848E9C]">{t('sid.register.mintFee')}</span>
+                  <span className="text-sm text-[#848E9C]">{isZh ? '铸造费用' : 'Mint Fee'}</span>
                   <div className="text-right">
                     <span className="text-lg font-bold text-[#F0B90B]">{MINT_FEE_BNB} BNB</span>
                     <span className="text-xs text-[#848E9C] ml-2">{feeUsd}</span>
@@ -368,12 +458,8 @@ export default function RegisterPage() {
                 )}
 
                 {!isConnected ? (
-                  <BnbButton
-                    disabled
-                    variant="primary"
-                    className="w-full text-base py-3 opacity-60"
-                  >
-                    🔗 {t('sid.register.connectWallet')}
+                  <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-60">
+                    🔗 {isZh ? '连接钱包' : 'Connect Wallet'}
                   </BnbButton>
                 ) : mintStep === 'done' ? (
                   <div className="text-center py-4">
@@ -382,24 +468,23 @@ export default function RegisterPage() {
                       {isZh ? 'SynthID 铸造成功！' : 'SynthID Minted Successfully!'}
                     </p>
                     <p className="text-xs text-[#848E9C]">
-                      {isZh ? 'NFT 头像已设置，钱包中即可查看' : 'NFT image set, viewable in your wallet'}
+                      {isZh ? '你的 AI Agent 链上身份已创建' : 'Your AI Agent on-chain identity is live'}
                     </p>
                   </div>
                 ) : mintStep !== 'idle' ? (
                   <div className="text-center py-3">
                     <div className="text-sm text-[#F0B90B] font-mono animate-pulse">{stepLabel()}</div>
                     <p className="text-[10px] text-[#848E9C] mt-2">
-                      {isZh ? '请在钱包中确认交易' : 'Please confirm transaction in wallet'}
+                      {isZh ? '请在钱包中确认交易' : 'Please confirm in wallet'}
                     </p>
                   </div>
+                ) : verifyStatus !== 'verified' ? (
+                  <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-40">
+                    {isZh ? '请先完成 Step 1 验证' : 'Complete Step 1 verification first'}
+                  </BnbButton>
                 ) : (
-                  <BnbButton
-                    onClick={handleMint}
-                    disabled={isMinting}
-                    variant="primary"
-                    className="w-full text-base py-3"
-                  >
-                    {t('sid.register.mintButton')}
+                  <BnbButton onClick={handleMint} disabled={isMinting} variant="primary" className="w-full text-base py-3">
+                    {isZh ? '🆔 铸造 SynthID' : '🆔 Mint SynthID'}
                   </BnbButton>
                 )}
 
@@ -411,15 +496,21 @@ export default function RegisterPage() {
 
             {/* Preview */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-[#848E9C] uppercase tracking-wider">{t('sid.register.preview')}</h3>
+              <h3 className="text-sm font-bold text-[#848E9C] uppercase tracking-wider">{isZh ? '身份预览' : 'Identity Preview'}</h3>
               <AgentPreviewCard
-                name={name}
+                name={name || 'Agent Name'}
                 platform={platform}
-                platformId={platformId}
+                platformId={moltbookId || '...'}
                 avatar={avatar}
                 description={description}
                 skills={skills}
               />
+              {verifyStatus === 'verified' && (
+                <div className="text-xs text-[#0ECB81] flex items-center gap-1.5 bg-[#0ECB81]/5 border border-[#0ECB81]/20 rounded-lg p-3">
+                  <span className="text-base">🛡</span>
+                  {isZh ? 'Moltbook 身份已验证' : 'Moltbook identity verified'}
+                </div>
+              )}
             </div>
           </div>
       </div>
