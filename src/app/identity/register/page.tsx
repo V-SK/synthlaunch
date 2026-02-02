@@ -288,12 +288,10 @@ export default function RegisterPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('name', 'SynthID Avatar');
-      formData.append('symbol', 'SID');
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const res = await fetch('/api/synthid/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.cid) {
-        setAvatar(`https://gateway.pinata.cloud/ipfs/${data.cid}`);
+      if (data.url) {
+        setAvatar(data.url);
       } else {
         setError(isZh ? 'IPFS 上传失败' : 'IPFS upload failed');
       }
