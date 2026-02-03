@@ -4,7 +4,8 @@
     "launch": "发币",
     "claim": "领取",
     "leaderboard": "排行榜",
-    "identity": "身份"
+    "identity": "身份",
+    "mint": "公平铸造"
   },
   "home": {
     "heroTitle": "代币发行",

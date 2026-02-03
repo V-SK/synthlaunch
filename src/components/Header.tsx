@@ -15,6 +15,7 @@ export function Header() {
   const NAV_ITEMS = [
     { label: t('nav.home'), href: '/' },
     { label: t('nav.launch'), href: '/launch' },
+    { label: `⚡ ${t('nav.mint')}`, href: '/mint' },
     { label: t('nav.claim'), href: '/claim' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
     { label: t('nav.identity'), href: '/identity' },

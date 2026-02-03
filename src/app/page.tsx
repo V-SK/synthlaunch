@@ -4,17 +4,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatsBar } from '@/components/StatsBar';
 import { TokenCard } from '@/components/TokenCard';
-import { FairMintTokenCard } from '@/components/FairMintTokenCard';
 import { Pagination } from '@/components/Pagination';
 import type { Token } from '@/lib/api';
-import { FAIR_MINT_TOKENS, type FairMintToken } from '@/lib/fairMintMocks';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 
 const TOKENS_PER_PAGE = 12;
 
 type SortTab = 'hot' | 'new' | 'top' | 'dex';
-type FilterTab = 'all' | 'curve' | 'fairMint' | 'agentOnly';
 
 interface TopEarner {
   rank: number;
@@ -25,7 +22,6 @@ interface TopEarner {
 function HomeInner() {
   const { t } = useI18n();
   const [sort, setSort] = useState<SortTab>('new');
-  const [filter, setFilter] = useState<FilterTab>('all');
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,7 +51,7 @@ function HomeInner() {
       })
       .then(data => {
         setTokens(data);
-        setCurrentPage(1); // reset page on sort change
+        setCurrentPage(1);
         setLoading(false);
       })
       .catch(e => {
@@ -71,42 +67,12 @@ function HomeInner() {
     { key: 'dex', label: 'DEX', icon: '🎓' },
   ];
 
-  const filterTabs: { key: FilterTab; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'curve', label: '🔄 Curve' },
-    { key: 'fairMint', label: '⚡ Fair Mint' },
-    { key: 'agentOnly', label: '🦞 Agent-Only' },
-  ];
+  const paginatedTokens = useMemo(() => {
+    const start = (currentPage - 1) * TOKENS_PER_PAGE;
+    return tokens.slice(start, start + TOKENS_PER_PAGE);
+  }, [tokens, currentPage]);
 
-  // Filter fair mint tokens
-  const filteredFairMintTokens = useMemo(() => {
-    if (filter === 'curve') return [];
-    if (filter === 'fairMint') return FAIR_MINT_TOKENS.filter(t => t.tokenType === 'fairMint');
-    if (filter === 'agentOnly') return FAIR_MINT_TOKENS.filter(t => t.tokenType === 'agentOnly');
-    return FAIR_MINT_TOKENS; // 'all'
-  }, [filter]);
-
-  // Filter curve tokens
-  const filteredCurveTokens = useMemo(() => {
-    if (filter === 'fairMint' || filter === 'agentOnly') return [];
-    return tokens;
-  }, [tokens, filter]);
-
-  // Combined count for display
-  const totalDisplayCount = filteredCurveTokens.length + filteredFairMintTokens.length;
-
-  // For pagination, we interleave fair mint tokens at the top
-  const paginatedCurveTokens = useMemo(() => {
-    const fairMintCount = filteredFairMintTokens.length;
-    const curveStart = Math.max(0, (currentPage - 1) * TOKENS_PER_PAGE - fairMintCount);
-    const curveSlots = TOKENS_PER_PAGE - (currentPage === 1 ? fairMintCount : 0);
-    return filteredCurveTokens.slice(
-      currentPage === 1 ? 0 : curveStart,
-      currentPage === 1 ? Math.max(0, curveSlots) : curveStart + TOKENS_PER_PAGE
-    );
-  }, [filteredCurveTokens, filteredFairMintTokens, currentPage]);
-
-  const totalPages = Math.ceil(totalDisplayCount / TOKENS_PER_PAGE);
+  const totalPages = Math.ceil(tokens.length / TOKENS_PER_PAGE);
 
   return (
     <div className="space-y-8">
@@ -128,6 +94,12 @@ function HomeInner() {
         <div className="flex items-center justify-center gap-3 pt-4">
           <Link href="/launch" className="btn-primary">
             {t('launch.launchToken')} →
+          </Link>
+          <Link
+            href="/mint"
+            className="px-4 py-2 rounded text-sm font-mono font-bold border border-[#F0B90B]/40 bg-[#F0B90B]/10 text-[#F0B90B] hover:bg-[#F0B90B]/20 hover:border-[#F0B90B]/60 transition-all duration-200"
+          >
+            ⚡ Fair Mint →
           </Link>
           <a href="/docs" className="btn-secondary">
             {t('home.viewDocs')}
@@ -168,23 +140,6 @@ function HomeInner() {
 
       {/* Token List */}
       <section className="space-y-4">
-        {/* Filter tabs */}
-        <div className="flex items-center gap-1 flex-wrap">
-          {filterTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => { setFilter(tab.key); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded text-sm font-mono transition-all duration-200 ${
-                filter === tab.key
-                  ? 'text-synth-green bg-synth-green/10 border border-synth-green/30'
-                  : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface border border-transparent'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         {/* Sort tabs + count */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
@@ -206,12 +161,12 @@ function HomeInner() {
             {loading ? (
               <span className="animate-pulse">{t('common.loading')}</span>
             ) : (
-              t('home.tokenCount', { count: String(totalDisplayCount) })
+              t('home.tokenCount', { count: String(tokens.length) })
             )}
           </span>
         </div>
 
-        {loading && (filter === 'all' || filter === 'curve') ? (
+        {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="card animate-pulse">
@@ -230,23 +185,18 @@ function HomeInner() {
               </div>
             ))}
           </div>
-        ) : error && (filter === 'all' || filter === 'curve') ? (
+        ) : error ? (
           <div className="card text-center py-12">
             <span className="text-red-400 text-sm">{t('home.failedToLoad', { error })}</span>
           </div>
-        ) : totalDisplayCount === 0 ? (
+        ) : tokens.length === 0 ? (
           <div className="card text-center py-12">
             <span className="text-synth-muted text-sm">{t('home.empty')}</span>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {/* Fair Mint tokens (show on first page or when filtered) */}
-              {currentPage === 1 && filteredFairMintTokens.map((token) => (
-                <FairMintTokenCard key={token.id} token={token} />
-              ))}
-              {/* Curve tokens */}
-              {paginatedCurveTokens.map((token) => (
+              {paginatedTokens.map((token) => (
                 <TokenCard key={token.address} {...token} />
               ))}
             </div>

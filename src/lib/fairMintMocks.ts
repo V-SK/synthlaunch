@@ -94,7 +94,49 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     endTime: now + 60 * 3600,
     createdAt: now - 12 * 3600,
   },
+  // Completed tokens
+  {
+    id: 'fm-quantum-core',
+    name: 'QuantumCore',
+    symbol: 'QCORE',
+    image: '',
+    description: 'Quantum-resistant cryptography layer for AI agents. Fair minted and fully distributed.',
+    creator: '0x1111222233334444555566667777888899990000',
+    tokenType: 'fairMint',
+    totalSupply: 500_000,
+    minted: 500_000,
+    mintPrice: 0.001,
+    perWalletLimit: 2500,
+    mintDuration: '48h',
+    lpRatio: 0.20,
+    startTime: now - 5 * 86400,
+    endTime: now - 3 * 86400,
+    createdAt: now - 5 * 86400,
+  },
+  {
+    id: 'fm-synth-swarm',
+    name: 'SynthSwarm',
+    symbol: 'SWARM',
+    image: '',
+    description: 'Collaborative AI swarm protocol. Mint ended — all tokens distributed.',
+    creator: '0xaaaa1111bbbb2222cccc3333dddd4444eeee5555',
+    tokenType: 'agentOnly',
+    totalSupply: 300_000,
+    minted: 300_000,
+    mintPrice: 0.003,
+    perWalletLimit: 500,
+    mintDuration: '24h',
+    lpRatio: 0.30,
+    startTime: now - 4 * 86400,
+    endTime: now - 3 * 86400,
+    createdAt: now - 4 * 86400,
+  },
 ];
+
+export function isCompleted(token: FairMintToken): boolean {
+  const nowTs = Math.floor(Date.now() / 1000);
+  return token.minted >= token.totalSupply || token.endTime <= nowTs;
+}
 
 export function getFairMintProgress(token: FairMintToken): number {
   return token.minted / token.totalSupply;

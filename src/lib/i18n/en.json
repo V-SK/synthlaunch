@@ -4,7 +4,8 @@
     "launch": "Launch",
     "claim": "Claim",
     "leaderboard": "Leaderboard",
-    "identity": "Identity"
+    "identity": "Identity",
+    "mint": "Fair Mint"
   },
   "home": {
     "heroTitle": "Token Launches with",
