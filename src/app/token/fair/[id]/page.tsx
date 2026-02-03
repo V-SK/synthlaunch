@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { FAIR_MINT_TOKENS, getFairMintProgress, getTimeRemaining, formatSupply } from '@/lib/fairMintMocks';
+import { FAIR_MINT_TOKENS, getFairMintProgress, getTimeRemaining, formatSupply, isCompleted } from '@/lib/fairMintMocks';
 import type { FairMintToken } from '@/lib/fairMintMocks';
 
 function FairMintDetailInner({ id }: { id: string }) {
   const token = FAIR_MINT_TOKENS.find(t => t.id === id);
   const [mintAmount, setMintAmount] = useState('');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   if (!token) {
     return (
@@ -34,6 +35,18 @@ function FairMintDetailInner({ id }: { id: string }) {
   const lpPercent = token.lpRatio * 100;
 
   const mintCostBnb = mintAmount ? (parseFloat(mintAmount) * token.mintPrice).toFixed(4) : '0';
+  const completed = isCompleted(token);
+
+  function truncateAddress(addr: string): string {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
+
+  function copyToClipboard(text: string, field: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    });
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -122,6 +135,108 @@ function FairMintDetailInner({ id }: { id: string }) {
           <span>{formatSupply(token.totalSupply - token.minted)} remaining</span>
         </div>
       </div>
+
+      {/* Contract Info */}
+      {token.contractAddress && (
+        <div className="card space-y-4">
+          <h2 className="text-sm font-bold text-synth-cyan uppercase tracking-wider">📋 Contract Info</h2>
+          <div className="space-y-3 text-sm">
+            {/* Token Contract */}
+            <div className="flex items-center justify-between">
+              <span className="text-synth-muted">Token Contract</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-synth-text">{truncateAddress(token.contractAddress)}</span>
+                <button
+                  onClick={() => copyToClipboard(token.contractAddress!, 'contract')}
+                  className="text-synth-muted hover:text-synth-cyan transition-colors"
+                  title="Copy address"
+                >
+                  {copiedField === 'contract' ? (
+                    <span className="text-synth-green text-xs">Copied!</span>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                  )}
+                </button>
+                <a
+                  href={`https://bscscan.com/address/${token.contractAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-synth-muted hover:text-synth-cyan transition-colors"
+                  title="View on BscScan"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            {/* LP Pair */}
+            <div className="flex items-center justify-between">
+              <span className="text-synth-muted">LP Pair</span>
+              {completed && token.lpPairAddress ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-synth-text">{truncateAddress(token.lpPairAddress)}</span>
+                  <button
+                    onClick={() => copyToClipboard(token.lpPairAddress!, 'lp')}
+                    className="text-synth-muted hover:text-synth-cyan transition-colors"
+                    title="Copy address"
+                  >
+                    {copiedField === 'lp' ? (
+                      <span className="text-synth-green text-xs">Copied!</span>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    )}
+                  </button>
+                  <a
+                    href={`https://bscscan.com/address/${token.lpPairAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-synth-muted hover:text-synth-cyan transition-colors"
+                    title="View on BscScan"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </a>
+                </div>
+              ) : (
+                <span className="text-synth-muted italic text-xs">Created after mint ends</span>
+              )}
+            </div>
+
+            {/* PancakeSwap Trade Link — only after completion */}
+            {completed && token.contractAddress && (
+              <div className="flex items-center justify-between">
+                <span className="text-synth-muted">Trade</span>
+                <a
+                  href={`https://pancakeswap.finance/swap?outputCurrency=${token.contractAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-synth-green hover:text-synth-cyan transition-colors font-mono text-xs"
+                >
+                  🥞 PancakeSwap
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mint Action */}
       {!isSoldOut && !isEnded && (

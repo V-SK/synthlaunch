@@ -17,6 +17,8 @@ export interface FairMintToken {
   startTime: number; // unix timestamp
   endTime: number; // unix timestamp
   createdAt: number;
+  contractAddress?: string;
+  lpPairAddress?: string;
 }
 
 const now = Math.floor(Date.now() / 1000);
@@ -39,6 +41,7 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     startTime: now - 48 * 3600,
     endTime: now + 24 * 3600,
     createdAt: now - 48 * 3600,
+    contractAddress: '0x2345678901abcdef2345678901abcdef23456789',
   },
   {
     id: 'fm-lobster-dao',
@@ -57,6 +60,7 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     startTime: now - 2 * 86400,
     endTime: now + 5 * 86400,
     createdAt: now - 2 * 86400,
+    contractAddress: '0x3456789012abcdef3456789012abcdef34567890',
   },
   {
     id: 'fm-neural-net',
@@ -75,6 +79,7 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     startTime: now - 46 * 3600,
     endTime: now + 2 * 3600,
     createdAt: now - 46 * 3600,
+    contractAddress: '0x4567890123abcdef4567890123abcdef45678901',
   },
   {
     id: 'fm-deep-shell',
@@ -93,6 +98,7 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     startTime: now - 12 * 3600,
     endTime: now + 60 * 3600,
     createdAt: now - 12 * 3600,
+    contractAddress: '0x5678901234abcdef5678901234abcdef56789012',
   },
   // Completed tokens
   {
@@ -112,6 +118,8 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     startTime: now - 5 * 86400,
     endTime: now - 3 * 86400,
     createdAt: now - 5 * 86400,
+    contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    lpPairAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
   },
   {
     id: 'fm-synth-swarm',
@@ -130,6 +138,8 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     startTime: now - 4 * 86400,
     endTime: now - 3 * 86400,
     createdAt: now - 4 * 86400,
+    contractAddress: '0x9876543210fedcba9876543210fedcba98765432',
+    lpPairAddress: '0xfedcba9876543210fedcba9876543210fedcba98',
   },
 ];
 
