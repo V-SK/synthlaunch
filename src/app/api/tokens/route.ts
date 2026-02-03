@@ -145,8 +145,10 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
     }
 
     const data = await res.json();
-    // Filter out invalid addresses
-    const valid = data.filter((t: any) => t.address && t.address.startsWith('0x') && t.address.length === 42);
+    // Hidden tokens (not shown on frontend)
+    const HIDDEN_TOKENS = ['0xf0af019693179ae0fd4b92ec39068b16f4887777'];
+    // Filter out invalid addresses and hidden tokens
+    const valid = data.filter((t: any) => t.address && t.address.startsWith('0x') && t.address.length === 42 && !HIDDEN_TOKENS.includes(t.address.toLowerCase()));
     console.log(`[tokens] Supabase raw=${data.length} valid=${valid.length} addrs=${data.map((t:any)=>t.address?.slice(0,8)||'null').join(',')}`);
     if (valid.length > 0) {
       lastKnownSupabaseTokens = valid;
