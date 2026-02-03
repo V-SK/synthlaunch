@@ -18,6 +18,8 @@ contract FairMintFactory {
     address public router;             // PancakeSwap V2 router
     address public synthID;            // SynthID contract address
     uint256 public creationFee;        // BNB fee to create a fair mint
+    uint256 public minRaiseBnb;        // min total raise in wei (~$50K FDV)
+    uint256 public maxRaiseBnb;        // max total raise in wei (~$200K FDV)
 
     address[] public allTokens;
     mapping(address => bool) public isToken;
@@ -38,12 +40,15 @@ contract FairMintFactory {
     event RouterChanged(address indexed newRouter);
     event CreationFeeChanged(uint256 newFee);
     event FeesWithdrawn(address indexed to, uint256 amount);
+    event RaiseLimitsChanged(uint256 minRaise, uint256 maxRaise);
 
     // ── Errors ──────────────────────────────────────────────────
     error NotOwner();
     error InsufficientFee();
     error TransferFailed();
     error ZeroAddress();
+    error RaiseTooLow();
+    error RaiseTooHigh();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -54,15 +59,20 @@ contract FairMintFactory {
         address _platform,
         address _router,
         address _synthID,
-        uint256 _creationFee
+        uint256 _creationFee,
+        uint256 _minRaiseBnb,
+        uint256 _maxRaiseBnb
     ) {
         require(_platform != address(0), "zero platform");
         require(_router != address(0), "zero router");
+        require(_maxRaiseBnb >= _minRaiseBnb, "bad raise limits");
         owner = msg.sender;
         platform = _platform;
         router = _router;
         synthID = _synthID;
         creationFee = _creationFee;
+        minRaiseBnb = _minRaiseBnb;
+        maxRaiseBnb = _maxRaiseBnb;
     }
 
     // ── Create Token ────────────────────────────────────────────
@@ -85,14 +95,28 @@ contract FairMintFactory {
 
         address _synthID = p.agentOnly ? synthID : address(0);
 
+        require(p.duration >= 1 hours, "min 1h duration");
+        require(p.duration <= 30 days, "max 30d duration");
+
+        // Convert user-facing whole tokens to wei (18 decimals)
+        uint256 totalSupplyWei = p.totalSupply * 1e18;
+        uint256 perWalletLimitWei = p.perWalletLimit * 1e18;
+
+        // Check total raise within allowed range
+        // mintableSupply = totalSupply * (10000 - lpRatioBps) / 10000
+        uint256 mintableSupply = (p.totalSupply * (10000 - p.lpRatioBps)) / 10000;
+        uint256 totalRaise = mintableSupply * p.mintPrice;
+        if (totalRaise < minRaiseBnb) revert RaiseTooLow();
+        if (totalRaise > maxRaiseBnb) revert RaiseTooHigh();
+
         FairMintToken t = new FairMintToken(
             p.name,
             p.symbol,
-            p.totalSupply,
-            p.mintPrice,
-            p.perWalletLimit,
+            totalSupplyWei,              // in wei
+            p.mintPrice,                 // BNB per whole token
+            perWalletLimitWei,           // in wei
             p.lpRatioBps,
-            block.timestamp,             // start now
+            block.timestamp,             // start now (no past startTime)
             block.timestamp + p.duration, // end after duration
             p.beneficiary,
             platform,
@@ -168,6 +192,13 @@ contract FairMintFactory {
     function setCreationFee(uint256 _fee) external onlyOwner {
         creationFee = _fee;
         emit CreationFeeChanged(_fee);
+    }
+
+    function setRaiseLimits(uint256 _min, uint256 _max) external onlyOwner {
+        require(_max >= _min, "bad limits");
+        minRaiseBnb = _min;
+        maxRaiseBnb = _max;
+        emit RaiseLimitsChanged(_min, _max);
     }
 
     function withdrawFees(address to) external onlyOwner {
