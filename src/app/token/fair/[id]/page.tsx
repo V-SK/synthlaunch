@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, use } from 'react';
+import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FAIR_MINT_TOKENS, getFairMintProgress, getTimeRemaining, formatSupply } from '@/lib/fairMintMocks';
 import type { FairMintToken } from '@/lib/fairMintMocks';
@@ -310,8 +311,8 @@ function FairMintDetailInner({ id }: { id: string }) {
 }
 
 
-export default function FairMintDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function FairMintDetailPage() {
+  const { id } = useParams<{ id: string }>();
   return (
     <ErrorBoundary>
       <FairMintDetailInner id={id} />

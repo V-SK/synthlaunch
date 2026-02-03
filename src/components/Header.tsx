@@ -23,36 +23,31 @@ export function Header() {
 
   return (
     <header className="border-b border-synth-border bg-synth-bg/95 backdrop-blur-md fixed top-0 left-0 right-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 md:px-4 h-12 md:h-14 flex items-center justify-between gap-2">
         {/* Mobile hamburger */}
         <button
-          className="md:hidden flex flex-col gap-1 p-2 -ml-2"
+          className="md:hidden flex flex-col gap-1 p-1.5 -ml-1 flex-shrink-0"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Menu"
         >
-          <span className={`block w-5 h-0.5 bg-synth-green transition-transform ${mobileOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-          <span className={`block w-5 h-0.5 bg-synth-green transition-opacity ${mobileOpen ? 'opacity-0' : ''}`} />
-          <span className={`block w-5 h-0.5 bg-synth-green transition-transform ${mobileOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+          <span className={`block w-4 h-0.5 bg-synth-green transition-transform ${mobileOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+          <span className={`block w-4 h-0.5 bg-synth-green transition-opacity ${mobileOpen ? 'opacity-0' : ''}`} />
+          <span className={`block w-4 h-0.5 bg-synth-green transition-transform ${mobileOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
         </button>
 
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/logo.jpg"
-              alt="SynthLaunch Logo"
-              width={32}
-              height={32}
-              className="rounded-md"
-            />
-            <span className="text-xl font-bold text-synth-green glow-text-green tracking-wider">
-              synthlaunch
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 bg-synth-cyan/20 text-synth-cyan border border-synth-cyan/30 rounded font-mono uppercase tracking-widest">
-              beta
-            </span>
-          </div>
-          <span className="hidden lg:inline text-[10px] text-synth-muted font-mono">
+        <Link href="/" className="flex items-center gap-2 min-w-0 flex-shrink-1">
+          <Image
+            src="/logo.jpg"
+            alt="SynthLaunch Logo"
+            width={28}
+            height={28}
+            className="rounded-md flex-shrink-0 md:w-8 md:h-8"
+          />
+          <span className="text-base md:text-xl font-bold text-synth-green glow-text-green tracking-wider truncate">
+            synthlaunch
+          </span>
+          <span className="hidden lg:inline text-[10px] text-synth-muted font-mono flex-shrink-0">
             {t('header.tagline')}
           </span>
         </Link>
@@ -74,8 +69,8 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Wallet (language toggle moved to nav areas) */}
-        <div className="flex items-center gap-2">
+        {/* Wallet */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="hidden md:block"><LanguageToggle /></div>
           <WalletConnect />
         </div>

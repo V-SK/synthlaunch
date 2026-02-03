@@ -60,9 +60,10 @@ export function WalletConnect() {
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="btn-primary text-xs"
+        className="btn-primary text-[10px] md:text-xs px-2 md:px-4 py-1.5 md:py-2 whitespace-nowrap"
       >
-        Connect Wallet
+        <span className="hidden sm:inline">Connect Wallet</span>
+        <span className="sm:hidden">Connect</span>
       </button>
       {showMenu && (
         <>
