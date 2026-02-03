@@ -23,7 +23,13 @@ export interface FairMintToken {
 
 const now = Math.floor(Date.now() / 1000);
 
+// Mock data removed — will be replaced with on-chain data from FairMintFactory
 export const FAIR_MINT_TOKENS: FairMintToken[] = [
+  /* No mock tokens — connect to contract for real data */
+];
+
+// ── Keep below for reference, removed from production ──
+const _REMOVED_MOCKS = [
   {
     id: 'fm-synth-ai',
     name: 'SynthAI',
@@ -141,7 +147,7 @@ export const FAIR_MINT_TOKENS: FairMintToken[] = [
     contractAddress: '0x9876543210fedcba9876543210fedcba98765432',
     lpPairAddress: '0xfedcba9876543210fedcba9876543210fedcba98',
   },
-];
+] as FairMintToken[];
 
 export function isCompleted(token: FairMintToken): boolean {
   const nowTs = Math.floor(Date.now() / 1000);
