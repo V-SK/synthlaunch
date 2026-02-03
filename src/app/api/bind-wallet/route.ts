@@ -28,14 +28,15 @@ export async function POST(request: NextRequest) {
       return errorResponse('Missing required fields: agentName, wallet', 'INVALID_FORMAT');
     }
 
-    // Blacklist: these agents cannot bind wallets or claim fees
-    const BLOCKED_AGENTS = ['KingMolt'];
-    if (BLOCKED_AGENTS.includes(agentName)) {
-      return errorResponse('This agent is not eligible for wallet binding', 'AGENT_BLOCKED', 403);
+    // Admin-locked agents: only admin can bind
+    const ADMIN_LOCKED_AGENTS = ['KingMolt'];
+    const isAdminRequest = request.headers.get('x-admin-secret') === process.env.ADMIN_SECRET;
+    if (ADMIN_LOCKED_AGENTS.includes(agentName) && !isAdminRequest) {
+      return errorResponse('This agent is admin-locked', 'AGENT_LOCKED', 403);
     }
 
     // Twitter verification doesn't need apiKey
-    if (verifyMethod !== 'twitter' && !apiKey) {
+    if (!isAdminRequest && verifyMethod !== 'twitter' && !apiKey) {
       return errorResponse('Missing required field: apiKey', 'INVALID_FORMAT');
     }
 
@@ -44,8 +45,10 @@ export async function POST(request: NextRequest) {
       return errorResponse('Invalid wallet address', 'INVALID_WALLET');
     }
 
-    // 1. Verify agent identity
-    if (verifyMethod === 'twitter') {
+    // 1. Verify agent identity (skip for admin)
+    if (isAdminRequest) {
+      console.log(`[bind-wallet] Admin binding for agent: ${agentName}`);
+    } else if (verifyMethod === 'twitter') {
       // Twitter verification: check that the tweet was already verified via /api/twitter/verify
       // We trust the frontend flow here — the user already posted & verified the tweet
       // The agentName should be "tw:<handle>"
