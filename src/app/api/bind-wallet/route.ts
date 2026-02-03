@@ -28,6 +28,12 @@ export async function POST(request: NextRequest) {
       return errorResponse('Missing required fields: agentName, wallet', 'INVALID_FORMAT');
     }
 
+    // Blacklist: these agents cannot bind wallets or claim fees
+    const BLOCKED_AGENTS = ['KingMolt'];
+    if (BLOCKED_AGENTS.includes(agentName)) {
+      return errorResponse('This agent is not eligible for wallet binding', 'AGENT_BLOCKED', 403);
+    }
+
     // Twitter verification doesn't need apiKey
     if (verifyMethod !== 'twitter' && !apiKey) {
       return errorResponse('Missing required field: apiKey', 'INVALID_FORMAT');
