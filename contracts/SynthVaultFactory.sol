@@ -3,10 +3,11 @@ pragma solidity ^0.8.20;
 
 import "./interfaces/IVaultFactory.sol";
 import "./SynthVault.sol";
+import "./NFALite.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 /// @title SynthVaultFactory
-/// @notice Factory contract for deploying SynthVault instances via EIP-1167 Clone
+/// @notice Factory contract for deploying SynthVault + NFALite via EIP-1167 Clone
 /// @author SynthLaunch (synthlaunch.fun)
 /// @dev Implements IVaultFactory interface for Flap VaultPortal integration
 contract SynthVaultFactory is IVaultFactory {
@@ -29,6 +30,9 @@ contract SynthVaultFactory is IVaultFactory {
     /// @notice SynthVault implementation contract (template for cloning)
     address public vaultImplementation;
     
+    /// @notice NFALite contract address
+    address public nfaLite;
+    
     /// @notice Default platform fee in basis points (1000 = 10%)
     uint256 public platformFeeBps;
     
@@ -45,7 +49,8 @@ contract SynthVaultFactory is IVaultFactory {
         address indexed token,
         address indexed vault,
         address indexed creator,
-        address agentWallet
+        address agentWallet,
+        uint256 nfaId
     );
     
     /// @notice Emitted when owner is changed
@@ -56,6 +61,9 @@ contract SynthVaultFactory is IVaultFactory {
     
     /// @notice Emitted when platform fee is changed
     event PlatformFeeChanged(uint256 oldFee, uint256 newFee);
+    
+    /// @notice Emitted when NFALite address is set
+    event NFALiteSet(address indexed oldNFALite, address indexed newNFALite);
 
     // ============ Errors ============
     
@@ -70,6 +78,9 @@ contract SynthVaultFactory is IVaultFactory {
     
     /// @notice Thrown when vault already exists for token
     error VaultAlreadyExists();
+    
+    /// @notice Thrown when NFALite is not set
+    error NFALiteNotSet();
 
     // ============ Modifiers ============
     
@@ -106,7 +117,7 @@ contract SynthVaultFactory is IVaultFactory {
     /// @param taxToken The predicted address of the tax token (not yet deployed)
     /// @param quoteToken The quote token address (must be address(0) for BNB)
     /// @param creator The original msg.sender who initiated token creation
-    /// @param vaultData Custom data - encodes agentWallet address
+    /// @param vaultData Custom data - encodes (agentWallet) or (agentWallet, name, avatarURI)
     /// @return vault The address of the newly created vault
     function newVault(
         address taxToken,
@@ -123,11 +134,30 @@ contract SynthVaultFactory is IVaultFactory {
         // Check vault doesn't already exist
         if (vaults[taxToken] != address(0)) revert VaultAlreadyExists();
         
-        // Decode agentWallet from vaultData, default to creator if empty
+        // Check NFALite is set
+        if (nfaLite == address(0)) revert NFALiteNotSet();
+        
+        // Decode vaultData - support multiple formats for flexibility
         address agentWallet;
-        if (vaultData.length >= 32) {
+        string memory name;
+        string memory avatarURI;
+        
+        if (vaultData.length >= 96) {
+            // Full format: (address, string, string)
+            (agentWallet, name, avatarURI) = abi.decode(vaultData, (address, string, string));
+        } else if (vaultData.length >= 32) {
+            // Simple format: just address
             agentWallet = abi.decode(vaultData, (address));
+            name = "Agent";
+            avatarURI = "";
+        } else {
+            // Empty: use defaults
+            agentWallet = creator;
+            name = "Agent";
+            avatarURI = "";
         }
+        
+        // Default agentWallet to creator if zero
         if (agentWallet == address(0)) {
             agentWallet = creator;
         }
@@ -147,7 +177,17 @@ contract SynthVaultFactory is IVaultFactory {
         vaults[taxToken] = vault;
         allVaults.push(vault);
         
-        emit VaultCreated(taxToken, vault, creator, agentWallet);
+        // Auto-mint NFALite for this agent
+        uint256 nfaId = NFALite(nfaLite).mintAgent(
+            name,
+            avatarURI,
+            vault,
+            agentWallet,
+            creator,
+            taxToken
+        );
+        
+        emit VaultCreated(taxToken, vault, creator, agentWallet, nfaId);
         
         return vault;
     }
@@ -180,6 +220,14 @@ contract SynthVaultFactory is IVaultFactory {
     }
 
     // ============ Admin Functions ============
+    
+    /// @notice Set NFALite contract address
+    /// @param _nfaLite NFALite contract address
+    function setNFALite(address _nfaLite) external onlyOwner {
+        if (_nfaLite == address(0)) revert ZeroAddress();
+        emit NFALiteSet(nfaLite, _nfaLite);
+        nfaLite = _nfaLite;
+    }
     
     /// @notice Transfer ownership
     /// @param newOwner New owner address
