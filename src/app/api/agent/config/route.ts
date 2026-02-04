@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
       if (!isOwner) {
         return NextResponse.json({ error: 'Not the owner of this NFA' }, { status: 403 });
       }
+    } else {
+      // Public read returns limited info (no sensitive fields)
     }
 
     // Fetch from Supabase
