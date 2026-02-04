@@ -63,6 +63,13 @@ contract NFALite is ERC721 {
     error AgentNotFound();
     error ZeroAddress();
 
+    // ============ Modifiers ============
+    
+    modifier onlyAdmin() {
+        if (msg.sender != owner) revert OnlyAdmin();
+        _;
+    }
+
     // ============ Constructor ============
     
     /// @notice Deploy NFALite
@@ -184,8 +191,7 @@ contract NFALite is ERC721 {
     
     /// @notice Update factory address (for factory upgrade)
     /// @param _factory New factory address
-    function setFactory(address _factory) external {
-        if (msg.sender != owner) revert OnlyAdmin();
+    function setFactory(address _factory) external onlyAdmin {
         if (_factory == address(0)) revert ZeroAddress();
         emit FactoryUpdated(factory, _factory);
         factory = _factory;
@@ -193,8 +199,7 @@ contract NFALite is ERC721 {
     
     /// @notice Transfer ownership
     /// @param _owner New owner address
-    function transferOwnership(address _owner) external {
-        if (msg.sender != owner) revert OnlyAdmin();
+    function transferOwnership(address _owner) external onlyAdmin {
         if (_owner == address(0)) revert ZeroAddress();
         emit OwnershipTransferred(owner, _owner);
         owner = _owner;

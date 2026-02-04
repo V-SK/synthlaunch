@@ -16,9 +16,6 @@ contract SynthVault is VaultBase {
     /// @notice The agent wallet address (receives 90% of tax)
     address public agentWallet;
     
-    /// @notice The factory contract that created this vault
-    address public factory;
-    
     /// @notice SynthLaunch treasury address (receives platform fee)
     address public treasury;
     
@@ -114,7 +111,6 @@ contract SynthVault is VaultBase {
         agentWallet = _agentWallet;
         treasury = _treasury;
         platformFeeBps = _platformFeeBps;
-        factory = msg.sender;
         initialized = true;
         
         emit Initialized(_token, _agentWallet, _treasury);
