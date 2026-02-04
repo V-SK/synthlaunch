@@ -196,8 +196,12 @@ contract NFALite is ERC721 {
     function transferOwnership(address _owner) external {
         if (msg.sender != owner) revert OnlyAdmin();
         if (_owner == address(0)) revert ZeroAddress();
+        emit OwnershipTransferred(owner, _owner);
         owner = _owner;
     }
+    
+    // ============ Events (Admin) ============
+    event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
 
     // ============ Internal Helpers ============
     
