@@ -2,6 +2,25 @@ export const SYNTHID_ADDRESS = "0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb" as c
 
 export const SYNTHID_ABI = [
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "balanceOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "activeCount",
     "outputs": [

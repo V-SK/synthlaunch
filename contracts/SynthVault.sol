@@ -86,6 +86,14 @@ contract SynthVault is VaultBase {
         _;
     }
 
+    // ============ Constructor ============
+    
+    /// @notice Locks the implementation contract from being initialized
+    /// @dev Prevents attackers from initializing the template contract
+    constructor() {
+        initialized = true;
+    }
+
     // ============ Initialization ============
     
     /// @notice Initialize the vault (can only be called once by factory)
@@ -149,15 +157,15 @@ contract SynthVault is VaultBase {
         emit Claimed(agentWallet, agentAmount, platformFee);
     }
     
-    /// @notice Platform claims accumulated fees (legacy function for compatibility)
-    /// @dev Fees are now sent directly in claim(), this is for any stuck fees
-    function claimPlatformFee() external onlyTreasuryOrGuardian {
-        // In current implementation, fees are sent immediately in claim()
-        // This function exists for guardian emergency access and future compatibility
+    /// @notice Emergency withdraw — Guardian only
+    /// @dev Sends all vault balance to treasury. Use only in emergency.
+    /// Normal platform fees are collected automatically via claim().
+    function emergencyWithdraw() external {
+        if (msg.sender != _getGuardian()) revert Unauthorized();
+        
         uint256 balance = address(this).balance;
         if (balance == 0) revert NothingToClaim();
         
-        // Emergency: send all balance to treasury
         (bool success, ) = payable(treasury).call{value: balance}("");
         if (!success) revert TransferFailed();
         

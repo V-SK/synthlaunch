@@ -106,10 +106,11 @@ export async function POST(request: NextRequest) {
     const account = await getDeployerAccount();
 
     // Build the message hash matching the contract's verification
+    // Must include address(this) = CUSTODY_ADDRESS
     const messageHash = keccak256(
       encodePacked(
-        ['string', 'string', 'address', 'bytes32', 'uint256'],
-        ['SynthLaunch:BindWallet', agentName, wallet as `0x${string}`, nonce as `0x${string}`, BigInt(CHAIN_ID)]
+        ['string', 'address', 'string', 'address', 'bytes32', 'uint256'],
+        ['SynthLaunch:BindWallet', CUSTODY_ADDRESS, agentName, wallet as `0x${string}`, nonce as `0x${string}`, BigInt(CHAIN_ID)]
       )
     );
 

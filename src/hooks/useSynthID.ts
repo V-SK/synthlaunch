@@ -112,4 +112,20 @@ export function useAllAgents() {
   return { agents, isLoading, error, totalMinted, activeCount };
 }
 
+// Hook: check if address has a SynthID
+export function useHasSynthID(address?: `0x${string}`) {
+  const { data: balance, isLoading } = useReadContract({
+    address: SYNTHID_ADDRESS,
+    abi: SYNTHID_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  return {
+    hasSynthID: balance ? Number(balance) > 0 : false,
+    isLoading,
+  };
+}
+
 // Server-side fetchAllAgents moved to /lib/synthid-server.ts

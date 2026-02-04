@@ -39,12 +39,53 @@ export async function GET(
     const [name, platform, platformId, , createdAt, owner, revoked] = identity;
     const [avatar, description, skills] = profile;
 
+    // Extract IPFS CID and resolve actual image
+    let imageUrl = avatar || '';
+    let ipfsCid = '';
+    
+    // Extract CID from various URL formats
+    const pinataMatch = imageUrl.match(/gateway\.pinata\.cloud\/ipfs\/([a-zA-Z0-9]+)/);
+    const ipfsIoMatch = imageUrl.match(/ipfs\.io\/ipfs\/([a-zA-Z0-9]+)/);
+    const rawCidMatch = imageUrl.match(/^(bafkrei[a-z0-9]+)$/);
+    
+    if (pinataMatch) ipfsCid = pinataMatch[1];
+    else if (ipfsIoMatch) ipfsCid = ipfsIoMatch[1];
+    else if (rawCidMatch) ipfsCid = rawCidMatch[1];
+    
+    // If we have a CID, check if it's a Flap JSON wrapper and extract real image
+    if (ipfsCid) {
+      try {
+        const res = await fetch(`https://gateway.pinata.cloud/ipfs/${ipfsCid}`, {
+          headers: { 'Accept': 'application/json, image/*' },
+        });
+        const contentType = res.headers.get('content-type') || '';
+        
+        if (contentType.includes('application/json')) {
+          // It's JSON - likely a Flap wrapper, extract the real image
+          const wrapper = await res.json();
+          if (wrapper.image && typeof wrapper.image === 'string') {
+            // wrapper.image might be just CID or full URL
+            const innerCid = wrapper.image.match(/([a-zA-Z0-9]{59})/)?.[1] || wrapper.image;
+            imageUrl = `ipfs://${innerCid}`;
+          } else {
+            imageUrl = `ipfs://${ipfsCid}`;
+          }
+        } else {
+          // It's an actual image
+          imageUrl = `ipfs://${ipfsCid}`;
+        }
+      } catch {
+        // Fallback to original CID
+        imageUrl = `ipfs://${ipfsCid}`;
+      }
+    }
+
     const metadata = {
       name: `SynthID #${id}`,
       description: description
         ? `AI Agent Identity on BSC — ${name}. ${description}`
         : `AI Agent Identity on BSC — ${name}`,
-      image: avatar || '',
+      image: imageUrl,
       external_url: `https://synthlaunch.fun/identity/agent/${id}`,
       attributes: [
         { trait_type: 'Name', value: name },

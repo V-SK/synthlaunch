@@ -370,5 +370,67 @@
       "notFound": "未找到 Agent",
       "notFoundDesc": "该 Agent 身份不存在或尚未注册。"
     }
+  },
+  "nfa": {
+    "title": "NFA 管理面板",
+    "subtitle": "BAP-578 · 非同质化代理",
+    "stats": {
+      "totalAgents": "Agent 总数",
+      "totalBalance": "总余额",
+      "totalXp": "总经验值",
+      "active": "活跃中"
+    },
+    "tabs": {
+      "myAgents": "我的 Agent",
+      "mintNew": "铸造新 Agent"
+    },
+    "empty": {
+      "title": "暂无 Agent",
+      "desc": "铸造你的第一个 Agent 开始使用"
+    },
+    "card": {
+      "active": "活跃",
+      "paused": "已暂停",
+      "balance": "余额",
+      "level": "等级",
+      "xp": "经验值"
+    },
+    "mint": {
+      "title": "创建新 Agent",
+      "desc": "在 BSC 上铸造一个 Non-Fungible Agent。费用：{price} BNB",
+      "name": "Agent 名称",
+      "namePlaceholder": "例如 Alice",
+      "persona": "人设哈希 (IPFS)",
+      "personaPlaceholder": "QmPersona...",
+      "voice": "声音哈希（可选）",
+      "voicePlaceholder": "QmVoice...",
+      "animation": "动画哈希（可选）",
+      "animationPlaceholder": "QmAnim...",
+      "logic": "逻辑合约（可选）",
+      "logicPlaceholder": "0x...",
+      "tokenUri": "元数据 URI",
+      "tokenUriPlaceholder": "ipfs://...",
+      "submit": "铸造 Agent",
+      "minting": "铸造中..."
+    },
+    "detail": {
+      "selectAgent": "选择一个 Agent 查看详情",
+      "persona": "人设",
+      "logic": "逻辑",
+      "voice": "声音",
+      "animation": "动画",
+      "none": "无",
+      "fund": "充值",
+      "withdraw": "提取",
+      "evolve": "进化",
+      "pause": "暂停",
+      "activate": "激活"
+    },
+    "toast": {
+      "minted": "Agent \"{name}\" 铸造成功！",
+      "funded": "已向 Agent #{id} 充值 {amount} BNB",
+      "withdrew": "已从 Agent #{id} 提取 {amount} BNB",
+      "evolved": "Agent #{id} 获得 {xp} 经验值！"
+    }
   }
 }

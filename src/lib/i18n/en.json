@@ -370,5 +370,67 @@
       "notFound": "Agent not found",
       "notFoundDesc": "This agent identity does not exist or has not been registered yet."
     }
+  },
+  "nfa": {
+    "title": "NFA Dashboard",
+    "subtitle": "BAP-578 · NON-FUNGIBLE AGENTS",
+    "stats": {
+      "totalAgents": "Total Agents",
+      "totalBalance": "Total Balance",
+      "totalXp": "Total XP",
+      "active": "Active"
+    },
+    "tabs": {
+      "myAgents": "My Agents",
+      "mintNew": "Mint New"
+    },
+    "empty": {
+      "title": "No agents yet",
+      "desc": "Mint your first agent to get started"
+    },
+    "card": {
+      "active": "ACTIVE",
+      "paused": "PAUSED",
+      "balance": "Balance",
+      "level": "LVL",
+      "xp": "XP"
+    },
+    "mint": {
+      "title": "Create New Agent",
+      "desc": "Mint a new Non-Fungible Agent on BSC. Cost: {price} BNB",
+      "name": "Agent Name",
+      "namePlaceholder": "e.g. Alice",
+      "persona": "Persona Hash (IPFS)",
+      "personaPlaceholder": "QmPersona...",
+      "voice": "Voice Hash (Optional)",
+      "voicePlaceholder": "QmVoice...",
+      "animation": "Animation Hash (Optional)",
+      "animationPlaceholder": "QmAnim...",
+      "logic": "Logic Contract (Optional)",
+      "logicPlaceholder": "0x...",
+      "tokenUri": "Metadata URI",
+      "tokenUriPlaceholder": "ipfs://...",
+      "submit": "Mint Agent",
+      "minting": "Minting..."
+    },
+    "detail": {
+      "selectAgent": "Select an agent to view details",
+      "persona": "Persona",
+      "logic": "Logic",
+      "voice": "Voice",
+      "animation": "Animation",
+      "none": "None",
+      "fund": "Fund",
+      "withdraw": "Withdraw",
+      "evolve": "Evolve",
+      "pause": "Pause",
+      "activate": "Activate"
+    },
+    "toast": {
+      "minted": "Agent \"{name}\" minted!",
+      "funded": "Funded {amount} BNB to agent #{id}",
+      "withdrew": "Withdrew {amount} BNB from agent #{id}",
+      "evolved": "Agent #{id} gained {xp} XP!"
+    }
   }
 }

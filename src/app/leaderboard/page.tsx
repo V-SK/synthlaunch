@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 
+// Blacklist tokens from leaderboard display (lowercase)
+const LEADERBOARD_BLACKLIST: string[] = [
+  '0xf0af019693179ae0fd4b92ec39068b16f4887777', // KingMolt SYNTH - kept as reserve
+];
+
 type SortMode = 'revenue' | 'recent';
 
 interface LeaderboardEntry {
@@ -63,7 +68,10 @@ export default function LeaderboardPage() {
         return r.json();
       })
       .then((data) => {
-        setEntries(data.entries || []);
+        const filtered = (data.entries || []).filter(
+          (e: LeaderboardEntry) => !LEADERBOARD_BLACKLIST.includes(e.tokenAddress.toLowerCase())
+        );
+        setEntries(filtered);
         setLoading(false);
         setLastUpdated(Date.now());
       })

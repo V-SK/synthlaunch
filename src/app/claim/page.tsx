@@ -7,6 +7,11 @@ import { formatEther, type Address } from 'viem';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
 import { useI18n } from '@/lib/i18n';
 
+// Blacklist tokens from claim page display (lowercase)
+const CLAIM_BLACKLIST: string[] = [
+  '0xf0af019693179ae0fd4b92ec39068b16f4887777', // KingMolt SYNTH - kept as reserve
+];
+
 type ClaimTab = 'twitter' | 'agents';
 type AgentStep = 1 | 2 | 3 | 4;
 type TwitterStep = 1 | 2 | 3; // login → review → claim
@@ -87,30 +92,45 @@ function ClaimPageInner() {
     }
   }, []);
 
-  // Fetch all registered tokens
+  // Fetch all registered tokens from API (avoids BSC RPC block range limits)
   const fetchRegisteredTokens = useCallback(async () => {
-    if (!publicClient) return;
     try {
-      // Use recent blocks only (custody contract is new, ~7 days lookback max)
-      const currentBlock = await publicClient.getBlockNumber();
-      const fromBlock = currentBlock - BigInt(20000 * 24 * 7); // ~7 days
-      const logs = await publicClient.getLogs({
-        address: CUSTODY_ADDRESS,
-        event: {
-          type: 'event',
-          name: 'TokenRegistered',
-          inputs: [
-            { indexed: true, name: 'token', type: 'address' },
-            { indexed: false, name: 'agentName', type: 'string' },
-          ],
-        },
-        fromBlock,
-        toBlock: 'latest',
-      });
-      const tokens = logs.map((log) => log.args.token as Address);
-      setKnownTokens(Array.from(new Set(tokens)));
+      // Fetch tokens from API which has the full list
+      const res = await fetch('/api/tokens');
+      if (!res.ok) throw new Error('Failed to fetch tokens');
+      const tokens = await res.json();
+      // Extract unique addresses, filter out blacklisted tokens
+      const addresses = tokens
+        .map((t: { address?: string }) => t.address as Address)
+        .filter(Boolean)
+        .filter((addr: Address) => !CLAIM_BLACKLIST.includes(addr.toLowerCase()));
+      setKnownTokens(Array.from(new Set(addresses)));
     } catch (err) {
       console.error('Failed to fetch registered tokens:', err);
+      // Fallback: try chain query with smaller range
+      if (!publicClient) return;
+      try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const fromBlock = currentBlock - BigInt(5000); // ~4 hours only
+        const logs = await publicClient.getLogs({
+          address: CUSTODY_ADDRESS,
+          event: {
+            type: 'event',
+            name: 'TokenRegistered',
+            inputs: [
+              { indexed: true, name: 'token', type: 'address' },
+              { indexed: false, name: 'agentName', type: 'string' },
+            ],
+          },
+          fromBlock,
+          toBlock: 'latest',
+        });
+        const tokens = logs.map((log) => log.args.token as Address)
+          .filter((addr: Address) => !CLAIM_BLACKLIST.includes(addr.toLowerCase()));
+        setKnownTokens(Array.from(new Set(tokens)));
+      } catch (chainErr) {
+        console.error('Chain fallback also failed:', chainErr);
+      }
     }
   }, [publicClient]);
 

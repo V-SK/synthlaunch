@@ -68,6 +68,7 @@ contract FairMintToken is ERC20, ReentrancyGuard {
     uint256 public immutable startTime;
     uint256 public immutable endTime;
     bool    public immutable agentOnly;       // requires SynthID to mint
+    uint256 public immutable mintFeeRate;    // mint fee in bps (250 = 2.5%)
 
     // ── Fee basis points (out of 10000) ─────────────────────────
     uint256 public constant AGENT_FEE_BPS    = 1000; // 10%
@@ -126,7 +127,8 @@ contract FairMintToken is ERC20, ReentrancyGuard {
         address _platform,
         address _router,
         address _synthID,          // address(0) for public mint
-        address _creator
+        address _creator,
+        uint256 _mintFeeRate       // mint fee in bps (250 = 2.5%)
     ) ERC20(_name, _symbol) {
         require(_totalSupplyWei > 0, "zero supply");
         require(_mintPrice > 0, "zero price");
@@ -152,6 +154,7 @@ contract FairMintToken is ERC20, ReentrancyGuard {
         synthID = _synthID;
         agentOnly = _synthID != address(0);
         creator = _creator;
+        mintFeeRate = _mintFeeRate;
 
         // Mint total supply to this contract (already in wei)
         _mint(address(this), _totalSupplyWei);
@@ -190,6 +193,13 @@ contract FairMintToken is ERC20, ReentrancyGuard {
         // Update state
         mintedBy[msg.sender] = newMinted;
         totalMinted += amountWei;
+
+        // Calculate and send mint fee to platform (2.5%)
+        uint256 mintFee = (cost * mintFeeRate) / 10000;
+        if (mintFee > 0) {
+            (bool feeOk, ) = platform.call{value: mintFee}("");
+            if (!feeOk) revert TransferFailed();
+        }
 
         // Transfer tokens from contract to user (already in wei, no scaling needed)
         _transfer(address(this), msg.sender, amountWei);

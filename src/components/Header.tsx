@@ -19,6 +19,7 @@ export function Header() {
     { label: t('nav.claim'), href: '/claim' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
     { label: t('nav.identity'), href: '/identity' },
+    { label: '🦞 NFA', href: '/nfa' },
   ];
 
   return (

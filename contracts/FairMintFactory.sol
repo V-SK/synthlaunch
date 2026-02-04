@@ -20,6 +20,7 @@ contract FairMintFactory {
     uint256 public creationFee;        // BNB fee to create a fair mint
     uint256 public minRaiseBnb;        // min total raise in wei (~$50K FDV)
     uint256 public maxRaiseBnb;        // max total raise in wei (~$200K FDV)
+    uint256 public mintFeeRate;        // mint fee in bps (250 = 2.5%)
 
     address[] public allTokens;
     mapping(address => bool) public isToken;
@@ -41,6 +42,7 @@ contract FairMintFactory {
     event CreationFeeChanged(uint256 newFee);
     event FeesWithdrawn(address indexed to, uint256 amount);
     event RaiseLimitsChanged(uint256 minRaise, uint256 maxRaise);
+    event MintFeeRateChanged(uint256 newRate);
 
     // ── Errors ──────────────────────────────────────────────────
     error NotOwner();
@@ -61,11 +63,13 @@ contract FairMintFactory {
         address _synthID,
         uint256 _creationFee,
         uint256 _minRaiseBnb,
-        uint256 _maxRaiseBnb
+        uint256 _maxRaiseBnb,
+        uint256 _mintFeeRate
     ) {
         require(_platform != address(0), "zero platform");
         require(_router != address(0), "zero router");
         require(_maxRaiseBnb >= _minRaiseBnb, "bad raise limits");
+        require(_mintFeeRate <= 1000, "max 10% mint fee");
         owner = msg.sender;
         platform = _platform;
         router = _router;
@@ -73,6 +77,7 @@ contract FairMintFactory {
         creationFee = _creationFee;
         minRaiseBnb = _minRaiseBnb;
         maxRaiseBnb = _maxRaiseBnb;
+        mintFeeRate = _mintFeeRate;
     }
 
     // ── Create Token ────────────────────────────────────────────
@@ -122,7 +127,8 @@ contract FairMintFactory {
             platform,
             router,
             _synthID,
-            msg.sender
+            msg.sender,
+            mintFeeRate                  // mint fee rate in bps
         );
 
         token = address(t);
@@ -199,6 +205,12 @@ contract FairMintFactory {
         minRaiseBnb = _min;
         maxRaiseBnb = _max;
         emit RaiseLimitsChanged(_min, _max);
+    }
+
+    function setMintFeeRate(uint256 _rate) external onlyOwner {
+        require(_rate <= 1000, "max 10%");
+        mintFeeRate = _rate;
+        emit MintFeeRateChanged(_rate);
     }
 
     function withdrawFees(address to) external onlyOwner {

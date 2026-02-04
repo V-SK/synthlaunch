@@ -65,6 +65,9 @@ contract SynthVaultFactory is IVaultFactory {
     /// @notice Thrown when fee exceeds 10%
     error FeeTooHigh();
     
+    /// @notice Thrown when quote token is not supported
+    error UnsupportedQuoteToken();
+    
     /// @notice Thrown when vault already exists for token
     error VaultAlreadyExists();
 
@@ -115,7 +118,7 @@ contract SynthVaultFactory is IVaultFactory {
         if (msg.sender != _getVaultPortal()) revert OnlyVaultPortal();
         
         // Only support BNB as quote token
-        if (quoteToken != address(0)) revert IVaultFactory.ZeroAddress();
+        if (quoteToken != address(0)) revert UnsupportedQuoteToken();
         
         // Check vault doesn't already exist
         if (vaults[taxToken] != address(0)) revert VaultAlreadyExists();
@@ -186,7 +189,7 @@ contract SynthVaultFactory is IVaultFactory {
         owner = newOwner;
     }
     
-    /// @notice Update treasury address
+    /// @notice Update treasury address (only affects NEW vaults)
     /// @param newTreasury New treasury address
     function setTreasury(address newTreasury) external onlyOwner {
         if (newTreasury == address(0)) revert ZeroAddress();
@@ -194,7 +197,7 @@ contract SynthVaultFactory is IVaultFactory {
         treasury = newTreasury;
     }
     
-    /// @notice Update default platform fee for new vaults
+    /// @notice Update default platform fee (only affects NEW vaults)
     /// @param newFeeBps New fee in basis points (max 1000)
     function setPlatformFee(uint256 newFeeBps) external onlyOwner {
         if (newFeeBps > 1000) revert FeeTooHigh();
