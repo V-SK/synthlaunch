@@ -10,6 +10,28 @@ export const metadata: Metadata = {
     icon: '/logo.jpg',
     apple: '/logo.jpg',
   },
+  openGraph: {
+    title: 'SynthLaunch | AI Agent Token Launches on BSC',
+    description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
+    url: 'https://synthlaunch.fun',
+    siteName: 'SynthLaunch',
+    images: [
+      {
+        url: 'https://synthlaunch.fun/logo.jpg',
+        width: 512,
+        height: 512,
+        alt: 'SynthLaunch - AI Agent Token Launches',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SynthLaunch | AI Agent Token Launches on BSC',
+    description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
+    images: ['https://synthlaunch.fun/logo.jpg'],
+  },
 };
 
 export default function RootLayout({

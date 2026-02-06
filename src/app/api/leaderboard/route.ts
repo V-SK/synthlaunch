@@ -90,7 +90,9 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return data.filter((t: any) => t.address?.startsWith('0x') && t.address.length === 42);
+    // Hidden tokens (same list as /api/tokens)
+    const HIDDEN_TOKENS = ['0xf0af019693179ae0fd4b92ec39068b16f4887777'];
+    return data.filter((t: any) => t.address?.startsWith('0x') && t.address.length === 42 && !HIDDEN_TOKENS.includes(t.address.toLowerCase()));
   } catch {
     return [];
   }
