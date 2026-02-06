@@ -414,7 +414,7 @@ export default function NFADashboard() {
       )}
 
       {/* Header */}
-      <header className="relative z-10 px-8 py-5 flex justify-between items-center border-b border-white/[0.04]">
+      <header className="relative z-20 px-8 py-5 flex justify-between items-center border-b border-white/[0.04]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-neon to-cyan-400 flex items-center justify-center text-lg font-black text-black">
             N

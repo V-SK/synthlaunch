@@ -42,7 +42,7 @@ export function WalletConnect() {
         {showMenu && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-            <div className="absolute right-0 top-full mt-2 z-50 bg-synth-surface border border-synth-border rounded p-1 min-w-[160px]">
+            <div className="absolute right-0 top-full mt-2 z-50 bg-[#111111] border border-synth-border rounded p-1 min-w-[160px] shadow-xl">
               <button
                 onClick={() => { disconnect(); setShowMenu(false); }}
                 className="w-full text-left px-3 py-2 text-xs font-mono text-red-400 hover:bg-red-500/10 rounded transition-colors"
@@ -68,7 +68,7 @@ export function WalletConnect() {
       {showMenu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-synth-surface border border-synth-border rounded p-1 min-w-[200px]">
+          <div className="absolute right-0 top-full mt-2 z-50 bg-[#111111] border border-synth-border rounded p-1 min-w-[200px] shadow-xl">
             {connectors.map((connector) => (
               <button
                 key={connector.uid}
