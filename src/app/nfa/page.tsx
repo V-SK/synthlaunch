@@ -448,7 +448,7 @@ export default function NFADashboard() {
         {tab === "mint" ? (
           <MintPanel onMint={handleMint} loading={loading} mintPrice={mintPriceFormatted || "0.05"} t={t} />
         ) : (
-          <div className="grid grid-cols-[380px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
             {/* Agent List */}
             <div className="flex flex-col gap-3">
               {loading && agents.length === 0 ? (
