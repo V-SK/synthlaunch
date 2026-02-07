@@ -2,10 +2,10 @@
   "nav": {
     "home": "首页",
     "launch": "发币",
-    "claim": "领取",
+    "nfa": "NFA",
+    "chat": "聊天",
     "leaderboard": "排行榜",
-    "identity": "身份",
-    "mint": "公平铸造"
+    "docs": "文档"
   },
   "home": {
     "heroTitle": "代币发行",

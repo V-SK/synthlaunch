@@ -2,10 +2,10 @@
   "nav": {
     "home": "Home",
     "launch": "Launch",
-    "claim": "Claim",
+    "nfa": "NFA",
+    "chat": "Chat",
     "leaderboard": "Leaderboard",
-    "identity": "Identity",
-    "mint": "Fair Mint"
+    "docs": "Docs"
   },
   "home": {
     "heroTitle": "Token Launches with",

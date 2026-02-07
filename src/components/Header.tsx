@@ -14,13 +14,24 @@ export function Header() {
 
   const NAV_ITEMS = [
     { label: t('nav.home'), href: '/' },
-    { label: t('nav.launch'), href: '/launch' },
-    { label: `⚡ ${t('nav.mint')}`, href: '/mint' },
-    { label: t('nav.claim'), href: '/claim' },
+    { label: `🚀 ${t('nav.launch')}`, href: '/launch' },
+    { label: `🤖 ${t('nav.nfa')}`, href: '/nfa', highlight: true },
+    { label: t('nav.chat'), href: '/chat' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
-    { label: t('nav.identity'), href: '/identity' },
-    { label: '🦞 NFA', href: '/nfa' },
+    { label: t('nav.docs'), href: '/docs' },
   ];
+
+  const getNavItemClasses = (item: { href: string; highlight?: boolean }) => {
+    const isActive = pathname === item.href;
+    if (item.highlight) {
+      return isActive
+        ? 'text-synth-bg bg-synth-green'
+        : 'text-synth-green bg-synth-green/20 hover:bg-synth-green/30';
+    }
+    return isActive
+      ? 'text-synth-green bg-synth-green/10'
+      : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface';
+  };
 
   return (
     <header className="border-b border-synth-border bg-synth-bg/95 backdrop-blur-md fixed top-0 left-0 right-0 z-50">
@@ -59,11 +70,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className={`px-3 py-1.5 rounded text-sm font-mono transition-all duration-200 ${
-                pathname === item.href
-                  ? 'text-synth-green bg-synth-green/10'
-                  : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-mono transition-all duration-200 ${getNavItemClasses(item)}`}
             >
               {item.label}
             </Link>
@@ -85,11 +92,7 @@ export function Header() {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className={`px-3 py-2 rounded text-sm font-mono transition-all duration-200 ${
-                pathname === item.href
-                  ? 'text-synth-green bg-synth-green/10'
-                  : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface'
-              }`}
+              className={`px-3 py-2 rounded text-sm font-mono transition-all duration-200 ${getNavItemClasses(item)}`}
             >
               {item.label}
             </Link>
