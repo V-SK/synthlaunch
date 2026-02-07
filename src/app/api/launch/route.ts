@@ -611,3 +611,7 @@ export async function POST(request: NextRequest) {
     return errorResponse(`Unexpected error: ${msg}`, 'DEPLOY_FAILED', 500);
   }
 }
+
+// Vercel function config
+export const maxDuration = 60;
+
