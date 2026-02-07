@@ -219,7 +219,7 @@ export class TwitterBot {
           tax_rate: input.taxRate,
           tax_rate_bps: taxRateBps,
         }),
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(120_000), // 2 minutes for salt mining
       });
 
       const text = await res.text();
