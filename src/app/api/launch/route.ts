@@ -345,7 +345,7 @@ export async function POST(request: NextRequest) {
 
     // Handle Twitter-based launch
     if (source === 'twitter') {
-      return handleTwitterLaunch(body);
+      return await handleTwitterLaunch(body);
     }
 
     // Original Moltbook flow below
@@ -613,5 +613,5 @@ export async function POST(request: NextRequest) {
 }
 
 // Vercel function config
+export const runtime = 'nodejs';
 export const maxDuration = 60;
-
