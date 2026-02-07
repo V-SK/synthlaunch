@@ -127,6 +127,207 @@ async function uploadToIPFS(imageUrl: string, description: string, website?: str
   return cid;
 }
 
+// --- Twitter Launch Handler ---
+
+async function handleTwitterLaunch(body: {
+  target_handle: string;
+  token_name?: string;
+  symbol?: string;
+  tax_rate?: number;
+  tax_rate_bps?: number;
+}) {
+  const { target_handle, token_name, symbol, tax_rate } = body;
+
+  if (!target_handle) {
+    return errorResponse('Missing target_handle', 'INVALID_FORMAT');
+  }
+
+  const cleanHandle = target_handle.replace('@', '').toLowerCase();
+  const agentName = `tw:${cleanHandle}`;
+  const finalName = token_name || `${cleanHandle} Coin`;
+  const finalSymbol = symbol || cleanHandle.slice(0, 4).toUpperCase();
+  const taxRateBps = body.tax_rate_bps ?? Math.round((tax_rate ?? 2) * 100);
+
+  console.log(`[launch/twitter] Launching token for @${cleanHandle}: ${finalName} ($${finalSymbol}), tax: ${taxRateBps} bps`);
+
+  // Rate limit per handle
+  const launches = loadLaunches();
+  const handleKey = `twitter:${cleanHandle}`;
+  const lastLaunch = launches[handleKey];
+  if (lastLaunch && Date.now() - lastLaunch < RATE_LIMIT_MS) {
+    const remainingMs = RATE_LIMIT_MS - (Date.now() - lastLaunch);
+    const remainingHrs = Math.ceil(remainingMs / (60 * 60 * 1000));
+    return errorResponse(`Token for @${cleanHandle} already launched. Try again in ${remainingHrs} hours.`, 'RATE_LIMITED', 429);
+  }
+
+  // Fetch Twitter avatar
+  let avatarUrl: string;
+  try {
+    console.log(`[launch/twitter] Fetching avatar for @${cleanHandle}...`);
+    // Use unavatar.io as a reliable avatar proxy
+    avatarUrl = `https://unavatar.io/twitter/${cleanHandle}`;
+    // Verify it exists
+    const checkRes = await fetch(avatarUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+    if (!checkRes.ok) {
+      console.log(`[launch/twitter] Avatar not found, using default`);
+      avatarUrl = 'https://unavatar.io/twitter/twitter'; // fallback
+    }
+  } catch {
+    avatarUrl = 'https://unavatar.io/twitter/twitter';
+  }
+
+  // Upload to IPFS
+  let cid: string;
+  try {
+    cid = await uploadToIPFS(
+      avatarUrl,
+      `Token for Twitter user @${cleanHandle}`,
+      `https://synthlaunch.fun`,
+      `https://x.com/${cleanHandle}`,
+    );
+    console.log(`[launch/twitter] IPFS CID: ${cid}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[launch/twitter] IPFS upload error:`, msg);
+    return errorResponse(`Failed to upload metadata: ${msg}`, 'DEPLOY_FAILED', 500);
+  }
+
+  // Mine vanity salt
+  const hasTax = taxRateBps > 0;
+  let salt: `0x${string}`;
+  let tokenAddress: string;
+  try {
+    console.log(`[launch/twitter] Mining vanity salt (hasTax: ${hasTax})...`);
+    const result = await findVanitySalt(hasTax);
+    salt = result.salt;
+    tokenAddress = result.tokenAddress;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorResponse(`Failed to mine vanity salt: ${msg}`, 'DEPLOY_FAILED', 500);
+  }
+
+  // Deploy token
+  const account = await getDeployerAccount();
+  const walletClient = createWalletClient({
+    account,
+    chain: bsc,
+    transport: http('https://bsc-dataseed.binance.org'),
+  });
+  const publicClient = createPublicClient({
+    chain: bsc,
+    transport: http('https://bsc-dataseed.binance.org'),
+  });
+
+  const beneficiary = hasTax ? CUSTODY_ADDRESS : account.address;
+  const migratorType = hasTax ? 1 : 0;
+
+  let txHash: `0x${string}`;
+  try {
+    console.log(`[launch/twitter] Sending newTokenV2 transaction...`);
+    txHash = await walletClient.writeContract({
+      address: FLAP_ADDRESS,
+      abi: FLAP_ABI,
+      functionName: 'newTokenV2',
+      args: [{
+        name: finalName,
+        symbol: finalSymbol,
+        meta: cid,
+        dexThresh: 1,
+        salt,
+        taxRate: taxRateBps,
+        migratorType,
+        quoteToken: zeroAddress,
+        quoteAmt: BigInt(0),
+        beneficiary,
+        permitData: '0x' as `0x${string}`,
+      }],
+      value: BigInt(0),
+    });
+
+    console.log(`[launch/twitter] Transaction sent: ${txHash}`);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+    console.log(`[launch/twitter] Confirmed in block ${receipt.blockNumber}`);
+
+    if (receipt.status === 'reverted') {
+      return errorResponse('Transaction reverted on-chain', 'DEPLOY_FAILED', 500);
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[launch/twitter] Transaction error:`, msg);
+    return errorResponse(`Transaction failed: ${msg}`, 'DEPLOY_FAILED', 500);
+  }
+
+  // Register in custody contract
+  if (hasTax) {
+    try {
+      console.log(`[launch/twitter] Registering token for ${agentName} in custody...`);
+      const registerHash = await walletClient.writeContract({
+        address: CUSTODY_ADDRESS,
+        abi: CUSTODY_ABI,
+        functionName: 'registerToken',
+        args: [tokenAddress as `0x${string}`, agentName],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: registerHash, confirmations: 1 });
+      console.log(`[launch/twitter] Custody registration done`);
+    } catch (err: unknown) {
+      console.error(`[launch/twitter] Custody registration failed (non-fatal):`, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  // Register in Supabase
+  try {
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (SUPABASE_URL && SUPABASE_KEY) {
+      await fetch(`${SUPABASE_URL}/rest/v1/tokens`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          address: tokenAddress.toLowerCase(),
+          name: finalName,
+          symbol: finalSymbol,
+          meta: cid,
+          creator: account.address,
+          agent_name: agentName,
+          tx_hash: txHash,
+          launch_type: 'twitter',
+          tax_rate: taxRateBps,
+          beneficiary: CUSTODY_ADDRESS,
+        }),
+      });
+      console.log(`[launch/twitter] Supabase registration done`);
+    }
+  } catch (err: unknown) {
+    console.error(`[launch/twitter] Supabase registration failed (non-fatal):`, err instanceof Error ? err.message : String(err));
+  }
+
+  // Record launch
+  launches[handleKey] = Date.now();
+  saveLaunches(launches);
+
+  const response = {
+    success: true,
+    source: 'twitter',
+    target_handle: cleanHandle,
+    agent_name: agentName,
+    token_address: tokenAddress,
+    token_name: finalName,
+    symbol: finalSymbol,
+    tax_rate: taxRateBps / 100,
+    tx_hash: txHash,
+    flap_url: `https://flap.sh/token/${tokenAddress}?chain=bsc`,
+    bscscan_url: `https://bscscan.com/token/${tokenAddress}`,
+  };
+
+  console.log(`[launch/twitter] Success!`, JSON.stringify(response));
+  return NextResponse.json(response);
+}
+
 // --- Main handler ---
 
 export async function POST(request: NextRequest) {
@@ -140,7 +341,14 @@ export async function POST(request: NextRequest) {
 
     // 1. Validate request
     const body = await request.json();
-    const { moltbook_key, post_id } = body;
+    const { source, moltbook_key, post_id, target_handle, token_name, symbol, tax_rate } = body;
+
+    // Handle Twitter-based launch
+    if (source === 'twitter') {
+      return handleTwitterLaunch(body);
+    }
+
+    // Original Moltbook flow below
 
     if (!moltbook_key || !post_id) {
       return errorResponse('Missing moltbook_key or post_id', 'INVALID_FORMAT');
