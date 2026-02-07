@@ -17,7 +17,7 @@ const EIP1167_PREFIX = '0x3d602d80600a3d3981f3363d3d373d3d3d363d73';
 const EIP1167_SUFFIX = '5af43d82803e903d91602b57fd5bf3';
 
 const LAUNCHES_FILE = '/tmp/synthlaunch-launches.json';
-const RATE_LIMIT_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_LAUNCHES_PER_HANDLE_PER_DAY = 3; // Target handle can receive max 3 tokens per day
 
 // --- Helpers ---
 
@@ -29,10 +29,24 @@ function errorResponse(error: string, code: string, status: number = 400) {
   return NextResponse.json({ error, code }, { status });
 }
 
-function loadLaunches(): Record<string, number> {
+type HandleLaunchRecord = { count: number; date: string };
+
+function loadLaunches(): Record<string, HandleLaunchRecord> {
   try {
     if (fs.existsSync(LAUNCHES_FILE)) {
-      return JSON.parse(fs.readFileSync(LAUNCHES_FILE, 'utf-8'));
+      const data = JSON.parse(fs.readFileSync(LAUNCHES_FILE, 'utf-8'));
+      // Migrate old format (timestamp) to new format (count + date)
+      const migrated: Record<string, HandleLaunchRecord> = {};
+      for (const [key, value] of Object.entries(data)) {
+        if (typeof value === 'number') {
+          // Old format: timestamp
+          migrated[key] = { count: 1, date: new Date(value).toISOString().slice(0, 10) };
+        } else {
+          // New format
+          migrated[key] = value as HandleLaunchRecord;
+        }
+      }
+      return migrated;
     }
   } catch {
     // corrupted file, start fresh
@@ -40,8 +54,28 @@ function loadLaunches(): Record<string, number> {
   return {};
 }
 
-function saveLaunches(launches: Record<string, number>) {
+function saveLaunches(launches: Record<string, HandleLaunchRecord>) {
   fs.writeFileSync(LAUNCHES_FILE, JSON.stringify(launches, null, 2));
+}
+
+function getHandleLaunchCount(handle: string): number {
+  const launches = loadLaunches();
+  const today = new Date().toISOString().slice(0, 10);
+  const record = launches[handle];
+  if (!record || record.date !== today) return 0;
+  return record.count;
+}
+
+function incrementHandleLaunch(handle: string): void {
+  const launches = loadLaunches();
+  const today = new Date().toISOString().slice(0, 10);
+  const record = launches[handle];
+  if (!record || record.date !== today) {
+    launches[handle] = { count: 1, date: today };
+  } else {
+    launches[handle].count += 1;
+  }
+  saveLaunches(launches);
 }
 
 async function findVanitySalt(hasTax: boolean): Promise<{ salt: `0x${string}`; tokenAddress: string }> {
@@ -150,14 +184,11 @@ async function handleTwitterLaunch(body: {
 
   console.log(`[launch/twitter] Launching token for @${cleanHandle}: ${finalName} ($${finalSymbol}), tax: ${taxRateBps} bps`);
 
-  // Rate limit per handle
-  const launches = loadLaunches();
+  // Rate limit per handle (max 3 tokens per day per target)
   const handleKey = `twitter:${cleanHandle}`;
-  const lastLaunch = launches[handleKey];
-  if (lastLaunch && Date.now() - lastLaunch < RATE_LIMIT_MS) {
-    const remainingMs = RATE_LIMIT_MS - (Date.now() - lastLaunch);
-    const remainingHrs = Math.ceil(remainingMs / (60 * 60 * 1000));
-    return errorResponse(`Token for @${cleanHandle} already launched. Try again in ${remainingHrs} hours.`, 'RATE_LIMITED', 429);
+  const handleLaunchCount = getHandleLaunchCount(handleKey);
+  if (handleLaunchCount >= MAX_LAUNCHES_PER_HANDLE_PER_DAY) {
+    return errorResponse(`@${cleanHandle} already has ${MAX_LAUNCHES_PER_HANDLE_PER_DAY} tokens today. Try again tomorrow!`, 'RATE_LIMITED', 429);
   }
 
   // Fetch Twitter avatar
@@ -306,9 +337,8 @@ async function handleTwitterLaunch(body: {
     console.error(`[launch/twitter] Supabase registration failed (non-fatal):`, err instanceof Error ? err.message : String(err));
   }
 
-  // Record launch
-  launches[handleKey] = Date.now();
-  saveLaunches(launches);
+  // Record launch for rate limiting
+  incrementHandleLaunch(handleKey);
 
   const response = {
     success: true,
@@ -437,13 +467,10 @@ export async function POST(request: NextRequest) {
     const taxRate = tokenDetails.taxRate ?? 200; // default 2% = 200 bps
     console.log(`[launch] Token: ${tokenDetails.name} (${tokenDetails.symbol}), taxRate: ${taxRate} bps, wallet: ${tokenDetails.wallet}`);
 
-    // 6. Rate limit
-    const launches = loadLaunches();
-    const lastLaunch = launches[agentId];
-    if (lastLaunch && Date.now() - lastLaunch < RATE_LIMIT_MS) {
-      const remainingMs = RATE_LIMIT_MS - (Date.now() - lastLaunch);
-      const remainingHrs = Math.ceil(remainingMs / (60 * 60 * 1000));
-      return errorResponse(`Rate limited. Try again in ${remainingHrs} hours.`, 'RATE_LIMITED', 429);
+    // 6. Rate limit (max 3 tokens per day per agent)
+    const agentLaunchCount = getHandleLaunchCount(agentId);
+    if (agentLaunchCount >= MAX_LAUNCHES_PER_HANDLE_PER_DAY) {
+      return errorResponse(`Agent already has ${MAX_LAUNCHES_PER_HANDLE_PER_DAY} tokens today. Try again tomorrow!`, 'RATE_LIMITED', 429);
     }
 
     // 7. Upload metadata to IPFS
@@ -587,9 +614,8 @@ export async function POST(request: NextRequest) {
       console.error(`[launch] Supabase register failed (non-fatal):`, err instanceof Error ? err.message : String(err));
     }
 
-    // 11. Record launch
-    launches[agentId] = Date.now();
-    saveLaunches(launches);
+    // 11. Record launch for rate limiting
+    incrementHandleLaunch(agentId);
     console.log(`[launch] Launch recorded for agent ${agentId}`);
 
     // 11. Return response
