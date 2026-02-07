@@ -1,4 +1,4 @@
-import { TwitterBot } from '../src/services/twitter-bot';
+import { TwitterBot } from '../src/services/twitter-bot/index';
 
 const bot = new TwitterBot();
 
