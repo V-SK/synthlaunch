@@ -2,9 +2,11 @@ export const TWITTER_API_KEY = process.env.TWITTER_API_KEY || '';
 export const TWITTER_API_SECRET = process.env.TWITTER_API_SECRET || '';
 export const TWITTER_ACCESS_TOKEN = process.env.TWITTER_ACCESS_TOKEN || '';
 export const TWITTER_ACCESS_SECRET = process.env.TWITTER_ACCESS_SECRET || '';
+export const TWITTER_BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN || '';
 
 export const POLL_INTERVAL_MS = 60_000;
-export const SEARCH_QUERY = '!发币 OR !launch';
+export const BOT_USERNAME = 'SynthBot219518b';
+export const SEARCH_QUERY = `@${BOT_USERNAME} 发币`;
 
 export const PROCESSED_TWEETS_FILE = process.env.TWITTER_BOT_PROCESSED_FILE || '/tmp/synthlaunch-twitter-bot-processed.json';
 export const MAX_PROCESSED_TWEETS = 2000;

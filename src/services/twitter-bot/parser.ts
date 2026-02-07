@@ -5,58 +5,92 @@ type ParsedCommand = {
   taxRate?: number;
 };
 
-const COMMAND_REGEX = /!发币|!launch/i;
-const HANDLE_REGEX = /@([A-Za-z0-9_]{1,15})/;
+// Match: @SynthBot219518b 发币 @target
+const BOT_MENTION_REGEX = /@SynthBot219518b/i;
+const COMMAND_KEYWORD = /发币|launch/i;
+const HANDLE_REGEX = /@([A-Za-z0-9_]{1,15})/g;
 
 function normalizeToken(token: string): string {
-  return token.replace(/^[\s,，。.;:]+|[\s,，。.;:]+$/g, '');
+  return token.replace(/^[\s,，。.;:：]+|[\s,，。.;:：]+$/g, '');
 }
 
-function parseTaxValue(input: string): number | null {
+function parseKeyValue(input: string): { key: string; value: string } | null {
   const cleaned = normalizeToken(input);
-  const explicit = cleaned.match(/^(?:tax|税率)\s*=\s*(\d+(?:\.\d+)?)(?:%)?$/i);
-  if (explicit) return Number(explicit[1]);
-
-  const percent = cleaned.match(/^(\d+(?:\.\d+)?)%$/);
-  if (percent) return Number(percent[1]);
-
+  // Support both : and ： (Chinese colon)
+  const match = cleaned.match(/^(税率|tax|名字|名称|name|代号|符号|symbol)[:：]\s*(.+)$/i);
+  if (match) {
+    return { key: match[1].toLowerCase(), value: match[2] };
+  }
   return null;
 }
 
 export function parseCommand(tweetText: string): ParsedCommand | null {
   if (!tweetText) return null;
 
-  const cmdMatch = tweetText.match(COMMAND_REGEX);
-  if (!cmdMatch || cmdMatch.index == null) return null;
+  // Must mention the bot
+  if (!BOT_MENTION_REGEX.test(tweetText)) return null;
+  
+  // Must have 发币 or launch keyword
+  if (!COMMAND_KEYWORD.test(tweetText)) return null;
 
-  const afterCommand = tweetText.slice(cmdMatch.index + cmdMatch[0].length).trim();
-  const handleMatch = afterCommand.match(HANDLE_REGEX);
-  if (!handleMatch) return null;
+  // Find all @handles (excluding the bot itself)
+  const handles: string[] = [];
+  let match;
+  while ((match = HANDLE_REGEX.exec(tweetText)) !== null) {
+    const handle = match[1];
+    if (handle.toLowerCase() !== 'synthbot219518b') {
+      handles.push(handle);
+    }
+  }
 
-  const targetHandle = handleMatch[1];
-  const parts = afterCommand.split(/\s+/).map(normalizeToken).filter(Boolean);
+  // Need at least one target handle
+  if (handles.length === 0) return null;
 
-  const handleIndex = parts.findIndex(part => part.toLowerCase() === `@${targetHandle}`.toLowerCase());
-  const remaining = handleIndex === -1 ? parts.slice(1) : parts.slice(handleIndex + 1);
-
+  const targetHandle = handles[0];
+  
+  // Parse optional parameters
+  const parts = tweetText.split(/\s+/).map(normalizeToken).filter(Boolean);
+  
+  let tokenName: string | undefined;
   let symbol: string | undefined;
   let taxRate: number | undefined;
-  const nameTokens: string[] = [];
 
-  for (const token of remaining) {
-    const tax = parseTaxValue(token);
-    if (tax != null && !Number.isNaN(tax)) {
-      taxRate = tax;
-      continue;
+  for (const part of parts) {
+    const kv = parseKeyValue(part);
+    if (kv) {
+      switch (kv.key) {
+        case '税率':
+        case 'tax':
+          const rate = parseFloat(kv.value.replace('%', ''));
+          if (!isNaN(rate) && rate >= 0 && rate <= 10) {
+            taxRate = rate;
+          }
+          break;
+        case '名字':
+        case '名称':
+        case 'name':
+          tokenName = kv.value;
+          break;
+        case '代号':
+        case '符号':
+        case 'symbol':
+          symbol = kv.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+          break;
+      }
     }
-
-    if (token.startsWith('$') && token.length > 1) {
-      symbol = token.slice(1).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      if (!symbol) symbol = undefined;
-      continue;
+    
+    // Also support $SYMBOL format
+    if (part.startsWith('$') && part.length > 1) {
+      symbol = part.slice(1).toUpperCase().replace(/[^A-Z0-9]/g, '');
     }
-
-    nameTokens.push(token);
+    
+    // Support standalone percentage as tax
+    if (part.match(/^\d+(\.\d+)?%$/)) {
+      const rate = parseFloat(part);
+      if (!isNaN(rate) && rate >= 0 && rate <= 10) {
+        taxRate = rate;
+      }
+    }
   }
 
   const defaultName = `${targetHandle} Coin`;
@@ -64,7 +98,7 @@ export function parseCommand(tweetText: string): ParsedCommand | null {
 
   return {
     targetHandle,
-    tokenName: nameTokens.length > 0 ? nameTokens.join(' ') : defaultName,
+    tokenName: tokenName || defaultName,
     symbol: symbol || defaultSymbol,
     taxRate: taxRate ?? 2,
   };
