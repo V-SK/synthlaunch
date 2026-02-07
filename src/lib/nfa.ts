@@ -1,6 +1,7 @@
 // NFA Contract - Non-Fungible Agents
 // Deploy first, then update this address (prefer env var in app code)
-export const NFA_ADDRESS = "0x396333F75f4e4CE0d9b614BE04b692496C6C18b3" as const;
+// NFAv2 with logicAddress allowlist
+export const NFA_ADDRESS = "0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19" as const;
 
 export const NFA_ABI = [
   // Read functions

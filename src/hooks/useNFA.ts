@@ -53,6 +53,8 @@ export function useNFA() {
     setError(null);
     try {
       // Find tokenIds ever received by this address
+      // NFA deployed around block 47000000 on BSC mainnet
+      const deployBlock = 47000000n;
       const logs = await publicClient.getLogs({
         address: NFA_ADDRESS,
         event: {
@@ -65,7 +67,7 @@ export function useNFA() {
           ],
         },
         args: { to: address },
-        fromBlock: 0n,
+        fromBlock: deployBlock,
         toBlock: "latest",
       });
 

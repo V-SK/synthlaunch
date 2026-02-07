@@ -29,13 +29,6 @@ interface NFAPublicInfo {
  */
 export async function GET(req: NextRequest) {
   try {
-    // Check if contract is deployed
-    if (NFA_ADDRESS === "0x0000000000000000000000000000000000000000") {
-      return NextResponse.json(
-        { error: "NFA contract not deployed yet", agents: [], total: 0 },
-        { status: 200 }
-      );
-    }
 
     const url = new URL(req.url);
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 100);

@@ -158,12 +158,12 @@ function MintPanel({ onMint, loading, mintPrice, t }: { onMint: (data: any) => v
   const [persona, setPersona] = useState("");
   const [voice, setVoice] = useState("");
   const [animation, setAnimation] = useState("");
-  const [logic, setLogic] = useState("");
   const [tokenURI, setTokenURI] = useState("");
 
   const handleMint = () => {
     if (!name || !persona) return;
-    onMint({ name, persona, voice, animation, logic, tokenURI });
+    // NFAv2: logic is managed via allowlist, default to address(0)
+    onMint({ name, persona, voice, animation, logic: "", tokenURI });
   };
 
   return (
@@ -177,7 +177,6 @@ function MintPanel({ onMint, loading, mintPrice, t }: { onMint: (data: any) => v
       <InputField label={`${t('nfa.mint.persona')} *`} value={persona} onChange={setPersona} placeholder={t('nfa.mint.personaPlaceholder')} mono />
       <InputField label={t('nfa.mint.voice')} value={voice} onChange={setVoice} placeholder={t('nfa.mint.voicePlaceholder')} mono />
       <InputField label={t('nfa.mint.animation')} value={animation} onChange={setAnimation} placeholder={t('nfa.mint.animationPlaceholder')} mono />
-      <InputField label={t('nfa.mint.logic')} value={logic} onChange={setLogic} placeholder={t('nfa.mint.logicPlaceholder')} mono />
       <InputField label={t('nfa.mint.tokenUri')} value={tokenURI} onChange={setTokenURI} placeholder={t('nfa.mint.tokenUriPlaceholder')} mono />
       
       <div className="flex gap-3 mt-2">

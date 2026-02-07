@@ -1,4 +1,4 @@
-import { verifyMessage } from 'viem';
+import { recoverMessageAddress } from 'viem';
 import { createPublicClient, http } from 'viem';
 import { bsc } from 'viem/chains';
 
@@ -20,7 +20,7 @@ export async function verifySignature(
   message: string,
   signature: `0x${string}`
 ): Promise<string> {
-  const address = await verifyMessage({
+  const address = await recoverMessageAddress({
     message,
     signature,
   });

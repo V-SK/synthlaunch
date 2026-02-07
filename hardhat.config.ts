@@ -1,7 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
+const DEPLOYER_PRIVATE_KEY = process.env.EVA_PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY || "";
 const BSC_SCAN_API_KEY = process.env.BSC_SCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
