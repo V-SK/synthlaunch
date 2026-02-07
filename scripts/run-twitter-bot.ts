@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
 import { TwitterBot } from '../src/services/twitter-bot/index';
 
 const bot = new TwitterBot();
