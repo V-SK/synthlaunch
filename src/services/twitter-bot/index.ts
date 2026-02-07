@@ -14,6 +14,49 @@ import {
   getApiBaseUrl,
 } from './config';
 
+// Rate limit: max tokens per user per day
+const MAX_LAUNCHES_PER_USER_PER_DAY = 3;
+const USER_LAUNCHES_FILE = '/tmp/synthlaunch-user-launches.json';
+
+type UserLaunchRecord = { count: number; date: string };
+
+function loadUserLaunches(): Record<string, UserLaunchRecord> {
+  try {
+    if (!fs.existsSync(USER_LAUNCHES_FILE)) return {};
+    return JSON.parse(fs.readFileSync(USER_LAUNCHES_FILE, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveUserLaunches(data: Record<string, UserLaunchRecord>): void {
+  try {
+    fs.writeFileSync(USER_LAUNCHES_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.warn('[TwitterBot] Failed to save user launches:', err);
+  }
+}
+
+function getUserLaunchCount(userId: string): number {
+  const data = loadUserLaunches();
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const record = data[userId];
+  if (!record || record.date !== today) return 0;
+  return record.count;
+}
+
+function incrementUserLaunch(userId: string): void {
+  const data = loadUserLaunches();
+  const today = new Date().toISOString().slice(0, 10);
+  const record = data[userId];
+  if (!record || record.date !== today) {
+    data[userId] = { count: 1, date: today };
+  } else {
+    data[userId].count += 1;
+  }
+  saveUserLaunches(data);
+}
+
 export type TwitterBotStatus = {
   running: boolean;
   lastRunAt?: string;
@@ -135,11 +178,15 @@ export class TwitterBot {
       if (this.lastSeenId) params.since_id = this.lastSeenId;
 
       console.log(`[TwitterBot] Searching tweets: ${SEARCH_QUERY}`);
-      const search = await this.client.v2.search(SEARCH_QUERY, params);
-      const tweets = [] as Array<{ id: string; text: string }>;
+      const search = await this.client.v2.search(SEARCH_QUERY, {
+        ...params,
+        expansions: ['author_id'],
+        'tweet.fields': ['author_id'],
+      });
+      const tweets = [] as Array<{ id: string; text: string; authorId?: string }>;
 
       for await (const tweet of search) {
-        tweets.push({ id: tweet.id, text: tweet.text });
+        tweets.push({ id: tweet.id, text: tweet.text, authorId: tweet.author_id });
       }
 
       if (tweets.length === 0) {
@@ -158,6 +205,19 @@ export class TwitterBot {
           continue;
         }
 
+        // Check user daily limit
+        const authorId = tweet.authorId;
+        if (authorId) {
+          const userLaunchCount = getUserLaunchCount(authorId);
+          if (userLaunchCount >= MAX_LAUNCHES_PER_USER_PER_DAY) {
+            console.log(`[TwitterBot] User ${authorId} exceeded daily limit (${userLaunchCount}/${MAX_LAUNCHES_PER_USER_PER_DAY}), skipping tweet ${tweet.id}`);
+            // Reply with rate limit message
+            await replyToTweet(tweet.id, `⚠️ 每人每天最多发 ${MAX_LAUNCHES_PER_USER_PER_DAY} 个币，明天再来！\n\nDaily limit: ${MAX_LAUNCHES_PER_USER_PER_DAY} tokens per user. Try again tomorrow!`);
+            this.markProcessed(tweet.id);
+            continue;
+          }
+        }
+
         const { targetHandle, tokenName, symbol, taxRate } = parsed;
         console.log(`[TwitterBot] Launching token for @${targetHandle} from tweet ${tweet.id}`);
 
@@ -169,6 +229,11 @@ export class TwitterBot {
         });
 
         if (launchResult?.tokenAddress) {
+          // Increment user launch count on success
+          if (authorId) {
+            incrementUserLaunch(authorId);
+          }
+          
           const reply = buildSuccessReply(
             launchResult.tokenAddress,
             launchResult.tokenName,
