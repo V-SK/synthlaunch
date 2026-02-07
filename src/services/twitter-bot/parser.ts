@@ -33,12 +33,14 @@ export function parseCommand(tweetText: string): ParsedCommand | null {
   // Must have 发币 or launch keyword
   if (!COMMAND_KEYWORD.test(tweetText)) return null;
 
-  // Find all @handles (excluding the bot itself)
+  // Find all @handles (excluding the bot itself and placeholder "xxx")
   const handles: string[] = [];
   let match;
   while ((match = HANDLE_REGEX.exec(tweetText)) !== null) {
     const handle = match[1];
-    if (handle.toLowerCase() !== 'synthbot219518b') {
+    const lower = handle.toLowerCase();
+    // Skip bot mention and placeholder handles
+    if (lower !== 'synthbot219518b' && lower !== 'xxx' && lower !== 'example') {
       handles.push(handle);
     }
   }
