@@ -646,38 +646,6 @@ function ClaimPageInner() {
               </button>
             )}
 
-            {isBound && anyRequiresSynth && (
-              <div className="bg-synth-bg rounded-lg p-4 space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-synth-muted">{t('claim.synthRequiredAmount')}</span>
-                  <span className="text-synth-text font-mono">{formatEther(requiredSynthAmount)} SYNTH</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-synth-muted">{t('claim.minFeeThreshold')}</span>
-                  <span className="text-synth-text font-mono">{formatEther(minFeeThreshold)} BNB</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-synth-muted">{t('claim.synthBalance')}</span>
-                  <span className="text-synth-text font-mono">{formatEther(synthBalance)} SYNTH</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-synth-muted">{t('claim.synthAllowance')}</span>
-                  <span className="text-synth-text font-mono">{formatEther(synthAllowance)} SYNTH</span>
-                </div>
-                {!hasBalance && (
-                  <div className="text-xs text-red-400">{t('claim.insufficientSynth')}</div>
-                )}
-                {approveError && <div className="text-xs text-red-400">{approveError}</div>}
-                {needsApproval ? (
-                  <button onClick={handleApproveSynth} disabled={approveLoading || !hasBalance} className="btn-purple w-full">
-                    {approveLoading ? t('claim.approvingSynth') : t('claim.approveSynth')}
-                  </button>
-                ) : (
-                  <div className="text-xs text-synth-green">{t('claim.approved')}</div>
-                )}
-              </div>
-            )}
-
             {isBound && tokens.length > 0 && (
               <div className="space-y-3">
                 {tokens.map((info) => renderTokenRow(info))}
