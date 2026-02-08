@@ -156,7 +156,7 @@ function ClaimPageInner() {
         publicClient.readContract({
           address: CLAIM_WRAPPER_ADDRESS,
           abi: CLAIM_WRAPPER_ABI,
-          functionName: 'requiredSynthAmount',
+          functionName: 'getRequiredSynthAmount',
         }) as Promise<bigint>,
         publicClient.readContract({
           address: CLAIM_WRAPPER_ADDRESS,
