@@ -428,12 +428,20 @@ function ClaimPageInner() {
 
   const handleClaim = async (token: Address) => {
     if (!walletClient || !publicClient) return;
+    
+    // Check SYNTH holding requirement (holding threshold, no transfer)
+    if (synthBalance < requiredSynthAmount) {
+      setClaimSuccess(t('claim.insufficientSynth'));
+      return;
+    }
+    
     setClaimingToken(token);
     setClaimSuccess('');
     try {
+      // Direct call to Custody (holding threshold mode - no SYNTH transfer)
       const txHash = await walletClient.writeContract({
-        address: CLAIM_WRAPPER_ADDRESS,
-        abi: CLAIM_WRAPPER_ABI,
+        address: CUSTODY_ADDRESS,
+        abi: CUSTODY_ABI,
         functionName: 'claim',
         args: [token],
       });
