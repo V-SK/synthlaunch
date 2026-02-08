@@ -33,7 +33,7 @@ function ClaimPageInner() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  const hasClaimWrapper = CLAIM_WRAPPER_ADDRESS !== '0x0000000000000000000000000000000000000000';
+  const hasClaimWrapper = (CLAIM_WRAPPER_ADDRESS as string) !== '0x0000000000000000000000000000000000000000';
   const [tab, setTab] = useState<ClaimTab>('twitter');
 
   // Agent flow state
