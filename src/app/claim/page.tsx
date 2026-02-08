@@ -197,10 +197,16 @@ function ClaimPageInner() {
 
   useEffect(() => {
     fetchClaimWrapperConfig();
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchClaimWrapperConfig, 60_000);
+    return () => clearInterval(interval);
   }, [fetchClaimWrapperConfig]);
 
   useEffect(() => {
     fetchSynthState();
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchSynthState, 60_000);
+    return () => clearInterval(interval);
   }, [fetchSynthState]);
 
   // Fetch token info for agent name
