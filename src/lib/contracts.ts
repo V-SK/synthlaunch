@@ -1,6 +1,6 @@
 export const FLAP_ADDRESS = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as const;
 
-export const CLAIM_WRAPPER_ADDRESS = '0x5986E8532C21e1FE3BA6CF3d2E1085A3a38c2b76' as const;
+export const CLAIM_WRAPPER_ADDRESS = '0x3B45DEe04572c34b12eCcA3d895D24a1Cdc9ce37' as const;
 export const SYNTH_TOKEN_ADDRESS = '0x83c8c815bbf6a239816aa0b14ba9d9222b817777' as const;
 
 export const FLAP_ABI = [
