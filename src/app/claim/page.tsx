@@ -609,6 +609,35 @@ function ClaimPageInner() {
               </div>
             </div>
 
+            {/* SYNTH Payment Notice */}
+            {anyRequiresSynth && (
+              <div className="bg-synth-purple/10 border border-synth-purple/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2 text-synth-purple text-sm font-medium">
+                  <span>💎</span>
+                  <span>{t('claim.synthFeeTitle')}</span>
+                </div>
+                <p className="text-xs text-synth-muted">
+                  {t('claim.synthFeeDesc', { amount: formatEther(requiredSynthAmount) })}
+                </p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-synth-muted">{t('claim.yourSynthBalance')}</span>
+                  <span className={hasBalance ? 'text-synth-green' : 'text-red-400'}>
+                    {Number(formatEther(synthBalance)).toLocaleString()} SYNTH
+                  </span>
+                </div>
+                {needsApproval && hasBalance && (
+                  <button
+                    onClick={handleApproveSynth}
+                    disabled={approveLoading}
+                    className="btn-purple w-full text-xs"
+                  >
+                    {approveLoading ? t('claim.approving') : t('claim.approveSynth')}
+                  </button>
+                )}
+                {approveError && <div className="text-xs text-red-400">{approveError}</div>}
+              </div>
+            )}
+
             {bindError && <div className="text-xs text-red-400">{bindError}</div>}
 
             {!isBound && (
