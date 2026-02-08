@@ -5,6 +5,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { formatEther, type Address } from 'viem';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
+import { CLAIM_WRAPPER_ABI } from '@/lib/claimWrapper';
+import { ERC20_ABI } from '@/lib/erc20';
+import { CLAIM_WRAPPER_ADDRESS, SYNTH_TOKEN_ADDRESS } from '@/lib/contracts';
 import { useI18n } from '@/lib/i18n';
 
 // Blacklist tokens from claim page display (lowercase)
@@ -30,6 +33,7 @@ function ClaimPageInner() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const hasClaimWrapper = CLAIM_WRAPPER_ADDRESS !== '0x0000000000000000000000000000000000000000';
   const [tab, setTab] = useState<ClaimTab>('twitter');
 
   // Agent flow state
@@ -60,8 +64,15 @@ function ClaimPageInner() {
 
   // Claim state
   const [claimingToken, setClaimingToken] = useState<Address | null>(null);
-  const [claimAllLoading, setClaimAllLoading] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState('');
+
+  // ClaimWrapper + SYNTH state
+  const [requiredSynthAmount, setRequiredSynthAmount] = useState<bigint>(50_000n * 10n ** 18n);
+  const [minFeeThreshold, setMinFeeThreshold] = useState<bigint>(10n ** 16n); // 0.01 BNB
+  const [synthAllowance, setSynthAllowance] = useState<bigint>(0n);
+  const [synthBalance, setSynthBalance] = useState<bigint>(0n);
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [approveError, setApproveError] = useState('');
 
   const [knownTokens, setKnownTokens] = useState<Address[]>([]);
 
@@ -137,6 +148,60 @@ function ClaimPageInner() {
   useEffect(() => {
     fetchRegisteredTokens();
   }, [fetchRegisteredTokens]);
+
+  const fetchClaimWrapperConfig = useCallback(async () => {
+    if (!publicClient || !hasClaimWrapper) return;
+    try {
+      const [requiredAmount, minThreshold] = await Promise.all([
+        publicClient.readContract({
+          address: CLAIM_WRAPPER_ADDRESS,
+          abi: CLAIM_WRAPPER_ABI,
+          functionName: 'requiredSynthAmount',
+        }) as Promise<bigint>,
+        publicClient.readContract({
+          address: CLAIM_WRAPPER_ADDRESS,
+          abi: CLAIM_WRAPPER_ABI,
+          functionName: 'minFeeThreshold',
+        }) as Promise<bigint>,
+      ]);
+      setRequiredSynthAmount(requiredAmount);
+      setMinFeeThreshold(minThreshold);
+    } catch (err) {
+      console.error('Failed to fetch ClaimWrapper config:', err);
+    }
+  }, [publicClient, hasClaimWrapper]);
+
+  const fetchSynthState = useCallback(async () => {
+    if (!publicClient || !address || !hasClaimWrapper) return;
+    try {
+      const [allowance, balance] = await Promise.all([
+        publicClient.readContract({
+          address: SYNTH_TOKEN_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'allowance',
+          args: [address, CLAIM_WRAPPER_ADDRESS],
+        }) as Promise<bigint>,
+        publicClient.readContract({
+          address: SYNTH_TOKEN_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf',
+          args: [address],
+        }) as Promise<bigint>,
+      ]);
+      setSynthAllowance(allowance);
+      setSynthBalance(balance);
+    } catch (err) {
+      console.error('Failed to fetch SYNTH allowance/balance:', err);
+    }
+  }, [publicClient, address, hasClaimWrapper]);
+
+  useEffect(() => {
+    fetchClaimWrapperConfig();
+  }, [fetchClaimWrapperConfig]);
+
+  useEffect(() => {
+    fetchSynthState();
+  }, [fetchSynthState]);
 
   // Fetch token info for agent name
   const fetchTokensByAgent = useCallback(async (agentName: string) => {
@@ -329,19 +394,46 @@ function ClaimPageInner() {
   };
 
   // === Claim handlers ===
+  const handleApproveSynth = async () => {
+    if (!walletClient || !publicClient || !address) return;
+    if (!hasClaimWrapper) {
+      setApproveError(t('claim.wrapperMissing'));
+      return;
+    }
+    setApproveLoading(true);
+    setApproveError('');
+    try {
+      const txHash = await walletClient.writeContract({
+        address: SYNTH_TOKEN_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [CLAIM_WRAPPER_ADDRESS, requiredSynthAmount],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+      await fetchSynthState();
+      setClaimSuccess(t('claim.approveSuccess'));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setApproveError(t('claim.approveFailed', { error: msg }));
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
   const handleClaim = async (token: Address) => {
     if (!walletClient || !publicClient) return;
     setClaimingToken(token);
     setClaimSuccess('');
     try {
       const txHash = await walletClient.writeContract({
-        address: CUSTODY_ADDRESS,
-        abi: CUSTODY_ABI,
+        address: CLAIM_WRAPPER_ADDRESS,
+        abi: CLAIM_WRAPPER_ABI,
         functionName: 'claim',
         args: [token],
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
       setClaimSuccess(t('claim.claimedSuccess', { token: `${token.slice(0, 8)}...${token.slice(-4)}` }));
+      await fetchSynthState();
       if (tab === 'agents') fetchAgentTokens(moltbookUsername);
       else fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
     } catch (err: unknown) {
@@ -349,29 +441,6 @@ function ClaimPageInner() {
       setClaimSuccess(t('claim.claimFailed', { error: msg }));
     } finally {
       setClaimingToken(null);
-    }
-  };
-
-  const handleClaimAll = async (tokens: Address[]) => {
-    if (!walletClient || !publicClient || tokens.length === 0) return;
-    setClaimAllLoading(true);
-    setClaimSuccess('');
-    try {
-      const txHash = await walletClient.writeContract({
-        address: CUSTODY_ADDRESS,
-        abi: CUSTODY_ABI,
-        functionName: 'claimBatch',
-        args: [tokens],
-      });
-      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
-      setClaimSuccess(t('claim.batchClaimedSuccess', { count: String(tokens.length) }));
-      if (tab === 'agents') fetchAgentTokens(moltbookUsername);
-      else fetchTwitterTokens(twitterHandle.replace('@', '').trim().toLowerCase());
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setClaimSuccess(t('claim.batchClaimFailed', { error: msg }));
-    } finally {
-      setClaimAllLoading(false);
     }
   };
 
@@ -421,7 +490,13 @@ function ClaimPageInner() {
   );
 
   // Render token row
-  const renderTokenRow = (info: TokenInfo, showAgent: boolean = false) => (
+  const renderTokenRow = (info: TokenInfo, showAgent: boolean = false) => {
+    const requiresSynth = info.pendingClaim >= minFeeThreshold;
+    const hasAllowance = synthAllowance >= requiredSynthAmount;
+    const hasBalance = synthBalance >= requiredSynthAmount;
+    const claimDisabled = requiresSynth && (!hasAllowance || !hasBalance);
+
+    return (
     <div key={info.token} className="bg-synth-bg rounded-lg p-4 space-y-2">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
@@ -455,17 +530,32 @@ function ClaimPageInner() {
           <div className="text-synth-green font-mono">{formatEther(info.pendingClaim)} BNB</div>
         </div>
       </div>
+      {requiresSynth && (
+        <div className="text-[10px] text-synth-muted">
+          {t('claim.synthRequired', {
+            amount: formatEther(requiredSynthAmount),
+            threshold: formatEther(minFeeThreshold),
+          })}
+        </div>
+      )}
+      {requiresSynth && synthBalance < requiredSynthAmount && (
+        <div className="text-[10px] text-red-400">{t('claim.insufficientSynth')}</div>
+      )}
+      {requiresSynth && synthAllowance < requiredSynthAmount && (
+        <div className="text-[10px] text-red-400">{t('claim.approvalNeeded')}</div>
+      )}
       {info.pendingClaim > BigInt(0) && (
         <button
           onClick={() => handleClaim(info.token)}
-          disabled={claimingToken === info.token}
+          disabled={claimingToken === info.token || claimDisabled}
           className="btn-primary w-full text-xs"
         >
           {claimingToken === info.token ? t('claim.claiming') : `Claim ${formatEther(info.pendingClaim)} BNB`}
         </button>
       )}
     </div>
-  );
+    );
+  };
 
   // Render bind + claim section (shared between Twitter and Moltbook)
   const renderClaimSection = (
@@ -473,73 +563,102 @@ function ClaimPageInner() {
     tokens: TokenInfo[],
     tokensAreLoading: boolean,
     onBindWallet: () => Promise<void>,
-  ) => (
-    <div className="card space-y-4">
-      <h2 className="text-sm font-bold text-synth-green">
-        {isBound ? t('claim.claimFees').replace(' →', '') : t('claim.bindAndClaim').replace(' →', '')}
-      </h2>
-      {!isConnected ? (
-        <div className="text-center py-6 space-y-2">
-          <span className="text-2xl">🔗</span>
-          <p className="text-synth-muted text-sm">{t('claim.connectWallet')}</p>
-        </div>
-      ) : (
-        <>
-          <div className="bg-synth-bg rounded-lg p-4 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">{t('claim.agent')}</span>
-              <span className="text-synth-purple">@{agentName}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">{t('claim.wallet')}</span>
-              <span className="text-synth-text font-mono text-xs">{address?.slice(0, 10)}...{address?.slice(-6)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">{t('claim.walletBound')}</span>
-              <span className={isBound ? 'text-synth-green' : 'text-synth-muted'}>
-                {isBound ? `${t('common.yes')} (${boundWallet?.slice(0, 6)}...${boundWallet?.slice(-4)})` : t('common.notYet')}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-synth-muted">{t('claim.claimable')}</span>
-              <span className="text-synth-green font-mono">
-                {formatEther(tokens.reduce((sum, t) => sum + t.pendingClaim, BigInt(0)))} BNB
-              </span>
-            </div>
+  ) => {
+    const anyRequiresSynth = tokens.some((token) => token.pendingClaim >= minFeeThreshold);
+    const needsApproval = anyRequiresSynth && synthAllowance < requiredSynthAmount;
+    const hasBalance = synthBalance >= requiredSynthAmount;
+
+    return (
+      <div className="card space-y-4">
+        <h2 className="text-sm font-bold text-synth-green">
+          {isBound ? t('claim.claimFees').replace(' →', '') : t('claim.bindAndClaim').replace(' →', '')}
+        </h2>
+        {!isConnected ? (
+          <div className="text-center py-6 space-y-2">
+            <span className="text-2xl">🔗</span>
+            <p className="text-synth-muted text-sm">{t('claim.connectWallet')}</p>
           </div>
-
-          {bindError && <div className="text-xs text-red-400">{bindError}</div>}
-
-          {!isBound && (
-            <button onClick={onBindWallet} disabled={bindLoading} className="btn-purple w-full">
-              {bindLoading ? t('claim.bindingWallet') : t('claim.bindWallet')}
-            </button>
-          )}
-
-          {isBound && tokens.length > 0 && (
-            <div className="space-y-3">
-              {tokens.filter(t => t.pendingClaim > BigInt(0)).length > 1 && (
-                <button
-                  onClick={() => handleClaimAll(tokens.filter(t => t.pendingClaim > BigInt(0)).map(t => t.token))}
-                  disabled={claimAllLoading}
-                  className="btn-primary w-full"
-                >
-                  {claimAllLoading ? t('claim.claimingAll') : t('claim.claimAll')}
-                </button>
-              )}
-              {tokens.map((info) => renderTokenRow(info))}
+        ) : (
+          <>
+            <div className="bg-synth-bg rounded-lg p-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-synth-muted">{t('claim.agent')}</span>
+                <span className="text-synth-purple">@{agentName}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-synth-muted">{t('claim.wallet')}</span>
+                <span className="text-synth-text font-mono text-xs">{address?.slice(0, 10)}...{address?.slice(-6)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-synth-muted">{t('claim.walletBound')}</span>
+                <span className={isBound ? 'text-synth-green' : 'text-synth-muted'}>
+                  {isBound ? `${t('common.yes')} (${boundWallet?.slice(0, 6)}...${boundWallet?.slice(-4)})` : t('common.notYet')}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-synth-muted">{t('claim.claimable')}</span>
+                <span className="text-synth-green font-mono">
+                  {formatEther(tokens.reduce((sum, t) => sum + t.pendingClaim, BigInt(0)))} BNB
+                </span>
+              </div>
             </div>
-          )}
 
-          {isBound && tokens.filter(t => t.pendingClaim > BigInt(0)).length === 0 && (
-            <div className="text-center py-4">
-              <p className="text-synth-muted text-sm">{t('claim.noFees')}</p>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+            {bindError && <div className="text-xs text-red-400">{bindError}</div>}
+
+            {!isBound && (
+              <button onClick={onBindWallet} disabled={bindLoading} className="btn-purple w-full">
+                {bindLoading ? t('claim.bindingWallet') : t('claim.bindWallet')}
+              </button>
+            )}
+
+            {isBound && anyRequiresSynth && (
+              <div className="bg-synth-bg rounded-lg p-4 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-synth-muted">{t('claim.synthRequiredAmount')}</span>
+                  <span className="text-synth-text font-mono">{formatEther(requiredSynthAmount)} SYNTH</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-synth-muted">{t('claim.minFeeThreshold')}</span>
+                  <span className="text-synth-text font-mono">{formatEther(minFeeThreshold)} BNB</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-synth-muted">{t('claim.synthBalance')}</span>
+                  <span className="text-synth-text font-mono">{formatEther(synthBalance)} SYNTH</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-synth-muted">{t('claim.synthAllowance')}</span>
+                  <span className="text-synth-text font-mono">{formatEther(synthAllowance)} SYNTH</span>
+                </div>
+                {!hasBalance && (
+                  <div className="text-xs text-red-400">{t('claim.insufficientSynth')}</div>
+                )}
+                {approveError && <div className="text-xs text-red-400">{approveError}</div>}
+                {needsApproval ? (
+                  <button onClick={handleApproveSynth} disabled={approveLoading || !hasBalance} className="btn-purple w-full">
+                    {approveLoading ? t('claim.approvingSynth') : t('claim.approveSynth')}
+                  </button>
+                ) : (
+                  <div className="text-xs text-synth-green">{t('claim.approved')}</div>
+                )}
+              </div>
+            )}
+
+            {isBound && tokens.length > 0 && (
+              <div className="space-y-3">
+                {tokens.map((info) => renderTokenRow(info))}
+              </div>
+            )}
+
+            {isBound && tokens.filter(t => t.pendingClaim > BigInt(0)).length === 0 && (
+              <div className="text-center py-4">
+                <p className="text-synth-muted text-sm">{t('claim.noFees')}</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
