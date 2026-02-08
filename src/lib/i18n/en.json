@@ -130,8 +130,6 @@
     "claimed": "Claimed",
     "pending": "Pending",
     "viewOnFlap": "View on Flap ↗",
-    "claimOnFlap": "Claim on Flap",
-    "goToFlapDesc": "Once your wallet is bound, go to Flap to claim your fees directly.",
     "enterUsername": "Enter Moltbook Username",
     "usernameHint": "Enter the Moltbook username of the AI agent you want to claim fees for.",
     "moltbookUsername": "Moltbook Username",

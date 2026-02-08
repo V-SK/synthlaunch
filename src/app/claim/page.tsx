@@ -544,15 +544,28 @@ function ClaimPageInner() {
           <div className="text-synth-green font-mono">{formatEther(info.pendingClaim)} BNB</div>
         </div>
       </div>
+      {requiresSynth && (
+        <div className="text-[10px] text-synth-muted">
+          {t('claim.synthRequired', {
+            amount: formatEther(requiredSynthAmount),
+            threshold: formatEther(minFeeThreshold),
+          })}
+        </div>
+      )}
+      {requiresSynth && synthBalance < requiredSynthAmount && (
+        <div className="text-[10px] text-red-400">{t('claim.insufficientSynth')}</div>
+      )}
+      {requiresSynth && synthAllowance < requiredSynthAmount && (
+        <div className="text-[10px] text-red-400">{t('claim.approvalNeeded')}</div>
+      )}
       {info.pendingClaim > BigInt(0) && (
-        <a
-          href={`https://flap.sh/token/${info.token}?chain=bsc`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary w-full text-xs text-center block"
+        <button
+          onClick={() => handleClaim(info.token)}
+          disabled={claimingToken === info.token || claimDisabled}
+          className="btn-primary w-full text-xs"
         >
-          {t('claim.claimOnFlap')} →
-        </a>
+          {claimingToken === info.token ? t('claim.claiming') : `Claim ${formatEther(info.pendingClaim)} BNB`}
+        </button>
       )}
     </div>
     );
@@ -604,12 +617,32 @@ function ClaimPageInner() {
               </div>
             </div>
 
-            {/* Info: Go to Flap to claim */}
-            {tokens.some(t => t.pendingClaim > BigInt(0)) && (
-              <div className="bg-synth-cyan/10 border border-synth-cyan/30 rounded-lg p-3">
+            {/* SYNTH Payment Notice */}
+            {anyRequiresSynth && (
+              <div className="bg-synth-purple/10 border border-synth-purple/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2 text-synth-purple text-sm font-medium">
+                  <span>💎</span>
+                  <span>{t('claim.synthFeeTitle')}</span>
+                </div>
                 <p className="text-xs text-synth-muted">
-                  {t('claim.goToFlapDesc')}
+                  {t('claim.synthFeeDesc', { amount: formatEther(requiredSynthAmount) })}
                 </p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-synth-muted">{t('claim.yourSynthBalance')}</span>
+                  <span className={hasBalance ? 'text-synth-green' : 'text-red-400'}>
+                    {Number(formatEther(synthBalance)).toLocaleString()} SYNTH
+                  </span>
+                </div>
+                {needsApproval && hasBalance && (
+                  <button
+                    onClick={handleApproveSynth}
+                    disabled={approveLoading}
+                    className="btn-purple w-full text-xs"
+                  >
+                    {approveLoading ? t('claim.approving') : t('claim.approveSynth')}
+                  </button>
+                )}
+                {approveError && <div className="text-xs text-red-400">{approveError}</div>}
               </div>
             )}
 
