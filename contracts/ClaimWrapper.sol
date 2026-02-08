@@ -8,14 +8,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @title ClaimWrapper
  * @notice Wrapper for claiming fees from SynthLaunch Custody
  * @dev Requires payment in $SYNTH to claim fees (flywheel mechanism)
- * @dev Uses Chainlink for BNB/USD price + Flap for SYNTH price
+ * @dev Uses Chainlink for BNB/USD price, calculates $10 USD worth of SYNTH
  */
 contract ClaimWrapper is Ownable {
     // $SYNTH token on BSC
     IERC20 public immutable synthToken;
-    
-    // Flap Portal to get SYNTH price from bonding curve
-    IFlapPortal public immutable flapPortal;
     
     // Chainlink BNB/USD price feed
     IChainlinkFeed public immutable bnbPriceFeed;
@@ -29,27 +26,29 @@ contract ClaimWrapper is Ownable {
     // Required USD value (18 decimals, e.g., 10e18 = $10)
     uint256 public requiredUsdValue = 10 * 1e18; // $10 USD
     
+    // SYNTH price in USD (18 decimals) - owner can update
+    // Default based on current price ~$0.00027
+    uint256 public synthPriceUsd = 270000000000000; // $0.00027 (18 decimals)
+    
     // Minimum fee threshold to require SYNTH payment (in BNB wei)
     uint256 public minFeeThreshold = 0.01 ether; // 0.01 BNB
     
     // Constants
-    uint256 private constant BILLION = 1e9;
     uint256 private constant PRECISION = 1e18;
     
     event Claimed(address indexed user, address indexed token, uint256 synthPaid, uint256 usdValue);
     event RequiredUsdUpdated(uint256 oldValue, uint256 newValue);
+    event SynthPriceUpdated(uint256 oldPrice, uint256 newPrice);
     event TreasuryUpdated(address oldTreasury, address newTreasury);
     event MinFeeThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     constructor(
         address _synthToken,
-        address _flapPortal,
         address _bnbPriceFeed,
         address _custody,
         address _treasury
     ) Ownable(msg.sender) {
         synthToken = IERC20(_synthToken);
-        flapPortal = IFlapPortal(_flapPortal);
         bnbPriceFeed = IChainlinkFeed(_bnbPriceFeed);
         custody = ICustody(_custody);
         treasury = _treasury;
@@ -72,10 +71,10 @@ contract ClaimWrapper is Ownable {
                 priceUsd = uint256(answer) * 1e10; // 8 -> 18 decimals
             } else {
                 // Fallback price if stale
-                priceUsd = 600 * 1e18; // $600 fallback
+                priceUsd = 650 * 1e18; // $650 fallback
             }
         } catch {
-            priceUsd = 600 * 1e18; // $600 fallback
+            priceUsd = 650 * 1e18; // $650 fallback
         }
     }
 
@@ -84,49 +83,13 @@ contract ClaimWrapper is Ownable {
      * @return synthAmount Amount of SYNTH needed for requiredUsdValue
      */
     function getRequiredSynthAmount() public view returns (uint256 synthAmount) {
-        // Get SYNTH price from Flap bonding curve
-        uint256 synthPriceUsd = getSynthPriceUsd();
-        
         if (synthPriceUsd == 0) {
-            // Fallback: return a high amount to prevent claims if price unavailable
             return type(uint256).max;
         }
         
         // Calculate: requiredUsdValue / synthPriceUsd
         // Both have 18 decimals, result needs 18 decimals
         synthAmount = (requiredUsdValue * PRECISION) / synthPriceUsd;
-    }
-    
-    /**
-     * @notice Get SYNTH price in USD from Flap bonding curve
-     * @return priceUsd Price in USD with 18 decimals
-     */
-    function getSynthPriceUsd() public view returns (uint256 priceUsd) {
-        uint256 bnbPrice = getBnbPriceUsd();
-        
-        try flapPortal.getTokenV5(address(synthToken)) returns (IFlapPortal.TokenInfo memory info) {
-            // info.r is reserve in BNB (wei)
-            // info.h is virtual supply offset
-            // Price = reserve / (1B - circulatingSupply + h)
-            
-            uint256 r = info.r;
-            uint256 h = info.h;
-            
-            // Get current supply
-            uint256 totalSupply = synthToken.totalSupply();
-            uint256 circulatingSupply = totalSupply > BILLION * 1e18 ? 0 : (BILLION * 1e18 - totalSupply) / 1e18;
-            
-            // Price in BNB = r / (1B + h - circulatingSupply)
-            uint256 denom = BILLION + h - circulatingSupply;
-            if (denom == 0 || r == 0) return 0;
-            
-            uint256 priceInBnb = (r * PRECISION) / (denom * 1e9); // Convert to 18 decimals
-            
-            // Convert to USD using Chainlink price
-            priceUsd = (priceInBnb * bnbPrice) / PRECISION;
-        } catch {
-            return 0;
-        }
     }
 
     /**
@@ -142,7 +105,7 @@ contract ClaimWrapper is Ownable {
         if (claimable >= minFeeThreshold) {
             synthToPay = getRequiredSynthAmount();
             
-            require(synthToPay < type(uint256).max, "Price unavailable");
+            require(synthToPay < type(uint256).max, "Price not set");
             
             // Check user has enough SYNTH
             require(
@@ -204,18 +167,18 @@ contract ClaimWrapper is Ownable {
      * @notice Get current SYNTH requirement info
      * @return usdValue Required USD value
      * @return synthAmount Current SYNTH amount needed
-     * @return synthPriceUsd Current SYNTH price in USD
-     * @return bnbPriceUsd Current BNB price in USD
+     * @return currentSynthPrice Current SYNTH price in USD
+     * @return bnbPrice Current BNB price in USD
      */
     function getRequirementInfo() external view returns (
         uint256 usdValue,
         uint256 synthAmount,
-        uint256 synthPriceUsd,
-        uint256 bnbPriceUsd
+        uint256 currentSynthPrice,
+        uint256 bnbPrice
     ) {
         usdValue = requiredUsdValue;
-        bnbPriceUsd = getBnbPriceUsd();
-        synthPriceUsd = getSynthPriceUsd();
+        currentSynthPrice = synthPriceUsd;
+        bnbPrice = getBnbPriceUsd();
         synthAmount = getRequiredSynthAmount();
     }
     
@@ -228,6 +191,16 @@ contract ClaimWrapper is Ownable {
     function setRequiredUsdValue(uint256 newValue) external onlyOwner {
         emit RequiredUsdUpdated(requiredUsdValue, newValue);
         requiredUsdValue = newValue;
+    }
+    
+    /**
+     * @notice Update SYNTH price in USD
+     * @param newPrice New price (18 decimals, e.g., 270000000000000 = $0.00027)
+     */
+    function setSynthPriceUsd(uint256 newPrice) external onlyOwner {
+        require(newPrice > 0, "Invalid price");
+        emit SynthPriceUpdated(synthPriceUsd, newPrice);
+        synthPriceUsd = newPrice;
     }
     
     /**
@@ -256,28 +229,6 @@ contract ClaimWrapper is Ownable {
 interface ICustody {
     function claim(address token) external;
     function claimable(address token) external view returns (uint256);
-}
-
-/**
- * @notice Interface for Flap Portal
- */
-interface IFlapPortal {
-    struct TokenInfo {
-        uint8 status;
-        uint256 r;      // reserve in BNB
-        uint256 h;      // virtual supply offset
-        uint256 k;      // constant product
-        uint8 dexThresh;
-        uint256 dexSupplyThreshold;
-        uint256 taxRate;
-        uint256 migratorType;
-        uint256 createdAt;
-        address beneficiary;
-        bool hasTax;
-        bytes32 meta;
-    }
-    
-    function getTokenV5(address token) external view returns (TokenInfo memory);
 }
 
 /**
