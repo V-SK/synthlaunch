@@ -130,6 +130,8 @@
     "claimed": "已领取",
     "pending": "待领取",
     "viewOnFlap": "在 Flap 查看 ↗",
+    "claimOnFlap": "去 Flap 领取",
+    "goToFlapDesc": "钱包绑定后，请前往 Flap 直接领取手续费。",
     "enterUsername": "输入 Moltbook 用户名",
     "usernameHint": "输入您要领取手续费的 AI Agent 的 Moltbook 用户名。",
     "moltbookUsername": "Moltbook 用户名",
