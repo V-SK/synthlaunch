@@ -504,7 +504,7 @@ function ClaimPageInner() {
   );
 
   // Render token row
-  const renderTokenRow = (info: TokenInfo, showAgent: boolean = false) => {
+  const renderTokenRow = (info: TokenInfo, showAgent: boolean = false, showClaimButton: boolean = true) => {
     const requiresSynth = info.pendingClaim >= minFeeThreshold;
     const hasAllowance = synthAllowance >= requiredSynthAmount;
     const hasBalance = synthBalance >= requiredSynthAmount;
@@ -558,7 +558,7 @@ function ClaimPageInner() {
       {requiresSynth && synthAllowance < requiredSynthAmount && (
         <div className="text-[10px] text-red-400">{t('claim.approvalNeeded')}</div>
       )}
-      {info.pendingClaim > BigInt(0) && (
+      {showClaimButton && info.pendingClaim > BigInt(0) && (
         <button
           onClick={() => handleClaim(info.token)}
           disabled={claimingToken === info.token || claimDisabled}
@@ -759,7 +759,7 @@ function ClaimPageInner() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {twitterTokens.map((info) => renderTokenRow(info))}
+                  {twitterTokens.map((info) => renderTokenRow(info, false, false))}
                 </div>
               )}
 
