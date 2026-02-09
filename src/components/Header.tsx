@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { WalletConnect } from './WalletConnect';
 import { useI18n, LanguageToggle } from '@/lib/i18n';
 
@@ -11,6 +12,7 @@ export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { t } = useI18n();
+  const { isConnected } = useAccount();
 
   const NAV_ITEMS = [
     { label: t('nav.home'), href: '/' },
@@ -20,7 +22,6 @@ export function Header() {
     { label: t('nav.chat'), href: '/chat' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
     { label: t('nav.docs'), href: '/docs' },
-    { label: `👤 ${t('nav.dashboard')}`, href: '/dashboard' },
   ];
 
   const getNavItemClasses = (item: { href: string; highlight?: boolean }) => {
@@ -81,18 +82,20 @@ export function Header() {
 
         {/* Dashboard + Wallet */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Link
-            href="/dashboard"
-            className={`hidden md:flex items-center gap-1 px-3 py-1.5 rounded text-sm font-mono transition-all duration-200 ${
-              pathname === '/dashboard' 
-                ? 'text-synth-green bg-synth-green/10' 
-                : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface'
-            }`}
-          >
-            👤 {t('nav.dashboard')}
-          </Link>
           <div className="hidden md:block"><LanguageToggle /></div>
           <WalletConnect />
+          {isConnected && (
+            <Link
+              href="/dashboard"
+              className={`hidden md:flex items-center px-2 py-1 rounded border text-xs font-mono transition-all duration-200 ${
+                pathname === '/dashboard'
+                  ? 'text-synth-green bg-synth-green/10 border-synth-green'
+                  : 'text-synth-green/90 border-synth-green/50 hover:text-synth-green hover:bg-synth-green/10 hover:border-synth-green'
+              }`}
+            >
+              {t('nav.dashboard')}
+            </Link>
+          )}
         </div>
       </div>
 
