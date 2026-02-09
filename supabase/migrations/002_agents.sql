@@ -1,22 +1,19 @@
--- Phase Eva: Agents Table for Agent Chat
--- Run this in Supabase Dashboard > SQL Editor
+-- Agents table for AI Agent hosting
 
 CREATE TABLE IF NOT EXISTS agents (
-  id SERIAL PRIMARY KEY,
-  token_address TEXT UNIQUE NOT NULL,
-  nfa_id INTEGER,
-  name TEXT DEFAULT 'Agent',
-  avatar_url TEXT,
-  persona_prompt TEXT DEFAULT 'You are a friendly AI agent.',
-  tone TEXT DEFAULT 'friendly',
-  language TEXT DEFAULT 'zh',
-  chat_threshold BIGINT DEFAULT 1000,
-  owner_address TEXT,
-  tier TEXT DEFAULT 'lite',
-  total_chats INTEGER DEFAULT 0,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_address TEXT NOT NULL,
+  name TEXT NOT NULL,
+  bot_token_encrypted TEXT NOT NULL,
+  description TEXT,
+  plan TEXT NOT NULL,
+  payment_method TEXT NOT NULL,
+  payment_amount NUMERIC,
+  status TEXT DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  expires_at TIMESTAMPTZ NOT NULL,
+  tx_hash TEXT UNIQUE,
+  container_id TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_agents_token ON agents(token_address);
-CREATE INDEX IF NOT EXISTS idx_agents_owner ON agents(owner_address);
+CREATE INDEX IF NOT EXISTS idx_agents_user_address ON agents(user_address);
