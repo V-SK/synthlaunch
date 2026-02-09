@@ -19,7 +19,7 @@ export function Header() {
     { label: `🚀 ${t('nav.launch')}`, href: '/launch' },
     { label: t('nav.claim'), href: '/claim' },
     { label: `🤖 ${t('nav.nfa')}`, href: '/nfa', highlight: true },
-    { label: `🤖 ${t('nav.dashboard')}`, href: '/dashboard', highlight: true },
+    { label: t('nav.dashboard'), href: '/dashboard', highlight: true },
     { label: t('nav.chat'), href: '/chat' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
     { label: t('nav.docs'), href: '/docs' },
