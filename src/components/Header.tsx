@@ -19,6 +19,7 @@ export function Header() {
     { label: `🚀 ${t('nav.launch')}`, href: '/launch' },
     { label: t('nav.claim'), href: '/claim' },
     { label: `🤖 ${t('nav.nfa')}`, href: '/nfa', highlight: true },
+    { label: `🤖 ${t('nav.dashboard')}`, href: '/dashboard', highlight: true },
     { label: t('nav.chat'), href: '/chat' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
     { label: t('nav.docs'), href: '/docs' },
@@ -80,18 +81,10 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Dashboard + Wallet */}
+        {/* Wallet */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="hidden md:block"><LanguageToggle /></div>
           <WalletConnect />
-          {isConnected && (
-            <Link
-              href="/dashboard"
-              className="hidden md:inline-flex items-center justify-center px-2.5 py-1.5 rounded border border-synth-green/30 text-synth-green text-xs font-mono whitespace-nowrap hover:border-synth-green hover:bg-synth-green/10 transition-colors"
-            >
-              Dashboard
-            </Link>
-          )}
         </div>
       </div>
 
@@ -108,15 +101,6 @@ export function Header() {
               {item.label}
             </Link>
           ))}
-          {isConnected && (
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileOpen(false)}
-              className="px-3 py-2 rounded text-sm font-mono transition-all duration-200 text-synth-cyan bg-synth-cyan/10 hover:bg-synth-cyan/20 border border-synth-cyan/30"
-            >
-              🤖 {t('nav.dashboard') || 'AI Agent'}
-            </Link>
-          )}
           <div className="px-3 py-2 border-t border-synth-border mt-1 pt-2">
             <LanguageToggle />
           </div>
