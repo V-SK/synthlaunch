@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSendTransaction } from 'wagmi';
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useReadContract,
+  useSendTransaction,
+  useSignMessage,
+} from 'wagmi';
 import { parseEther, formatEther, parseUnits } from 'viem';
 import { WalletConnect } from '@/components/WalletConnect';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -61,7 +68,7 @@ const formatTokenDisplay = (value: number, decimals = 2) => {
 
 function CreateAgentPageInner() {
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
 
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -71,10 +78,13 @@ function CreateAgentPageInner() {
   const [selectedPlan, setSelectedPlan] = useState<string>('14d');
   const [paymentMethod, setPaymentMethod] = useState<string>('synth');
   const [formError, setFormError] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [flowStep, setFlowStep] = useState<'idle' | 'paying' | 'signing' | 'creating' | 'success'>('idle');
   const [bnbUsdPrice, setBnbUsdPrice] = useState(0);
 
   const { writeContract, data: tokenTxHash, isPending: isTokenPending, error: tokenError } = useWriteContract();
   const { sendTransaction, data: bnbTxHash, isPending: isBnbPending, error: bnbError } = useSendTransaction();
+  const { signMessageAsync } = useSignMessage();
   
   const txHash = paymentMethod === 'bnb' ? bnbTxHash : tokenTxHash;
   const isPending = paymentMethod === 'bnb' ? isBnbPending : isTokenPending;
@@ -144,13 +154,87 @@ function CreateAgentPageInner() {
 
   const isFormValid = form.name.trim().length > 0 && form.botToken.trim().length > 0;
   const isConfirming = Boolean(txHash) && !isTxSuccess;
+  const isPaying = flowStep === 'paying' || isPending || isConfirming;
+  const isSigning = flowStep === 'signing';
+  const isCreating = flowStep === 'creating';
 
   useEffect(() => {
-    if (isTxSuccess) {
+    if (flowStep === 'success') {
       const timer = setTimeout(() => router.push('/dashboard'), 1500);
       return () => clearTimeout(timer);
     }
-  }, [isTxSuccess, router]);
+  }, [flowStep, router]);
+
+  useEffect(() => {
+    if (txError) {
+      setFlowStep('idle');
+    }
+  }, [txError]);
+
+  const createAgent = useCallback(async () => {
+    if (!address || !txHash) {
+      setCreateError('缺少钱包地址或交易哈希');
+      setFlowStep('idle');
+      return;
+    }
+
+    try {
+      setCreateError('');
+      setFlowStep('signing');
+      const message = `SynthLaunch Agent Creation\n\nTimestamp: ${Date.now()}`;
+      const signature = await signMessageAsync({ message });
+      setFlowStep('creating');
+
+      const expiresAt = new Date(Date.now() + currentPlan.days * 24 * 60 * 60 * 1000).toISOString();
+      const payload = {
+        user_address: address,
+        name: form.name.trim(),
+        bot_token: form.botToken.trim(),
+        description: form.description.trim() || null,
+        plan: selectedPlan,
+        payment_method: paymentMethod,
+        payment_amount: paymentInfo.amount,
+        expires_at: expiresAt,
+        tx_hash: txHash,
+        signature,
+        message,
+      };
+
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || '创建失败，请稍后重试');
+      }
+
+      setFlowStep('success');
+    } catch (error) {
+      console.error('[create-agent] error:', error);
+      setCreateError(error instanceof Error ? error.message : '创建失败，请稍后重试');
+      setFlowStep('idle');
+    }
+  }, [
+    address,
+    txHash,
+    signMessageAsync,
+    currentPlan.days,
+    form.name,
+    form.botToken,
+    form.description,
+    selectedPlan,
+    paymentMethod,
+    paymentInfo.amount,
+  ]);
+
+  useEffect(() => {
+    if (isTxSuccess && flowStep === 'paying') {
+      void createAgent();
+    }
+  }, [isTxSuccess, flowStep, createAgent]);
 
   const handlePayment = () => {
     if (!isFormValid) {
@@ -162,6 +246,8 @@ function CreateAgentPageInner() {
       return;
     }
     setFormError('');
+    setCreateError('');
+    setFlowStep('paying');
 
     if (paymentMethod === 'synth') {
       // Burn SYNTH to dead address
@@ -352,7 +438,7 @@ function CreateAgentPageInner() {
             </p>
           )}
 
-          {isTxSuccess ? (
+          {flowStep === 'success' ? (
             <div className="border border-synth-green/30 bg-synth-green/5 rounded-lg p-4 text-center space-y-2">
               <div className="text-2xl">✅</div>
               <p className="text-synth-green font-bold">创建成功</p>
@@ -369,12 +455,22 @@ function CreateAgentPageInner() {
                 type="button"
                 className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2"
                 onClick={handlePayment}
-                disabled={!isFormValid || isPending || isConfirming}
+                disabled={!isFormValid || isPaying || isSigning || isCreating || flowStep === 'success'}
               >
-                {isPending || isConfirming ? (
+                {isPaying ? (
                   <>
                     <span className="animate-spin">⏳</span>
-                    处理中...
+                    付款处理中...
+                  </>
+                ) : isSigning ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    等待签名...
+                  </>
+                ) : isCreating ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    创建中...
                   </>
                 ) : (
                   <>
@@ -383,8 +479,37 @@ function CreateAgentPageInner() {
                 )}
               </button>
 
+              {isTxSuccess && flowStep === 'idle' && createError && (
+                <button
+                  type="button"
+                  className="mt-3 w-full px-4 py-2 border border-synth-cyan/40 text-synth-cyan rounded hover:bg-synth-cyan/10 transition-colors text-sm"
+                  onClick={() => void createAgent()}
+                >
+                  重试签名并创建
+                </button>
+              )}
+
+              {(flowStep !== 'idle' || txHash) && (
+                <div className="mt-3 space-y-1 text-xs text-synth-muted">
+                  <div className={isTxSuccess ? 'text-synth-green' : isPaying ? 'text-synth-cyan' : ''}>
+                    {isTxSuccess ? '✅ 付款完成' : isPaying ? '⏳ 付款中' : '• 等待付款'}
+                  </div>
+                  <div className={flowStep === 'signing' ? 'text-synth-cyan' : flowStep === 'creating' || flowStep === 'success' ? 'text-synth-green' : ''}>
+                    {flowStep === 'signing' ? '⏳ 钱包签名中' : flowStep === 'creating' || flowStep === 'success' ? '✅ 已签名' : '• 签名'}
+                  </div>
+                  <div className={flowStep === 'creating' ? 'text-synth-cyan' : flowStep === 'success' ? 'text-synth-green' : ''}>
+                    {flowStep === 'creating' ? '⏳ 创建中' : flowStep === 'success' ? '✅ 创建完成' : '• 创建'}
+                  </div>
+                </div>
+              )}
+
               {formError && (
                 <p className="text-red-400 text-xs text-center mt-2">{formError}</p>
+              )}
+              {createError && (
+                <p className="text-red-400 text-xs text-center mt-2">
+                  创建失败：{createError}
+                </p>
               )}
               {txError && (
                 <p className="text-red-400 text-xs text-center mt-2">

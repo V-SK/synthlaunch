@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useI18n } from '@/lib/i18n';
 import Link from 'next/link';
@@ -8,28 +8,65 @@ import Link from 'next/link';
 interface Agent {
   id: string;
   name: string;
-  botUsername: string;
-  status: 'running' | 'stopped' | 'pending';
-  createdAt: string;
-  expiresAt: string;
+  plan: string;
+  status: 'running' | 'stopped' | 'pending' | 'deploying' | 'expired';
+  created_at: string;
+  expires_at: string;
 }
+
+const PLAN_LABELS: Record<string, string> = {
+  '7d': '7 天',
+  '14d': '14 天',
+  '30d': '30 天',
+};
+
+const statusStyles: Record<string, { label: string; className: string }> = {
+  running: { label: '✅ Running', className: 'bg-synth-green/20 text-synth-green' },
+  deploying: { label: '🚀 Deploying', className: 'bg-blue-500/20 text-blue-300' },
+  pending: { label: '⏳ Pending', className: 'bg-yellow-500/20 text-yellow-400' },
+  stopped: { label: '⏹ Stopped', className: 'bg-red-500/20 text-red-400' },
+  expired: { label: '⌛ Expired', className: 'bg-slate-500/20 text-slate-300' },
+};
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
   const { t } = useI18n();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAgents = useCallback(async () => {
+    if (!address) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/agents?user_address=${encodeURIComponent(address)}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to fetch agents');
+      }
+      const data = await res.json();
+      setAgents(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('[dashboard] fetch agents error:', error);
+      setAgents([]);
+      setError(error instanceof Error ? error.message : 'Failed to fetch agents');
+    } finally {
+      setLoading(false);
+    }
+  }, [address]);
 
   useEffect(() => {
     if (isConnected && address) {
-      // TODO: Fetch agents from API
-      // Mock data for now
-      setAgents([]);
-      setLoading(false);
+      void fetchAgents();
     } else {
+      setAgents([]);
+      setError(null);
       setLoading(false);
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, fetchAgents]);
 
   if (!isConnected) {
     return (
@@ -62,12 +99,22 @@ export default function DashboardPage() {
               {address?.slice(0, 6)}...{address?.slice(-4)}
             </p>
           </div>
-          <Link
-            href="/dashboard/create"
-            className="px-4 py-2 bg-synth-green text-synth-bg font-bold rounded hover:bg-synth-green/90 transition-colors"
-          >
-            + {t('dashboard.createAgent')}
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void fetchAgents()}
+              disabled={loading}
+              className="px-3 py-2 border border-synth-border text-synth-text rounded hover:border-synth-green/50 transition-colors text-sm disabled:opacity-50"
+            >
+              {loading ? '⏳' : '↻'} {t('dashboard.refresh')}
+            </button>
+            <Link
+              href="/dashboard/create"
+              className="px-4 py-2 bg-synth-green text-synth-bg font-bold rounded hover:bg-synth-green/90 transition-colors"
+            >
+              + {t('dashboard.createAgent')}
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
@@ -100,6 +147,18 @@ export default function DashboardPage() {
             <div className="p-8 text-center text-synth-muted">
               {t('dashboard.loading')}
             </div>
+          ) : error ? (
+            <div className="p-8 text-center">
+              <div className="text-3xl mb-3">⚠️</div>
+              <p className="text-red-400 mb-3">{error}</p>
+              <button
+                type="button"
+                className="px-4 py-2 bg-synth-green/20 text-synth-green border border-synth-green/30 rounded hover:bg-synth-green/30 transition-colors"
+                onClick={() => void fetchAgents()}
+              >
+                {t('dashboard.retry')}
+              </button>
+            </div>
           ) : agents.length === 0 ? (
             <div className="p-8 text-center">
               <div className="text-4xl mb-3">🤖</div>
@@ -121,19 +180,19 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <div className="font-bold text-synth-text">{agent.name}</div>
-                      <div className="text-sm text-synth-muted">@{agent.botUsername}</div>
+                      <div className="text-xs text-synth-muted">
+                        Plan: {PLAN_LABELS[agent.plan] ?? agent.plan} · Expires:{' '}
+                        {agent.expires_at ? new Date(agent.expires_at).toLocaleDateString() : '--'}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      agent.status === 'running' 
-                        ? 'bg-synth-green/20 text-synth-green' 
-                        : agent.status === 'pending'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'bg-red-500/20 text-red-400'
-                    }`}>
-                      {agent.status === 'running' ? '✅ Running' : 
-                       agent.status === 'pending' ? '⏳ Pending' : '⏹ Stopped'}
+                    <span
+                      className={`px-2 py-1 text-xs rounded ${
+                        statusStyles[agent.status]?.className ?? 'bg-slate-500/20 text-slate-300'
+                      }`}
+                    >
+                      {statusStyles[agent.status]?.label ?? agent.status}
                     </span>
                     <Link
                       href={`/dashboard/agent/${agent.id}`}
