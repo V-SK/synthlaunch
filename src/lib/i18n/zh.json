@@ -6,7 +6,27 @@
     "nfa": "NFA",
     "chat": "聊天",
     "leaderboard": "排行榜",
-    "docs": "文档"
+    "docs": "文档",
+    "dashboard": "个人中心"
+  },
+  "dashboard": {
+    "title": "个人中心",
+    "connectWallet": "连接钱包",
+    "connectWalletDesc": "连接钱包以查看和管理您的 AI Agent。",
+    "totalAgents": "Agent 总数",
+    "running": "运行中",
+    "stopped": "已停止",
+    "myAgents": "我的 Agent",
+    "loading": "加载中...",
+    "noAgents": "您还没有任何 Agent。",
+    "createFirst": "创建第一个 Agent",
+    "createAgent": "创建 Agent",
+    "manage": "管理",
+    "howItWorks": "如何使用",
+    "step1": "支付 $10 SYNTH 创建 Agent（燃烧）",
+    "step2": "在 Telegram @BotFather 创建机器人",
+    "step3": "输入 Bot Token 并配置您的 Agent",
+    "step4": "30 秒内您的 AI Agent 即可上线！"
   },
   "home": {
     "heroTitle": "代币发行",

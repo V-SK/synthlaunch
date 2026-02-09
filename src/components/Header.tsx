@@ -20,6 +20,7 @@ export function Header() {
     { label: t('nav.chat'), href: '/chat' },
     { label: t('nav.leaderboard'), href: '/leaderboard' },
     { label: t('nav.docs'), href: '/docs' },
+    { label: `👤 ${t('nav.dashboard')}`, href: '/dashboard' },
   ];
 
   const getNavItemClasses = (item: { href: string; highlight?: boolean }) => {
@@ -78,8 +79,18 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Wallet */}
+        {/* Dashboard + Wallet */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/dashboard"
+            className={`hidden md:flex items-center gap-1 px-3 py-1.5 rounded text-sm font-mono transition-all duration-200 ${
+              pathname === '/dashboard' 
+                ? 'text-synth-green bg-synth-green/10' 
+                : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface'
+            }`}
+          >
+            👤 {t('nav.dashboard')}
+          </Link>
           <div className="hidden md:block"><LanguageToggle /></div>
           <WalletConnect />
         </div>

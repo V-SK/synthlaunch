@@ -6,7 +6,27 @@
     "nfa": "NFA",
     "chat": "Chat",
     "leaderboard": "Leaderboard",
-    "docs": "Docs"
+    "docs": "Docs",
+    "dashboard": "Dashboard"
+  },
+  "dashboard": {
+    "title": "My Dashboard",
+    "connectWallet": "Connect Wallet",
+    "connectWalletDesc": "Connect your wallet to view and manage your AI agents.",
+    "totalAgents": "Total Agents",
+    "running": "Running",
+    "stopped": "Stopped",
+    "myAgents": "My Agents",
+    "loading": "Loading...",
+    "noAgents": "You don't have any agents yet.",
+    "createFirst": "Create Your First Agent",
+    "createAgent": "Create Agent",
+    "manage": "Manage",
+    "howItWorks": "How It Works",
+    "step1": "Pay $10 in SYNTH to create an agent (burned)",
+    "step2": "Create a Telegram bot via @BotFather",
+    "step3": "Enter your bot token and configure your agent",
+    "step4": "Your AI agent goes live within 30 seconds!"
   },
   "home": {
     "heroTitle": "Token Launches with",
