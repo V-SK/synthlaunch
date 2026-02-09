@@ -108,6 +108,15 @@ export function Header() {
               {item.label}
             </Link>
           ))}
+          {isConnected && (
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileOpen(false)}
+              className="px-3 py-2 rounded text-sm font-mono transition-all duration-200 text-synth-cyan bg-synth-cyan/10 hover:bg-synth-cyan/20 border border-synth-cyan/30"
+            >
+              🤖 {t('nav.dashboard') || 'AI Agent'}
+            </Link>
+          )}
           <div className="px-3 py-2 border-t border-synth-border mt-1 pt-2">
             <LanguageToggle />
           </div>
