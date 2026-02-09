@@ -11,8 +11,8 @@ import { useI18n, LanguageToggle } from '@/lib/i18n';
 export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { t } = useI18n();
   const { isConnected } = useAccount();
+  const { t } = useI18n();
 
   const NAV_ITEMS = [
     { label: t('nav.home'), href: '/' },
@@ -87,13 +87,9 @@ export function Header() {
           {isConnected && (
             <Link
               href="/dashboard"
-              className={`hidden md:flex items-center px-2 py-1 rounded border text-xs font-mono transition-all duration-200 ${
-                pathname === '/dashboard'
-                  ? 'text-synth-green bg-synth-green/10 border-synth-green'
-                  : 'text-synth-green/90 border-synth-green/50 hover:text-synth-green hover:bg-synth-green/10 hover:border-synth-green'
-              }`}
+              className="hidden md:inline-flex items-center justify-center px-2.5 py-1.5 rounded border border-synth-green/30 text-synth-green text-xs font-mono whitespace-nowrap hover:border-synth-green hover:bg-synth-green/10 transition-colors"
             >
-              {t('nav.dashboard')}
+              Dashboard
             </Link>
           )}
         </div>
