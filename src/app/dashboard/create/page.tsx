@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther } from 'viem';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { parseEther, formatEther } from 'viem';
 import { WalletConnect } from '@/components/WalletConnect';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ERC20_ABI } from '@/lib/erc20';
@@ -12,8 +12,22 @@ import { SYNTH_TOKEN_ADDRESS } from '@/lib/contracts';
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 const USD_FEE = 10;
-const FALLBACK_SYNTH_AMOUNT = 10;
 const PRICE_REFRESH_MS = 60_000;
+const SYNTH_WBNB_PAIR = '0xc0289861Ce670ecB8a75768e021b5e3e313d5940';
+
+const PAIR_ABI = [
+  {
+    inputs: [],
+    name: 'getReserves',
+    outputs: [
+      { name: 'reserve0', type: 'uint112' },
+      { name: 'reserve1', type: 'uint112' },
+      { name: 'blockTimestampLast', type: 'uint32' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
 
 type FormState = {
   name: string;
@@ -28,7 +42,7 @@ const toAmountString = (value: number) => {
 
 const formatSynthDisplay = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '--';
-  return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 };
 
 function CreateAgentPageInner() {
@@ -41,43 +55,57 @@ function CreateAgentPageInner() {
     description: '',
   });
   const [formError, setFormError] = useState('');
-  const [synthUsdPrice, setSynthUsdPrice] = useState<number | null>(null);
+  const [bnbUsdPrice, setBnbUsdPrice] = useState(0);
 
   const { writeContract, data: burnTxHash, isPending, error: burnError } = useWriteContract();
   const { isSuccess: isBurnSuccess } = useWaitForTransactionReceipt({ hash: burnTxHash });
 
   useEffect(() => {
-    let active = true;
     const fetchPrice = async () => {
       try {
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/simple/token_price/binance-smart-chain?contract_addresses=${SYNTH_TOKEN_ADDRESS}&vs_currencies=usd`
-        );
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd');
         const data = await res.json();
-        const price = data?.[SYNTH_TOKEN_ADDRESS.toLowerCase()]?.usd;
-        if (active) {
-          setSynthUsdPrice(typeof price === 'number' && price > 0 ? price : null);
-        }
+        setBnbUsdPrice(data.binancecoin?.usd || 0);
       } catch {
-        if (active) setSynthUsdPrice(null);
+        setBnbUsdPrice(0);
       }
     };
     fetchPrice();
     const interval = setInterval(fetchPrice, PRICE_REFRESH_MS);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
+
+  const { data: reserves } = useReadContract({
+    address: SYNTH_WBNB_PAIR,
+    abi: PAIR_ABI,
+    functionName: 'getReserves',
+    query: { refetchInterval: PRICE_REFRESH_MS },
+  });
+
+  const synthUsdPrice = useMemo(() => {
+    if (!reserves || bnbUsdPrice <= 0) return null;
+    const { reserve0, reserve1 } = reserves as {
+      reserve0: bigint;
+      reserve1: bigint;
+      blockTimestampLast: number;
+    };
+    if (reserve0 === 0n || reserve1 === 0n) return null;
+    const reserve0Amount = Number(formatEther(reserve0));
+    const reserve1Amount = Number(formatEther(reserve1));
+    if (!Number.isFinite(reserve0Amount) || !Number.isFinite(reserve1Amount)) return null;
+    if (reserve0Amount <= 0 || reserve1Amount <= 0) return null;
+    const synthPriceInBnb = reserve1Amount / reserve0Amount;
+    return synthPriceInBnb * bnbUsdPrice;
+  }, [reserves, bnbUsdPrice]);
 
   const computedSynthAmount = useMemo(() => {
     if (!synthUsdPrice || synthUsdPrice <= 0) return null;
     return USD_FEE / synthUsdPrice;
   }, [synthUsdPrice]);
 
-  const burnAmount = computedSynthAmount ?? FALLBACK_SYNTH_AMOUNT;
+  const burnAmount = computedSynthAmount ?? 0;
   const burnAmountString = useMemo(() => toAmountString(burnAmount), [burnAmount]);
-  const approxSynthDisplay = formatSynthDisplay(computedSynthAmount ?? FALLBACK_SYNTH_AMOUNT);
+  const approxSynthDisplay = formatSynthDisplay(computedSynthAmount ?? 0);
 
   const isFormValid = form.name.trim().length > 0 && form.botToken.trim().length > 0;
   const isConfirming = Boolean(burnTxHash) && !isBurnSuccess;
@@ -92,6 +120,10 @@ function CreateAgentPageInner() {
   const handleBurn = () => {
     if (!isFormValid) {
       setFormError('请填写 Agent 名称和 Telegram Bot Token');
+      return;
+    }
+    if (!computedSynthAmount || computedSynthAmount <= 0) {
+      setFormError('SYNTH 价格获取中，请稍后重试');
       return;
     }
     setFormError('');
