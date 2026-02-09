@@ -467,6 +467,22 @@ function AgentDetailPageInner() {
                   </p>
                 </div>
               </div>
+
+              {/* Prominent Deploy Button for Pending status */}
+              {agent.status === 'pending' && (
+                <div className="mt-6 p-4 border border-blue-500/30 rounded-lg bg-blue-500/10">
+                  <p className="text-blue-300 text-sm mb-3">
+                    ⚡ Your agent is ready to deploy! Click the button below to start your AI agent.
+                  </p>
+                  <button
+                    onClick={() => handleAction('deploy')}
+                    disabled={actionLoading !== null}
+                    className="w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-lg"
+                  >
+                    {actionLoading === 'deploy' ? '⏳ Deploying...' : '🚀 Deploy Agent'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* SOUL.md Editor */}
