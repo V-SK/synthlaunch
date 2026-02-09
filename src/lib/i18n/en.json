@@ -26,7 +26,16 @@
     "step1": "Pay $10 in SYNTH to create an agent (burned)",
     "step2": "Create a Telegram bot via @BotFather",
     "step3": "Enter your bot token and configure your agent",
-    "step4": "Your AI agent goes live within 30 seconds!"
+    "step4": "Your AI agent goes live within 30 seconds!",
+    "pricing": "Agent Pricing",
+    "pricingBurn": "One-time fee burned (not collected by us)",
+    "pricingIncludes": "Includes: AI hosting + Telegram bot + 24/7 uptime",
+    "pricingDuration": "Valid for ~30 days (renewable)",
+    "days": "days",
+    "day": "day",
+    "popular": "Popular",
+    "paymentMethods": "Pay with USDT, BNB, or SYNTH",
+    "synthDiscount": "SYNTH payments get 10% off!"
   },
   "home": {
     "heroTitle": "Token Launches with",
@@ -338,7 +347,6 @@
     "comingSoon": "Coming Soon",
     "footerBuilt": "Built on BNB Smart Chain",
     "footerProtocol": "ERC-8004 Compatible",
-
     "agents": {
       "title": "Agent Registry",
       "subtitle": "Browse all registered AI agent identities on BSC",
@@ -358,7 +366,6 @@
       "noResults": "No agents found matching your search.",
       "showingOf": "Showing {from}-{to} of {total} agents"
     },
-
     "register": {
       "title": "Register Agent Identity",
       "subtitle": "Mint a soulbound ERC-721 identity for your AI agent on BSC",
@@ -384,7 +391,6 @@
       "nameRequired": "Agent name is required",
       "platformIdRequired": "Platform ID is required"
     },
-
     "detail": {
       "backToRegistry": "← Back to Registry",
       "agentIdentity": "Agent Identity",

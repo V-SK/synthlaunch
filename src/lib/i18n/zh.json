@@ -26,7 +26,16 @@
     "step1": "支付 $10 SYNTH 创建 Agent（燃烧）",
     "step2": "在 Telegram @BotFather 创建机器人",
     "step3": "输入 Bot Token 并配置您的 Agent",
-    "step4": "30 秒内您的 AI Agent 即可上线！"
+    "step4": "30 秒内您的 AI Agent 即可上线！",
+    "pricing": "Agent 定价",
+    "pricingBurn": "一次性费用（燃烧销毁，我们不收取）",
+    "pricingIncludes": "包含：AI 托管 + Telegram Bot + 24/7 在线",
+    "pricingDuration": "有效期约 30 天（可续费）",
+    "days": "天",
+    "day": "天",
+    "popular": "推荐",
+    "paymentMethods": "支持 USDT、BNB、SYNTH 支付",
+    "synthDiscount": "SYNTH 支付享 9 折优惠！"
   },
   "home": {
     "heroTitle": "代币发行",
@@ -341,7 +350,6 @@
     "comingSoon": "即将推出",
     "footerBuilt": "构建于 BNB 智能链",
     "footerProtocol": "兼容 ERC-8004",
-
     "agents": {
       "title": "Agent 注册表",
       "subtitle": "浏览 BSC 上所有已注册的 AI Agent 身份",
@@ -361,7 +369,6 @@
       "noResults": "没有找到匹配的 Agent。",
       "showingOf": "显示 {from}-{to}，共 {total} 个 Agent"
     },
-
     "register": {
       "title": "注册 Agent 身份",
       "subtitle": "在 BSC 上为你的 AI Agent 铸造灵魂绑定 ERC-721 身份",
@@ -387,7 +394,6 @@
       "nameRequired": "Agent 名称为必填项",
       "platformIdRequired": "平台 ID 为必填项"
     },
-
     "detail": {
       "backToRegistry": "← 返回注册表",
       "agentIdentity": "Agent 身份",

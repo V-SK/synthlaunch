@@ -1,6 +1,7 @@
--- Agents table for AI Agent hosting
+-- Hosted Agents table for AI Agent hosting service
+-- Separate from the original 'agents' table used for Agent Chat
 
-CREATE TABLE IF NOT EXISTS agents (
+CREATE TABLE IF NOT EXISTS hosted_agents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_address TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -16,4 +17,4 @@ CREATE TABLE IF NOT EXISTS agents (
   container_id TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_agents_user_address ON agents(user_address);
+CREATE INDEX IF NOT EXISTS idx_hosted_agents_user_address ON hosted_agents(user_address);

@@ -148,8 +148,38 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Pricing Box */}
+        <div className="mt-6 bg-synth-green/5 border border-synth-green/30 rounded-lg p-4">
+          <h3 className="font-bold text-synth-text mb-3">💰 {t('dashboard.pricing')}</h3>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="bg-synth-surface border border-synth-border rounded-lg p-3 text-center">
+              <div className="text-synth-muted text-xs mb-1">7 {t('dashboard.days')}</div>
+              <div className="text-synth-green font-bold text-lg">$10</div>
+              <div className="text-synth-muted text-[10px]">~$1.43/{t('dashboard.day')}</div>
+            </div>
+            <div className="bg-synth-surface border border-synth-green/50 rounded-lg p-3 text-center relative">
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-synth-green text-synth-bg text-[9px] px-2 py-0.5 rounded font-bold">
+                {t('dashboard.popular')}
+              </div>
+              <div className="text-synth-muted text-xs mb-1">14 {t('dashboard.days')}</div>
+              <div className="text-synth-green font-bold text-lg">$18.50</div>
+              <div className="text-synth-muted text-[10px]">~$1.32/{t('dashboard.day')}</div>
+            </div>
+            <div className="bg-synth-surface border border-synth-border rounded-lg p-3 text-center">
+              <div className="text-synth-muted text-xs mb-1">30 {t('dashboard.days')}</div>
+              <div className="text-synth-green font-bold text-lg">$30</div>
+              <div className="text-synth-muted text-[10px]">~$1.00/{t('dashboard.day')}</div>
+            </div>
+          </div>
+          <ul className="text-synth-muted text-sm space-y-1">
+            <li>• {t('dashboard.paymentMethods')}</li>
+            <li>• 🔥 {t('dashboard.synthDiscount')}</li>
+            <li>• {t('dashboard.pricingIncludes')}</li>
+          </ul>
+        </div>
+
         {/* Info Box */}
-        <div className="mt-6 bg-synth-surface/50 border border-synth-border rounded-lg p-4">
+        <div className="mt-4 bg-synth-surface/50 border border-synth-border rounded-lg p-4">
           <h3 className="font-bold text-synth-text mb-2">💡 {t('dashboard.howItWorks')}</h3>
           <ol className="text-synth-muted text-sm space-y-1 list-decimal list-inside">
             <li>{t('dashboard.step1')}</li>

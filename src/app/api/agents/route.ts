@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient();
     const encodedAddress = encodeURIComponent(userAddress);
     const data = await supabase.request<any[]>(
-      `agents?select=${AGENT_SELECT}&user_address=eq.${encodedAddress}&order=created_at.desc`
+      `hosted_agents?select=${AGENT_SELECT}&user_address=eq.${encodedAddress}&order=created_at.desc`
     );
 
     return NextResponse.json(data);
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient();
     const encodedTx = encodeURIComponent(tx_hash);
     const existing = await supabase.request<any[]>(
-      `agents?select=id&tx_hash=eq.${encodedTx}&limit=1`
+      `hosted_agents?select=id&tx_hash=eq.${encodedTx}&limit=1`
     );
 
     if (existing.length > 0) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     };
 
     const created = await supabase.request<any[]>(
-      `agents?select=${AGENT_SELECT}`,
+      `hosted_agents?select=${AGENT_SELECT}`,
       {
         method: 'POST',
         headers: {

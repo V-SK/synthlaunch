@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest, context: { params: { id: string
     const supabase = createClient();
     const encodedId = encodeURIComponent(id);
     const data = await supabase.request<any[]>(
-      `agents?select=${AGENT_SELECT}&id=eq.${encodedId}&limit=1`
+      `hosted_agents?select=${AGENT_SELECT}&id=eq.${encodedId}&limit=1`
     );
 
     if (!data || data.length === 0) {
@@ -63,7 +63,7 @@ export async function PATCH(request: NextRequest, context: { params: { id: strin
     const supabase = createClient();
     const encodedId = encodeURIComponent(id);
     const data = await supabase.request<any[]>(
-      `agents?id=eq.${encodedId}&select=${AGENT_SELECT}`,
+      `hosted_agents?id=eq.${encodedId}&select=${AGENT_SELECT}`,
       {
         method: 'PATCH',
         headers: {
@@ -95,7 +95,7 @@ export async function DELETE(_request: NextRequest, context: { params: { id: str
     const supabase = createClient();
     const encodedId = encodeURIComponent(id);
     const data = await supabase.request<any[]>(
-      `agents?id=eq.${encodedId}&select=${AGENT_SELECT}`,
+      `hosted_agents?id=eq.${encodedId}&select=${AGENT_SELECT}`,
       {
         method: 'PATCH',
         headers: {
