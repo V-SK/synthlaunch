@@ -110,6 +110,44 @@ function HomeInner() {
       {/* Stats */}
       <StatsBar />
 
+      {/* NFA Pro Banner */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-synth-green/5 to-cyan-500/5 rounded-xl" />
+        <div className="relative border border-synth-green/20 rounded-xl p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-synth-green to-cyan-400 flex items-center justify-center text-3xl shadow-lg shadow-synth-green/20 flex-shrink-0">
+              ⚡
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                <h3 className="text-lg font-bold text-synth-text">NFA Pro</h3>
+                <span className="px-2 py-0.5 rounded-full bg-synth-green/10 text-synth-green text-[10px] font-bold border border-synth-green/30">
+                  BAP-578
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold animate-pulse">
+                  LIVE
+                </span>
+              </div>
+              <p className="text-sm text-synth-muted mb-3">
+                {t('home.nfaProDesc') || 'Full BAP-578 implementation for AI agents. Batch swaps, learning module, memory storage, and multi-agent collaboration.'}
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                <span className="text-[10px] text-synth-cyan bg-synth-surface px-2 py-1 rounded">🧠 Learning</span>
+                <span className="text-[10px] text-synth-cyan bg-synth-surface px-2 py-1 rounded">💾 Memory</span>
+                <span className="text-[10px] text-synth-cyan bg-synth-surface px-2 py-1 rounded">🤝 Multi-Agent</span>
+                <span className="text-[10px] text-synth-cyan bg-synth-surface px-2 py-1 rounded">⚡ Batch Ops</span>
+              </div>
+            </div>
+            <Link 
+              href="/nfa" 
+              className="btn-primary flex items-center gap-2 flex-shrink-0"
+            >
+              {t('home.exploreNfa') || 'Explore'} →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Top Earners */}
       {topEarners.length > 0 && (
         <section>
