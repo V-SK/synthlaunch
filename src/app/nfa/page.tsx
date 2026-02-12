@@ -1,498 +1,356 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatEther } from "viem";
-import { useNFA } from "@/hooks/useNFA";
-import { calculateLevel, calculateXPProgress, type NFAgent } from "@/lib/nfa";
+import { formatEther, parseEther } from "viem";
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
-import { useI18n } from "@/lib/i18n";
+
+// ============ Contract Config ============
+const AGENT_LOGIC_PRO = "0x7a08ff7ab3EF202F7B499648a25FCD94Fb5a8857";
+const NFAv2_ADDRESS = "0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19";
+
+const AGENT_LOGIC_PRO_ABI = [
+  {
+    name: "swapBNB",
+    type: "function",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "tokenOut", type: "address" },
+      { name: "amountIn", type: "uint256" },
+      { name: "amountOutMin", type: "uint256" },
+      { name: "deadline", type: "uint256" }
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "nonpayable"
+  },
+  {
+    name: "swapToken",
+    type: "function", 
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "tokenIn", type: "address" },
+      { name: "tokenOut", type: "address" },
+      { name: "amountIn", type: "uint256" },
+      { name: "amountOutMin", type: "uint256" },
+      { name: "deadline", type: "uint256" }
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "nonpayable"
+  },
+  {
+    name: "batchTransferERC20",
+    type: "function",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "token", type: "address" },
+      { name: "recipients", type: "address[]" },
+      { name: "amounts", type: "uint256[]" }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    name: "batchSwap",
+    type: "function",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "swaps", type: "tuple[]", components: [
+        { name: "tokenIn", type: "address" },
+        { name: "tokenOut", type: "address" },
+        { name: "amountIn", type: "uint256" },
+        { name: "amountOutMin", type: "uint256" }
+      ] },
+      { name: "deadline", type: "uint256" }
+    ],
+    outputs: [{ name: "amountsOut", type: "uint256[]" }],
+    stateMutability: "nonpayable"
+  },
+  {
+    name: "transferERC20",
+    type: "function",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "token", type: "address" },
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    name: "emergencyWithdraw",
+    type: "function",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "token", type: "address" },
+      { name: "to", type: "address" }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  }
+] as const;
 
 // ============ Components ============
 
-function StatCard({ label, value, accent = "text-neon" }: { label: string; value: string | number; accent?: string }) {
-  return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 flex-1 min-w-[140px]">
-      <div className="text-[11px] tracking-[2px] text-white/40 uppercase mb-2 font-mono">{label}</div>
-      <div className={`text-[28px] font-bold ${accent}`}>{value}</div>
-    </div>
-  );
-}
-
-function AgentCard({ agent, selected, onClick, t }: { agent: NFAgent; selected: boolean; onClick: () => void; t: (key: string) => string }) {
-  const level = calculateLevel(agent.experience);
-  const xpProgress = calculateXPProgress(agent.experience);
-  const balanceFormatted = formatEther(agent.balance);
-  
-  return (
-    <div
-      onClick={onClick}
-      className={`
-        rounded-2xl p-6 cursor-pointer transition-all duration-300
-        ${selected 
-          ? "bg-neon/[0.06] border border-neon/30 scale-[1.01]" 
-          : "bg-white/[0.02] border border-white/[0.06] hover:border-white/10"
-        }
-      `}
-    >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1.5">
-            <span className="text-xl font-bold text-white">{agent.name}</span>
-            <span className={`
-              text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-md
-              ${agent.active 
-                ? "bg-neon/15 text-neon" 
-                : "bg-red-500/15 text-red-400"
-              }
-            `}>
-              {agent.active ? t('nfa.card.active') : t('nfa.card.paused')}
-            </span>
-          </div>
-          <div className="text-[13px] text-white/45 font-mono">NFA #{agent.id}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-neon">{balanceFormatted} BNB</div>
-          <div className="text-[11px] text-white/35">{t('nfa.card.balance')}</div>
-        </div>
-      </div>
-      
-      <div className="text-[13px] text-white/55 mb-4 line-clamp-2">
-        {agent.persona || "No persona set"}
-      </div>
-      
-      {/* XP Bar */}
-      <div>
-        <div className="flex justify-between mb-1.5">
-          <span className="text-[11px] text-white/40 font-mono">{t('nfa.card.level')} {level.toString()}</span>
-          <span className="text-[11px] text-white/40 font-mono">{agent.experience.toString()} {t('nfa.card.xp')}</span>
-        </div>
-        <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-neon to-cyan-400 rounded-full transition-all duration-500"
-            style={{ width: `${xpProgress}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        px-5 py-2.5 rounded-xl text-[13px] font-semibold tracking-wide transition-all
-        ${active 
-          ? "bg-neon/15 text-neon" 
-          : "text-white/40 hover:text-white/60"
-        }
-      `}
-    >
-      {label}
-    </button>
-  );
-}
-
-function InputField({ 
-  label, value, onChange, placeholder, type = "text", mono = false 
+function FeatureCard({ 
+  icon, title, desc, tag 
 }: { 
-  label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string; mono?: boolean 
+  icon: string; title: string; desc: string; tag?: string 
 }) {
   return (
-    <div className="mb-4">
-      <label className="block text-[11px] tracking-[1.5px] text-white/40 uppercase mb-2 font-mono">
-        {label}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`
-          w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03]
-          text-white text-sm outline-none transition-colors
-          focus:border-neon/30 placeholder:text-white/25
-          ${mono ? "font-mono" : ""}
-        `}
-      />
-    </div>
-  );
-}
-
-function ActionButton({ 
-  label, onClick, variant = "primary", disabled = false, icon, loading = false 
-}: { 
-  label: string; onClick: () => void; variant?: "primary" | "secondary" | "danger"; disabled?: boolean; icon?: string; loading?: boolean 
-}) {
-  const variants = {
-    primary: "bg-gradient-to-r from-neon to-emerald-400 text-black",
-    secondary: "bg-white/[0.06] text-white border border-white/10",
-    danger: "bg-red-500/15 text-red-400 border border-red-500/20",
-  };
-  
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`
-        px-6 py-3 rounded-xl text-sm font-bold tracking-wide transition-all
-        flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed
-        ${variants[variant]}
-      `}
-    >
-      {loading ? (
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-      ) : icon ? (
-        <span className="text-base">{icon}</span>
-      ) : null}
-      {label}
-    </button>
-  );
-}
-
-// ============ Panels ============
-
-function MintPanel({ onMint, loading, mintPrice, t }: { onMint: (data: any) => void; loading: boolean; mintPrice: string; t: (key: string, params?: Record<string, string>) => string }) {
-  const [name, setName] = useState("");
-  const [persona, setPersona] = useState("");
-  const [voice, setVoice] = useState("");
-  const [animation, setAnimation] = useState("");
-  const [tokenURI, setTokenURI] = useState("");
-
-  const handleMint = () => {
-    if (!name || !persona) return;
-    // NFAv2: logic is managed via allowlist, default to address(0)
-    onMint({ name, persona, voice, animation, logic: "", tokenURI });
-  };
-
-  return (
-    <div className="max-w-[520px]">
-      <h3 className="text-lg font-bold text-white mb-1">{t('nfa.mint.title')}</h3>
-      <p className="text-[13px] text-white/40 mb-6 leading-relaxed">
-        {t('nfa.mint.desc', { price: mintPrice || "0.05" })}
-      </p>
-      
-      <InputField label={`${t('nfa.mint.name')} *`} value={name} onChange={setName} placeholder={t('nfa.mint.namePlaceholder')} />
-      <InputField label={`${t('nfa.mint.persona')} *`} value={persona} onChange={setPersona} placeholder={t('nfa.mint.personaPlaceholder')} mono />
-      <InputField label={t('nfa.mint.voice')} value={voice} onChange={setVoice} placeholder={t('nfa.mint.voicePlaceholder')} mono />
-      <InputField label={t('nfa.mint.animation')} value={animation} onChange={setAnimation} placeholder={t('nfa.mint.animationPlaceholder')} mono />
-      <InputField label={t('nfa.mint.tokenUri')} value={tokenURI} onChange={setTokenURI} placeholder={t('nfa.mint.tokenUriPlaceholder')} mono />
-      
-      <div className="flex gap-3 mt-2">
-        <ActionButton 
-          label={loading ? t('nfa.mint.minting') : t('nfa.mint.submit')} 
-          onClick={handleMint} 
-          icon="⚡" 
-          disabled={!name || !persona}
-          loading={loading}
-        />
-      </div>
-    </div>
-  );
-}
-
-function DetailPanel({ 
-  agent, onFund, onWithdraw, onEvolve, onToggleActive, loading, t 
-}: { 
-  agent: NFAgent | null; 
-  onFund: (id: number, amount: string) => void;
-  onWithdraw: (id: number, amount: string) => void;
-  onEvolve: (id: number, xp: number) => void;
-  onToggleActive: (id: number) => void;
-  loading: boolean;
-  t: (key: string) => string;
-}) {
-  const [fundAmount, setFundAmount] = useState("");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [xpAmount, setXpAmount] = useState("");
-
-  if (!agent) {
-    return (
-      <div className="flex items-center justify-center h-[300px] text-white/25 text-sm">
-        {t('nfa.detail.selectAgent')}
-      </div>
-    );
-  }
-
-  const level = calculateLevel(agent.experience);
-  const createdDate = new Date(Number(agent.createdAt) * 1000).toLocaleDateString();
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h3 className="text-[22px] font-bold text-white">{agent.name}</h3>
-          <span className="text-xs text-white/35 font-mono">
-            NFA #{agent.id} · {t('nfa.card.level')} {level.toString()} · {createdDate}
+    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:border-neon/20 transition-all group">
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neon/20 to-cyan-500/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+          {icon}
+        </div>
+        {tag && (
+          <span className="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full bg-neon/10 text-neon border border-neon/20">
+            {tag}
           </span>
-        </div>
-        <ActionButton
-          label={agent.active ? t('nfa.detail.pause') : t('nfa.detail.activate')}
-          onClick={() => onToggleActive(agent.id)}
-          variant={agent.active ? "danger" : "primary"}
-          icon={agent.active ? "⏸" : "▶"}
-          loading={loading}
-        />
+        )}
       </div>
-
-      {/* Info Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-6 bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
-        {[
-          { k: t('nfa.detail.persona'), v: agent.persona || "—" },
-          { k: t('nfa.detail.logic'), v: agent.logic === "0x0000000000000000000000000000000000000000" ? t('nfa.detail.none') : `${agent.logic.slice(0,6)}...${agent.logic.slice(-4)}` },
-          { k: t('nfa.detail.voice'), v: agent.voice || "—" },
-          { k: t('nfa.detail.animation'), v: agent.animation || "—" },
-        ].map((item, i) => (
-          <div key={i}>
-            <div className="text-[10px] tracking-[1.5px] text-white/30 uppercase mb-1 font-mono">{item.k}</div>
-            <div className="text-[13px] text-white/70 font-mono break-all">{item.v}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div className="grid grid-cols-3 gap-3">
-        {/* Fund */}
-        <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
-          <div className="text-[11px] tracking-[1.5px] text-white/35 uppercase mb-2.5 font-mono">{t('nfa.detail.fund')}</div>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              step="0.01"
-              value={fundAmount}
-              onChange={e => setFundAmount(e.target.value)}
-              placeholder="BNB"
-              className="flex-1 min-w-0 px-2.5 py-2 rounded-lg border border-white/[0.08] bg-black/30 text-white text-[13px] outline-none font-mono"
-            />
-            <button
-              onClick={() => { onFund(agent.id, fundAmount); setFundAmount(""); }}
-              disabled={!fundAmount || loading}
-              className={`px-3 py-2 rounded-lg font-bold text-[13px] transition-colors ${
-                fundAmount ? "bg-neon text-black" : "bg-white/[0.06] text-white/30"
-              } disabled:cursor-not-allowed`}
-            >+</button>
-          </div>
-        </div>
-
-        {/* Withdraw */}
-        <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
-          <div className="text-[11px] tracking-[1.5px] text-white/35 uppercase mb-2.5 font-mono">{t('nfa.detail.withdraw')}</div>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              step="0.01"
-              value={withdrawAmount}
-              onChange={e => setWithdrawAmount(e.target.value)}
-              placeholder="BNB"
-              className="flex-1 min-w-0 px-2.5 py-2 rounded-lg border border-white/[0.08] bg-black/30 text-white text-[13px] outline-none font-mono"
-            />
-            <button
-              onClick={() => { onWithdraw(agent.id, withdrawAmount); setWithdrawAmount(""); }}
-              disabled={!withdrawAmount || loading}
-              className={`px-3 py-2 rounded-lg font-bold text-[13px] transition-colors ${
-                withdrawAmount ? "bg-red-500/20 text-red-400" : "bg-white/[0.06] text-white/30"
-              } disabled:cursor-not-allowed`}
-            >−</button>
-          </div>
-        </div>
-
-        {/* Evolve */}
-        <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
-          <div className="text-[11px] tracking-[1.5px] text-white/35 uppercase mb-2.5 font-mono">{t('nfa.detail.evolve')}</div>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              value={xpAmount}
-              onChange={e => setXpAmount(e.target.value)}
-              placeholder="XP"
-              className="flex-1 min-w-0 px-2.5 py-2 rounded-lg border border-white/[0.08] bg-black/30 text-white text-[13px] outline-none font-mono"
-            />
-            <button
-              onClick={() => { onEvolve(agent.id, parseInt(xpAmount)); setXpAmount(""); }}
-              disabled={!xpAmount || loading}
-              className={`px-3 py-2 rounded-lg font-bold text-[13px] transition-colors ${
-                xpAmount ? "bg-cyan-500/20 text-cyan-400" : "bg-white/[0.06] text-white/30"
-              } disabled:cursor-not-allowed`}
-            >↑</button>
-          </div>
-        </div>
-      </div>
+      <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+      <p className="text-[13px] text-white/50 leading-relaxed">{desc}</p>
     </div>
+  );
+}
+
+function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-[11px] tracking-[2px] text-white/40 uppercase mb-1 font-mono">{label}</div>
+      <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon to-cyan-400">
+        {value}
+      </div>
+      {sub && <div className="text-[11px] text-white/30 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function CodeBlock({ code }: { code: string }) {
+  return (
+    <pre className="bg-black/40 border border-white/[0.08] rounded-xl p-4 overflow-x-auto">
+      <code className="text-[12px] text-neon/80 font-mono leading-relaxed">{code}</code>
+    </pre>
   );
 }
 
 // ============ Main Page ============
 
-export default function NFADashboard() {
-  const { t } = useI18n();
-  const {
-    loading, error, agents, stats, isConnected, address,
-    mintAgent, fundAgent, withdrawFromAgent, evolveAgent, toggleActive,
-    mintPriceFormatted, clearError,
-  } = useNFA();
+export default function NFAProPage() {
+  const { address, isConnected } = useAccount();
+  const [activeDemo, setActiveDemo] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<"agents" | "mint">("agents");
-  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
-
-  const selectedAgent = agents.find(a => a.id === selectedAgentId) || null;
-  const totalBalance = formatEther(agents.reduce((s, a) => s + a.balance, 0n));
-  const totalXP = agents.reduce((s, a) => s + a.experience, 0n);
-
-  const showToast = (msg: string, type: "success" | "error" = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  useEffect(() => {
-    if (error) {
-      showToast(error, "error");
-      clearError();
+  const proFeatures = [
+    {
+      icon: "⚡",
+      title: "Batch Swap",
+      desc: "Execute multiple token swaps in a single transaction. Reduce gas costs by up to 60% compared to individual swaps.",
+      tag: "GAS SAVER"
+    },
+    {
+      icon: "📤",
+      title: "Batch Transfer",
+      desc: "Airdrop tokens to multiple addresses simultaneously. Perfect for community rewards and distributions.",
+      tag: "MULTI-SEND"
+    },
+    {
+      icon: "🔄",
+      title: "Smart Swap",
+      desc: "Swap any token pair through PancakeSwap with automatic routing. BNB and ERC20 supported.",
+      tag: "DEX"
+    },
+    {
+      icon: "🛡️",
+      title: "Emergency Withdraw",
+      desc: "Instantly recover all tokens from your agent in case of emergency. Owner-only safety feature.",
+      tag: "SECURITY"
+    },
+    {
+      icon: "🤖",
+      title: "On-Chain Autonomy",
+      desc: "Your AI agent executes trades autonomously based on your strategy. True decentralized AI.",
+      tag: "AI"
+    },
+    {
+      icon: "🔗",
+      title: "BAP-578 Standard",
+      desc: "Built on Non-Fungible Agents standard. Fully compatible with the BNB Chain AI ecosystem.",
+      tag: "STANDARD"
     }
-  }, [error, clearError]);
+  ];
 
-  const handleMint = async (data: any) => {
-    const result = await mintAgent(data);
-    if (result) {
-      showToast(t('nfa.toast.minted', { name: data.name }));
-      setTab("agents");
-    }
-  };
+  const codeExample = `// Batch swap example - swap multiple tokens at once
+await agentLogicPro.batchSwap(
+  agentId,
+  [
+    { tokenIn: WBNB, tokenOut: USDT, amountIn: 1e18, amountOutMin: 0 },
+    { tokenIn: WBNB, tokenOut: CAKE, amountIn: 0.5e18, amountOutMin: 0 }
+  ],
+  deadline
+);
 
-  const handleFund = async (id: number, amount: string) => {
-    const success = await fundAgent(id, amount);
-    if (success) showToast(t('nfa.toast.funded', { amount, id: id.toString() }));
-  };
-
-  const handleWithdraw = async (id: number, amount: string) => {
-    const success = await withdrawFromAgent(id, amount);
-    if (success) showToast(t('nfa.toast.withdrew', { amount, id: id.toString() }));
-  };
-
-  const handleEvolve = async (id: number, xp: number) => {
-    const success = await evolveAgent(id, xp);
-    if (success) showToast(t('nfa.toast.evolved', { xp: xp.toString(), id: id.toString() }));
-  };
-
-  const handleToggleActive = async (id: number) => {
-    const agent = agents.find(a => a.id === id);
-    if (agent) {
-      await toggleActive(id, !agent.active);
-    }
-  };
+// Batch transfer - airdrop to multiple addresses
+await agentLogicPro.batchTransferERC20(
+  agentId,
+  tokenAddress,
+  [addr1, addr2, addr3],
+  [amount1, amount2, amount3]
+);`;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white relative overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute -top-[100px] -right-[100px] w-[400px] h-[400px] bg-neon/[0.08] rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[10%] -left-[80px] w-[300px] h-[300px] bg-cyan-500/[0.06] rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[20%] w-[250px] h-[250px] bg-purple-500/[0.04] rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -top-[150px] -right-[150px] w-[500px] h-[500px] bg-neon/[0.08] rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[10%] -left-[100px] w-[400px] h-[400px] bg-cyan-500/[0.06] rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[50%] left-[50%] w-[300px] h-[300px] bg-purple-500/[0.04] rounded-full blur-[100px] pointer-events-none" />
       
-      {/* Grid Overlay */}
+      {/* Grid */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none opacity-30"
         style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
+          backgroundImage: "linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px)",
+          backgroundSize: "80px 80px",
         }}
       />
-
-      {/* Toast */}
-      {toast && (
-        <div className={`
-          fixed top-5 right-5 z-50 px-5 py-3 rounded-xl text-[13px] font-semibold
-          animate-[slideIn_0.3s_ease]
-          ${toast.type === "success" 
-            ? "bg-neon/15 border border-neon/30 text-neon" 
-            : "bg-red-500/15 border border-red-500/30 text-red-400"
-          }
-        `}>
-          {toast.msg}
-        </div>
-      )}
 
       {/* Header */}
       <header className="relative z-20 px-8 py-5 flex justify-between items-center border-b border-white/[0.04]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-neon to-cyan-400 flex items-center justify-center text-lg font-black text-black">
-            N
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon via-emerald-400 to-cyan-400 flex items-center justify-center text-lg font-black text-black shadow-lg shadow-neon/20">
+            ⚡
           </div>
           <div>
-            <div className="text-base font-bold tracking-wide">{t('nfa.title')}</div>
-            <div className="text-[10px] text-white/30 tracking-[1.5px] font-mono">{t('nfa.subtitle')}</div>
+            <div className="text-lg font-bold tracking-wide flex items-center gap-2">
+              NFA Pro
+              <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-neon/20 to-cyan-500/20 text-neon border border-neon/30">
+                v1.0
+              </span>
+            </div>
+            <div className="text-[10px] text-white/35 tracking-[2px] font-mono">ADVANCED AI AGENT OPERATIONS</div>
           </div>
         </div>
         
         <WalletConnect />
       </header>
 
-      {/* Main */}
-      <main className="relative z-10 p-8 max-w-[1200px] mx-auto">
+      {/* Hero Section */}
+      <section className="relative z-10 px-8 py-16 max-w-[1200px] mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neon/10 border border-neon/20 mb-6">
+          <span className="w-2 h-2 rounded-full bg-neon animate-pulse" />
+          <span className="text-[11px] font-bold tracking-wider text-neon">BNB AGENTS ARMY</span>
+        </div>
+        
+        <h1 className="text-5xl md:text-6xl font-black mb-4 leading-tight">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/60">
+            Real AI Agents
+          </span>
+          <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon to-cyan-400">
+            Running On-Chain
+          </span>
+        </h1>
+        
+        <p className="text-lg text-white/50 max-w-[600px] mx-auto mb-10 leading-relaxed">
+          NFA Pro enables your AI agents to execute complex DeFi operations autonomously. 
+          Batch swaps, multi-transfers, and smart trading — all in a single transaction.
+        </p>
+
         {/* Stats */}
-        <div className="flex gap-4 mb-8 flex-wrap">
-          <StatCard label={t('nfa.stats.totalAgents')} value={agents.length} />
-          <StatCard label={t('nfa.stats.totalBalance')} value={`${totalBalance} BNB`} accent="text-cyan-400" />
-          <StatCard label={t('nfa.stats.totalXp')} value={totalXP.toString()} accent="text-purple-400" />
-          <StatCard label={t('nfa.stats.active')} value={agents.filter(a => a.active).length} />
+        <div className="flex justify-center gap-12 mb-10">
+          <StatBox label="Contract" value="Verified" sub="BscScan" />
+          <StatBox label="Gas Saved" value="60%" sub="vs single txs" />
+          <StatBox label="Operations" value="6+" sub="Pro features" />
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-white/[0.02] rounded-xl p-1 border border-white/[0.04] w-fit">
-          <TabButton label={t('nfa.tabs.myAgents')} active={tab === "agents"} onClick={() => setTab("agents")} />
-          <TabButton label={t('nfa.tabs.mintNew')} active={tab === "mint"} onClick={() => setTab("mint")} />
+        {/* CTA Buttons */}
+        <div className="flex justify-center gap-4">
+          <a 
+            href="https://github.com/V-SK/synthlaunch-contracts"
+            target="_blank"
+            className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-neon to-emerald-400 text-black font-bold text-sm tracking-wide hover:opacity-90 transition-opacity flex items-center gap-2"
+          >
+            <span>View Source</span>
+            <span>→</span>
+          </a>
+          <a 
+            href="https://bscscan.com/address/0x7a08ff7ab3EF202F7B499648a25FCD94Fb5a8857#code"
+            target="_blank"
+            className="px-8 py-3.5 rounded-xl bg-white/[0.06] text-white font-bold text-sm tracking-wide hover:bg-white/[0.1] transition-colors border border-white/10"
+          >
+            BscScan ↗
+          </a>
         </div>
+      </section>
 
-        {/* Content */}
-        {tab === "mint" ? (
-          <MintPanel onMint={handleMint} loading={loading} mintPrice={mintPriceFormatted || "0.05"} t={t} />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
-            {/* Agent List */}
-            <div className="flex flex-col gap-3">
-              {loading && agents.length === 0 ? (
-                <div className="text-center py-10 text-white/25">Loading...</div>
-              ) : agents.length === 0 ? (
-                <div className="text-center p-10 text-white/25 bg-white/[0.02] rounded-2xl border border-dashed border-white/[0.08]">
-                  <div className="text-3xl mb-2">🦞</div>
-                  <div className="text-sm">{t('nfa.empty.title')}</div>
-                  <div className="text-xs mt-1">{t('nfa.empty.desc')}</div>
-                </div>
-              ) : (
-                agents.map(agent => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    selected={selectedAgentId === agent.id}
-                    onClick={() => setSelectedAgentId(agent.id)}
-                    t={t}
-                  />
-                ))
-              )}
-            </div>
+      {/* Features Grid */}
+      <section className="relative z-10 px-8 py-12 max-w-[1200px] mx-auto">
+        <h2 className="text-2xl font-bold text-center mb-3">Pro Features</h2>
+        <p className="text-white/40 text-center mb-10 text-sm">Everything your AI agent needs to operate autonomously</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {proFeatures.map((f, i) => (
+            <FeatureCard key={i} {...f} />
+          ))}
+        </div>
+      </section>
 
-            {/* Detail Panel */}
-            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-7">
-              <DetailPanel
-                agent={selectedAgent}
-                onFund={handleFund}
-                onWithdraw={handleWithdraw}
-                onEvolve={handleEvolve}
-                onToggleActive={handleToggleActive}
-                loading={loading}
-                t={t}
-              />
+      {/* Code Example */}
+      <section className="relative z-10 px-8 py-12 max-w-[900px] mx-auto">
+        <h2 className="text-xl font-bold text-center mb-2">Developer Integration</h2>
+        <p className="text-white/40 text-center mb-6 text-sm">Simple API for complex operations</p>
+        <CodeBlock code={codeExample} />
+      </section>
+
+      {/* Contract Addresses */}
+      <section className="relative z-10 px-8 py-12 max-w-[800px] mx-auto">
+        <h2 className="text-xl font-bold text-center mb-6">Deployed Contracts</h2>
+        
+        <div className="space-y-3">
+          {[
+            { name: "AgentLogic Pro", addr: AGENT_LOGIC_PRO, status: "✓ Verified" },
+            { name: "NFAv2", addr: NFAv2_ADDRESS, status: "✓ Verified" },
+            { name: "SynthLaunch Custody", addr: "0x3Fa33A0fb85f11A901e3616E10876d10018f43B7", status: "✓ Timelock" },
+          ].map((c, i) => (
+            <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <div>
+                <div className="font-semibold text-white text-sm">{c.name}</div>
+                <div className="font-mono text-[12px] text-white/40">{c.addr}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-neon font-medium">{c.status}</span>
+                <a 
+                  href={`https://bscscan.com/address/${c.addr}`}
+                  target="_blank"
+                  className="text-white/30 hover:text-white transition-colors text-sm"
+                >
+                  ↗
+                </a>
+              </div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 px-8 py-8 border-t border-white/[0.04] mt-12">
+        <div className="max-w-[1200px] mx-auto flex justify-between items-center">
+          <div className="text-[12px] text-white/30">
+            © 2026 SynthLaunch · Built for BNB Agents Army
           </div>
-        )}
-      </main>
-
-      <style jsx>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
+          <div className="flex gap-6">
+            <a href="https://twitter.com/synth_fun" target="_blank" className="text-white/30 hover:text-neon transition-colors text-sm">
+              Twitter
+            </a>
+            <a href="https://github.com/V-SK/synthlaunch-contracts" target="_blank" className="text-white/30 hover:text-neon transition-colors text-sm">
+              GitHub
+            </a>
+            <a href="https://synthlaunch.fun" className="text-white/30 hover:text-neon transition-colors text-sm">
+              Website
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
