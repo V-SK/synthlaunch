@@ -276,6 +276,44 @@ export async function POST(request: NextRequest) {
       return jsonError('Failed to create agent', 500);
     }
 
+    // 部署到 VPS
+    const agentId = created[0].id;
+    try {
+      const deployRes = await fetch('http://45.76.180.239:3456/deploy', {
+        method: 'POST',
+        headers: {
+          'X-Deploy-Secret': 'synth-deploy-2026',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bot_token: String(bot_token),
+          soul: description || `你是 ${name}，一个友好的 AI 助手。`,
+          model: 'gemini3',
+        }),
+      });
+
+      if (deployRes.ok) {
+        const deployData = await deployRes.json();
+        if (deployData.success && deployData.agentId) {
+          // 更新 container_id
+          await supabase.request(
+            `hosted_agents?id=eq.${agentId}`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ container_id: deployData.agentId, status: 'running' }),
+            }
+          );
+          console.log(`[agents][POST] deployed agent ${agentId}, container: ${deployData.agentId}`);
+        }
+      } else {
+        console.error(`[agents][POST] deploy failed for agent ${agentId}:`, await deployRes.text());
+      }
+    } catch (deployError) {
+      console.error(`[agents][POST] deploy error for agent ${agentId}:`, deployError);
+      // 不阻塞返回，部署失败但数据库记录已创建
+    }
+
     return NextResponse.json(created[0], { status: 201 });
   } catch (error) {
     console.error('[agents][POST] error:', error);
