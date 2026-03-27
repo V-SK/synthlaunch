@@ -9,6 +9,10 @@ export const CHAIN_CONFIG = {
     explorer: 'https://bscscan.com',
     flapUrl: 'https://flap.sh',
     vanitySuffix: { standard: '8888', tax: '7777' },
+    tokenImpl: {
+      standard: '0x8B4329947e34B6d56D71A3385caC122BaDe7d78D' as const,
+      tax: '0x29e6383F0ce68507b5A72a53c2B118a118332aA8' as const,
+    },
   },
   // X Layer Mainnet
   196: {
@@ -19,6 +23,10 @@ export const CHAIN_CONFIG = {
     explorer: 'https://www.oklink.com/x-layer',
     flapUrl: 'https://flap.sh',
     vanitySuffix: { standard: '1111', tax: '7777' },
+    tokenImpl: {
+      standard: '0x12Dc83157Bf1cfCB8Db5952b3ba5bb56Cc38f8C9' as const,
+      tax: '0xa9918579C9eD0899eCc7e449B9c59916Fb89bAF1' as const,
+    },
   },
 } as const;
 
