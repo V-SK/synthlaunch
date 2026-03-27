@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createWalletClient, createPublicClient, http, getContractAddress, keccak256, toBytes, toHex, zeroAddress } from 'viem';
+import { createWalletClient, createPublicClient, http, getContractAddress, keccak256, toBytes, toHex, zeroAddress, defineChain } from 'viem';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { generatePrivateKey } from 'viem/accounts';
 import { getDeployerAccount } from '@/lib/kms-signer';
 import { bsc } from 'viem/chains';
-import { FLAP_ABI, FLAP_ADDRESS } from '@/lib/contracts';
-import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
+import { CHAIN_CONFIG, DEFAULT_CHAIN_ID, FLAP_ABI, type SupportedChainId } from '@/lib/contracts';
+import { CUSTODY_ABI } from '@/lib/custody';
 import * as fs from 'fs';
 
 // --- Constants ---
 
 const PORTAL = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as const;
-const TAX_IMPL = '0x29e6383F0ce68507b5A72a53c2B118a118332aA8';
-const NON_TAX_IMPL = '0x8B4329947e34B6d56D71A3385caC122BaDe7d78D';
 const EIP1167_PREFIX = '0x3d602d80600a3d3981f3363d3d373d3d3d363d73';
 const EIP1167_SUFFIX = '5af43d82803e903d91602b57fd5bf3';
 
 const LAUNCHES_FILE = '/tmp/synthlaunch-launches.json';
 const MAX_LAUNCHES_PER_HANDLE_PER_DAY = 3; // Target handle can receive max 3 tokens per day
+
+const xlayer = defineChain({
+  id: 196,
+  name: 'X Layer',
+  nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://xlayerrpc.okx.com'] },
+    public: { http: ['https://xlayerrpc.okx.com'] },
+  },
+  blockExplorers: {
+    default: { name: 'OKLink', url: 'https://www.oklink.com/x-layer' },
+  },
+});
 
 // --- Helpers ---
 
@@ -78,9 +89,13 @@ function incrementHandleLaunch(handle: string): void {
   saveLaunches(launches);
 }
 
-async function findVanitySalt(hasTax: boolean): Promise<{ salt: `0x${string}`; tokenAddress: string }> {
-  const suffix = hasTax ? '7777' : '8888';
-  const impl = hasTax ? TAX_IMPL : NON_TAX_IMPL;
+async function findVanitySalt(
+  hasTax: boolean,
+  tokenImpl: { standard: string; tax: string },
+  vanitySuffix: { standard: string; tax: string }
+): Promise<{ salt: `0x${string}`; tokenAddress: string }> {
+  const suffix = hasTax ? vanitySuffix.tax : vanitySuffix.standard;
+  const impl = hasTax ? tokenImpl.tax : tokenImpl.standard;
   const bytecode = buildBytecode(impl);
   const maxIterations = 500000;
 
@@ -163,13 +178,18 @@ async function uploadToIPFS(imageUrl: string, description: string, website?: str
 
 // --- Twitter Launch Handler ---
 
-async function handleTwitterLaunch(body: {
-  target_handle: string;
-  token_name?: string;
-  symbol?: string;
-  tax_rate?: number;
-  tax_rate_bps?: number;
-}) {
+async function handleTwitterLaunch(
+  body: {
+    target_handle: string;
+    token_name?: string;
+    symbol?: string;
+    tax_rate?: number;
+    tax_rate_bps?: number;
+  },
+  chainId: SupportedChainId
+) {
+  const chainConfig = CHAIN_CONFIG[chainId];
+  const chain = chainId === 56 ? bsc : xlayer;
   const { target_handle, token_name, symbol, tax_rate } = body;
 
   if (!target_handle) {
@@ -229,7 +249,7 @@ async function handleTwitterLaunch(body: {
   let tokenAddress: string;
   try {
     console.log(`[launch/twitter] Mining vanity salt (hasTax: ${hasTax})...`);
-    const result = await findVanitySalt(hasTax);
+    const result = await findVanitySalt(hasTax, chainConfig.tokenImpl, chainConfig.vanitySuffix);
     salt = result.salt;
     tokenAddress = result.tokenAddress;
   } catch (err: unknown) {
@@ -241,22 +261,22 @@ async function handleTwitterLaunch(body: {
   const account = await getDeployerAccount();
   const walletClient = createWalletClient({
     account,
-    chain: bsc,
-    transport: http('https://bsc-dataseed.binance.org'),
+    chain,
+    transport: http(chainConfig.rpc),
   });
   const publicClient = createPublicClient({
-    chain: bsc,
-    transport: http('https://bsc-dataseed.binance.org'),
+    chain,
+    transport: http(chainConfig.rpc),
   });
 
-  const beneficiary = hasTax ? CUSTODY_ADDRESS : account.address;
+  const beneficiary = hasTax ? chainConfig.custodyAddress : account.address;
   const migratorType = hasTax ? 1 : 0;
 
   let txHash: `0x${string}`;
   try {
     console.log(`[launch/twitter] Sending newTokenV2 transaction...`);
     txHash = await walletClient.writeContract({
-      address: FLAP_ADDRESS,
+      address: chainConfig.flapAddress,
       abi: FLAP_ABI,
       functionName: 'newTokenV2',
       args: [{
@@ -293,7 +313,7 @@ async function handleTwitterLaunch(body: {
     try {
       console.log(`[launch/twitter] Registering token for ${agentName} in custody...`);
       const registerHash = await walletClient.writeContract({
-        address: CUSTODY_ADDRESS,
+        address: chainConfig.custodyAddress,
         abi: CUSTODY_ABI,
         functionName: 'registerToken',
         args: [tokenAddress as `0x${string}`, agentName],
@@ -328,7 +348,7 @@ async function handleTwitterLaunch(body: {
           tx_hash: txHash,
           launch_type: 'twitter',
           tax_rate: taxRateBps,
-          beneficiary: CUSTODY_ADDRESS,
+          beneficiary: chainConfig.custodyAddress,
         }),
       });
       console.log(`[launch/twitter] Supabase registration done`);
@@ -350,7 +370,7 @@ async function handleTwitterLaunch(body: {
     symbol: finalSymbol,
     tax_rate: taxRateBps / 100,
     tx_hash: txHash,
-    flap_url: `https://flap.sh/token/${tokenAddress}?chain=bsc`,
+    flap_url: `${chainConfig.flapUrl}/token/${tokenAddress}`,
     bscscan_url: `https://bscscan.com/token/${tokenAddress}`,
   };
 
@@ -371,11 +391,20 @@ export async function POST(request: NextRequest) {
 
     // 1. Validate request
     const body = await request.json();
+    const rawChainId = body.chainId ?? DEFAULT_CHAIN_ID;
+    const parsedChainId = typeof rawChainId === 'string' ? Number(rawChainId) : rawChainId;
+    if (parsedChainId !== 56 && parsedChainId !== 196) {
+      return errorResponse('Unsupported chainId. Use 56 (BSC) or 196 (X Layer).', 'INVALID_CHAIN');
+    }
+    const chainId = parsedChainId as SupportedChainId;
+    const chainConfig = CHAIN_CONFIG[chainId];
+    const chain = chainId === 56 ? bsc : xlayer;
+
     const { source, moltbook_key, post_id, target_handle, token_name, symbol, tax_rate } = body;
 
     // Handle Twitter-based launch
     if (source === 'twitter') {
-      return await handleTwitterLaunch(body);
+      return await handleTwitterLaunch(body, chainId);
     }
 
     // Original Moltbook flow below
@@ -498,7 +527,7 @@ export async function POST(request: NextRequest) {
     const migratorType = hasTax ? 1 : 0;
 
     try {
-      const result = await findVanitySalt(hasTax);
+      const result = await findVanitySalt(hasTax, chainConfig.tokenImpl, chainConfig.vanitySuffix);
       salt = result.salt;
       tokenAddress = result.tokenAddress;
     } catch (err: unknown) {
@@ -511,23 +540,23 @@ export async function POST(request: NextRequest) {
     const account = await getDeployerAccount();
     const walletClient = createWalletClient({
       account,
-      chain: bsc,
-      transport: http('https://bsc-dataseed.binance.org'),
+      chain,
+      transport: http(chainConfig.rpc),
     });
     const publicClient = createPublicClient({
-      chain: bsc,
-      transport: http('https://bsc-dataseed.binance.org'),
+      chain,
+      transport: http(chainConfig.rpc),
     });
 
     // When taxRate > 0, use custody contract as beneficiary so fees flow to custody
-    const beneficiary = hasTax ? CUSTODY_ADDRESS : (tokenDetails.wallet as `0x${string}`);
+    const beneficiary = hasTax ? chainConfig.custodyAddress : (tokenDetails.wallet as `0x${string}`);
     console.log(`[launch] Beneficiary: ${beneficiary} (custody: ${hasTax})`);
 
     console.log(`[launch] Sending newTokenV2 transaction...`);
     let txHash: `0x${string}`;
     try {
       txHash = await walletClient.writeContract({
-        address: FLAP_ADDRESS,
+        address: chainConfig.flapAddress,
         abi: FLAP_ABI,
         functionName: 'newTokenV2',
         args: [{
@@ -567,7 +596,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`[launch] Registering token ${tokenAddress} for agent ${agentName} in custody contract...`);
         const registerHash = await walletClient.writeContract({
-          address: CUSTODY_ADDRESS,
+          address: chainConfig.custodyAddress,
           abi: CUSTODY_ABI,
           functionName: 'registerToken',
           args: [tokenAddress as `0x${string}`, agentName],
@@ -605,7 +634,7 @@ export async function POST(request: NextRequest) {
             tx_hash: txHash,
             launch_type: 'api',
             tax_rate: taxRate,
-            beneficiary: CUSTODY_ADDRESS,
+            beneficiary: chainConfig.custodyAddress,
           }),
         });
         console.log(`[launch] Supabase register: ${sbRes.status}`);
@@ -624,7 +653,7 @@ export async function POST(request: NextRequest) {
       agent: agentName,
       token_address: tokenAddress,
       tx_hash: txHash,
-      flap_url: `https://flap.sh/token/${tokenAddress}?chain=bsc`,
+      flap_url: `${chainConfig.flapUrl}/token/${tokenAddress}`,
       bscscan_url: `https://bscscan.com/token/${tokenAddress}`,
     };
 
