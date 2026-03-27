@@ -140,7 +140,9 @@ function HomeInner() {
           <span className="text-synth-green glow-text-green">{t('home.subtitle')}</span>
         </h1>
         <p className="text-synth-muted max-w-xl mx-auto text-sm">
-          {t('home.heroDesc')}
+          {selectedChain === 196
+            ? '在 X Layer 上创建代币，交易手续费自动分配给 AI Agent。'
+            : t('home.heroDesc')}
           <br />
           {t('home.heroPowered')}
         </p>
