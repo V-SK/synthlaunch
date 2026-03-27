@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaxRateSlider } from '@/components/TaxRateSlider';
@@ -919,7 +919,9 @@ function LaunchPageInner() {
 export default function LaunchPage() {
   return (
     <ErrorBoundary>
-      <LaunchPageInner />
+      <Suspense fallback={<div className="text-center py-12 text-synth-muted font-mono">Loading...</div>}>
+        <LaunchPageInner />
+      </Suspense>
     </ErrorBoundary>
   );
 }
