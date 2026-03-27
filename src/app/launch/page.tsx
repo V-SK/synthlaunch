@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaxRateSlider } from '@/components/TaxRateSlider';
 import { AgentSelector } from '@/components/AgentSelector';
@@ -12,6 +12,7 @@ import { useCreateFairMint } from '@/hooks/useFairMint';
 import { useHasSynthID } from '@/hooks/useSynthID';
 import { uploadToFlap } from '@/lib/ipfs';
 import { useI18n } from '@/lib/i18n';
+import { CHAIN_CONFIG } from '@/lib/contracts';
 
 type LaunchStep = 'idle' | 'uploading' | 'mining-salt' | 'sending-tx' | 'confirming' | 'success' | 'error';
 type LaunchMode = 'curve' | 'fairMint' | 'agentOnly';
@@ -494,7 +495,9 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
 function LaunchPageInner() {
   const { t } = useI18n();
   const { isConnected, address } = useAccount();
-  const { launch, hash, isPending, isConfirming, isSuccess, error: txError, reset } = useLaunchToken();
+  const searchParams = useSearchParams();
+  const [chainId, setChainId] = useState<56 | 196>(56);
+  const { launch, hash, isPending, isConfirming, isSuccess, error: txError, reset } = useLaunchToken(chainId);
   const { hasSynthID } = useHasSynthID(address);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -517,6 +520,24 @@ function LaunchPageInner() {
   const [step, setStep] = useState<LaunchStep>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [tokenAddress, setTokenAddress] = useState('');
+
+  useEffect(() => {
+    const raw = searchParams.get('chainId');
+    const parsed = Number(raw);
+    if (parsed === 56 || parsed === 196) {
+      setChainId(parsed);
+    }
+  }, [searchParams]);
+
+  const chainOptions = useMemo(
+    () => ({
+      56: { id: 56 as const, label: 'BSC', badge: t('home.liveOnBsc'), nativeSymbol: CHAIN_CONFIG[56].nativeSymbol },
+      196: { id: 196 as const, label: 'X Layer', badge: t('home.liveOnXLayer'), nativeSymbol: CHAIN_CONFIG[196].nativeSymbol },
+    }),
+    [t]
+  );
+
+  const activeChain = chainOptions[chainId] ?? chainOptions[56];
 
   const handleImageChange = (file: File | null) => {
     if (!file) return;
@@ -567,6 +588,7 @@ function LaunchPageInner() {
         symbol: form.symbol,
         taxRate: form.taxRate,
         devBuyAmount: form.devBuyAmount,
+        chainId,
         agentId: form.agentId,
         website: form.website,
         twitter: form.twitter,
@@ -612,6 +634,12 @@ function LaunchPageInner() {
         <h1 className="text-2xl font-bold text-synth-text terminal-prompt">
           {t('launch.title')}
         </h1>
+        <div
+          className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono"
+          title={`${activeChain.label} (${activeChain.nativeSymbol})`}
+        >
+          ● {activeChain.badge}
+        </div>
         <p className="text-sm text-synth-muted">
           {t('launch.subtitle')}
         </p>

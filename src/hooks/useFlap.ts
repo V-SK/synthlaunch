@@ -1,11 +1,12 @@
 'use client';
 
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { bsc } from 'wagmi/chains';
 import { parseEther } from 'viem';
-import { FLAP_ADDRESS, FLAP_ABI } from '@/lib/contracts';
-import { CUSTODY_ADDRESS } from '@/lib/custody';
+import { CHAIN_CONFIG, DEFAULT_CHAIN_ID, FLAP_ABI, type SupportedChainId } from '@/lib/contracts';
 import { findVanitySalt } from '@/lib/salt';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { xlayer } from '@/lib/wagmi';
 
 interface LaunchTokenParams {
   metaCid: string;
@@ -13,6 +14,7 @@ interface LaunchTokenParams {
   symbol: string;
   taxRate: number;
   devBuyAmount: string;
+  chainId?: SupportedChainId;
   agentId?: string;
   website?: string;
   twitter?: string;
@@ -21,18 +23,25 @@ interface LaunchTokenParams {
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
 
-export function useLaunchToken() {
+export function useLaunchToken(defaultChainId: SupportedChainId = DEFAULT_CHAIN_ID) {
   const { address } = useAccount();
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
   const [launchParams, setLaunchParams] = useState<LaunchTokenParams | null>(null);
   const [registered, setRegistered] = useState(false);
+  const [activeChainId, setActiveChainId] = useState<SupportedChainId>(defaultChainId);
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
+    chainId: activeChainId,
   });
+
+  useEffect(() => {
+    setActiveChainId(defaultChainId);
+  }, [defaultChainId]);
 
   // Register token to Supabase after tx confirms
   const registerToken = useCallback(async (txHash: string, params: LaunchTokenParams, creator: string) => {
+    const chainConfig = CHAIN_CONFIG[params.chainId ?? defaultChainId] ?? CHAIN_CONFIG[DEFAULT_CHAIN_ID];
     const taxBps = Math.round(params.taxRate * 100);
     const hasTax = taxBps > 0;
     const selfMode = !params.agentId || params.launchType === 'client';
@@ -50,7 +59,7 @@ export function useLaunchToken() {
           creator,
           agent_name: params.agentId || '',
           tax_rate: taxBps,
-          beneficiary: (hasTax && !selfMode) ? CUSTODY_ADDRESS : creator,
+          beneficiary: (hasTax && !selfMode) ? chainConfig.custodyAddress : creator,
           tx_hash: txHash,
           launch_type: params.launchType || 'client',
           _rk: process.env.NEXT_PUBLIC_REGISTER_KEY || '',
@@ -64,7 +73,7 @@ export function useLaunchToken() {
     } catch (err) {
       console.error('[register] Failed:', err);
     }
-  }, []);
+  }, [defaultChainId]);
 
   useEffect(() => {
     if (isSuccess && hash && launchParams && address && !registered) {
@@ -76,23 +85,29 @@ export function useLaunchToken() {
   const launch = async (params: LaunchTokenParams) => {
     if (!address) throw new Error('Wallet not connected');
 
+    const resolvedChainId = params.chainId ?? defaultChainId;
+    const chain = resolvedChainId === xlayer.id ? xlayer : bsc;
+    const chainConfig = CHAIN_CONFIG[chain.id] ?? CHAIN_CONFIG[DEFAULT_CHAIN_ID];
+
     const taxBps = Math.round(params.taxRate * 100); // percent to basis points
     const hasTax = taxBps > 0;
     const devBuyWei = parseEther(params.devBuyAmount || '0');
 
     // Save params for registration after tx confirms
-    setLaunchParams(params);
+    setLaunchParams({ ...params, chainId: resolvedChainId });
     setRegistered(false);
+    setActiveChainId(chain.id as SupportedChainId);
 
     // Mine a vanity salt (address must end with 7777 for tax, 8888 for non-tax)
-    const salt = await findVanitySalt(hasTax);
+    const salt = await findVanitySalt(hasTax, chain.id as SupportedChainId);
 
     // Agent/Twitter mode with tax → custody contract; self mode → user wallet
     const isSelfMode = !params.agentId || params.launchType === 'client';
-    const beneficiary = (hasTax && !isSelfMode) ? CUSTODY_ADDRESS : address;
+    const beneficiary = (hasTax && !isSelfMode) ? chainConfig.custodyAddress : address;
 
     writeContract({
-      address: FLAP_ADDRESS,
+      chainId: chain.id,
+      address: chainConfig.flapAddress,
       abi: FLAP_ABI,
       functionName: 'newTokenV2',
       args: [
@@ -104,7 +119,7 @@ export function useLaunchToken() {
           salt,
           taxRate: taxBps,
           migratorType: hasTax ? 1 : 0,          // 1=V2_MIGRATOR (tax), 0=V3_MIGRATOR (no tax)
-          quoteToken: ZERO_ADDRESS,              // BNB
+          quoteToken: ZERO_ADDRESS,              // Native coin
           quoteAmt: devBuyWei,
           beneficiary,
           permitData: '0x' as `0x${string}`,
