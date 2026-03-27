@@ -8,8 +8,10 @@ import { Pagination } from '@/components/Pagination';
 import type { Token } from '@/lib/api';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
+import { CHAIN_CONFIG } from '@/lib/contracts';
 
 const TOKENS_PER_PAGE = 12;
+const CHAIN_STORAGE_KEY = 'synthlaunch:chainId';
 
 type SortTab = 'hot' | 'new' | 'top' | 'dex';
 
@@ -21,12 +23,27 @@ interface TopEarner {
 
 function HomeInner() {
   const { t } = useI18n();
+  const [selectedChain, setSelectedChain] = useState<56 | 196>(56);
   const [sort, setSort] = useState<SortTab>('new');
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [topEarners, setTopEarners] = useState<TopEarner[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(CHAIN_STORAGE_KEY);
+    const storedId = Number(stored);
+    if (storedId in CHAIN_CONFIG) {
+      setSelectedChain(storedId as 56 | 196);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(CHAIN_STORAGE_KEY, String(selectedChain));
+  }, [selectedChain]);
 
   useEffect(() => {
     fetch('/api/leaderboard')
@@ -67,6 +84,16 @@ function HomeInner() {
     { key: 'dex', label: 'DEX', icon: '🎓' },
   ];
 
+  const chainOptions = useMemo(
+    () => [
+      { id: 56 as const, label: 'BSC', badge: t('home.liveOnBsc'), nativeSymbol: CHAIN_CONFIG[56].nativeSymbol },
+      { id: 196 as const, label: 'X Layer', badge: t('home.liveOnXLayer'), nativeSymbol: CHAIN_CONFIG[196].nativeSymbol },
+    ],
+    [t]
+  );
+
+  const activeChain = chainOptions.find((chain) => chain.id === selectedChain) ?? chainOptions[0];
+
   const paginatedTokens = useMemo(() => {
     const start = (currentPage - 1) * TOKENS_PER_PAGE;
     return tokens.slice(start, start + TOKENS_PER_PAGE);
@@ -78,8 +105,34 @@ function HomeInner() {
     <div className="space-y-8">
       {/* Hero */}
       <section className="text-center py-12 space-y-4">
-        <div className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono mb-4">
-          ● {t('home.liveOnBsc')}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div
+            className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono"
+            title={`${activeChain.label} (${activeChain.nativeSymbol})`}
+          >
+            ● {activeChain.badge}
+          </div>
+          <div className="flex items-center gap-1 rounded border border-synth-border bg-synth-surface/60 p-0.5">
+            {chainOptions.map((chain) => {
+              const isActive = selectedChain === chain.id;
+              return (
+                <button
+                  key={chain.id}
+                  type="button"
+                  onClick={() => setSelectedChain(chain.id)}
+                  className={`px-2.5 py-1 rounded text-[10px] font-mono transition-all duration-200 ${
+                    isActive
+                      ? 'text-synth-green bg-synth-green/10 border border-synth-green/30'
+                      : 'text-synth-muted hover:text-synth-text'
+                  }`}
+                  aria-pressed={isActive}
+                  title={`${chain.label} (${chain.nativeSymbol})`}
+                >
+                  {chain.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-synth-text">
           {t('home.heroTitle')}
@@ -92,7 +145,7 @@ function HomeInner() {
           {t('home.heroPowered')}
         </p>
         <div className="flex items-center justify-center gap-3 pt-4">
-          <Link href="/launch" className="btn-primary">
+          <Link href={`/launch?chainId=${selectedChain}`} className="btn-primary">
             {t('launch.launchToken')} →
           </Link>
           <Link
@@ -108,7 +161,7 @@ function HomeInner() {
       </section>
 
       {/* Stats */}
-      <StatsBar />
+      <StatsBar chainId={selectedChain} />
 
       {/* NFA Pro Banner */}
       <section className="relative overflow-hidden">

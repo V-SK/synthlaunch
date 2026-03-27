@@ -3,12 +3,18 @@
 import { useEffect, useState } from 'react';
 import type { PlatformStats } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { CHAIN_CONFIG } from '@/lib/contracts';
 
-export function StatsBar() {
+type StatsBarProps = {
+  chainId?: 56 | 196;
+};
+
+export function StatsBar({ chainId = 56 }: StatsBarProps) {
   const { t } = useI18n();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [totalRevenueBnb, setTotalRevenueBnb] = useState<string>('0');
   const [loading, setLoading] = useState(true);
+  const nativeSymbol = CHAIN_CONFIG[chainId]?.nativeSymbol ?? 'BNB';
 
   useEffect(() => {
     Promise.all([
@@ -29,9 +35,9 @@ export function StatsBar() {
 
   const items = [
     { label: t('stats.totalTokens'), value: stats?.totalTokens?.toString() || '0', icon: '◆', color: 'text-synth-green' },
-    { label: t('stats.totalReserve'), value: `${stats?.totalReserveBnb || '0'} BNB`, icon: '◈', color: 'text-synth-cyan' },
+    { label: t('stats.totalReserve'), value: `${stats?.totalReserveBnb || '0'} ${nativeSymbol}`, icon: '◈', color: 'text-synth-cyan' },
     { label: t('stats.totalMarketCap'), value: stats?.totalMarketCap || '$0', icon: '◇', color: 'text-synth-purple' },
-    { label: t('stats.totalRevenue'), value: `${totalRevenueBnb} BNB`, icon: '💰', color: 'text-synth-cyan' },
+    { label: t('stats.totalRevenue'), value: `${totalRevenueBnb} ${nativeSymbol}`, icon: '💰', color: 'text-synth-cyan' },
     { label: t('stats.activeDex'), value: `${stats?.activeTokens || 0} / ${stats?.dexTokens || 0}`, icon: '▲', color: 'text-synth-green' },
   ];
 
