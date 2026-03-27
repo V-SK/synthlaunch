@@ -1,6 +1,11 @@
 // SynthLaunchCustody contract constants
+import { CHAIN_CONFIG, type SupportedChainId } from './contracts';
 
-export const CUSTODY_ADDRESS = '0x3Fa33A0fb85f11A901e3616E10876d10018f43B7' as const;
+export const CUSTODY_ADDRESS = CHAIN_CONFIG[56].custodyAddress; // BSC default (legacy)
+
+export function getCustodyAddress(chainId: SupportedChainId): string {
+  return CHAIN_CONFIG[chainId]?.custodyAddress ?? CHAIN_CONFIG[56].custodyAddress;
+}
 
 export const CUSTODY_ABI = [
   {

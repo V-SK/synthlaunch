@@ -102,6 +102,17 @@ contract SynthLaunchCustody is Ownable, ReentrancyGuard {
 
     // ============ 接收 BNB ============
 
+    /// @notice 链下 scanner 手动补记账（用于不支持 taxToken() 接口的链）
+    /// @param token 产生 fee 的 token 合约地址
+    /// @param amount fee 金额（wei）
+    function recordFee(address token, uint256 amount) external onlyOperator {
+        require(bytes(tokenAgent[token]).length > 0, "Token not registered");
+        require(amount > 0, "Zero amount");
+        tokenFees[token] += amount;
+        totalRecorded += amount;
+        emit FeeRecorded(token, amount);
+    }
+
     /// @notice 接收 fee 时指定 token 地址（如果调用方支持）
     /// @param token 产生 fee 的 token 合约地址
     function receiveFee(address token) external payable {

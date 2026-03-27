@@ -122,27 +122,27 @@ function TierCard({
   const t = texts[lang];
   return (
     <div className={`
-      relative bg-white/[0.03] border rounded-2xl p-6 flex flex-col
+      relative bg-white/[0.03] border rounded-2xl p-4 md:p-6 flex flex-col
       ${isPopular 
-        ? "border-neon/40 scale-105 shadow-lg shadow-neon/10" 
+        ? "border-neon/40 md:scale-105 shadow-lg shadow-neon/10 order-first md:order-none" 
         : "border-white/[0.06]"
       }
     `}>
       {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-neon to-cyan-400 rounded-full text-[10px] font-bold text-black tracking-wider">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-neon to-cyan-400 rounded-full text-[9px] md:text-[10px] font-bold text-black tracking-wider">
           {t.recommended}
         </div>
       )}
-      <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-white mb-1">{tier.name}</h3>
-        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon to-cyan-400">
+      <div className="text-center mb-3 md:mb-4">
+        <h3 className="text-lg md:text-xl font-bold text-white mb-1">{tier.name}</h3>
+        <div className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon to-cyan-400">
           {tier.price}
         </div>
-        <div className="text-xs text-white/40 mt-1">{tier.desc}</div>
+        <div className="text-[11px] md:text-xs text-white/40 mt-1">{tier.desc}</div>
       </div>
-      <ul className="flex-1 space-y-2 mb-4">
+      <ul className="flex-1 space-y-1.5 md:space-y-2 mb-3 md:mb-4">
         {tier.features.map((f, i) => (
-          <li key={i} className="flex items-center gap-2 text-[13px] text-white/60">
+          <li key={i} className="flex items-center gap-2 text-[12px] md:text-[13px] text-white/60">
             <span className="text-neon">✓</span>
             {f}
           </li>
@@ -158,27 +158,27 @@ function FeatureCard({
   icon: string; title: string; desc: string; tag?: string 
 }) {
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 hover:border-neon/20 transition-all group">
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon/20 to-cyan-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+    <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl md:rounded-2xl p-4 md:p-5 hover:border-neon/20 transition-all group">
+      <div className="flex items-start justify-between mb-2 md:mb-3">
+        <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-gradient-to-br from-neon/20 to-cyan-500/20 flex items-center justify-center text-lg md:text-xl group-hover:scale-110 transition-transform">
           {icon}
         </div>
         {tag && (
-          <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-neon/10 text-neon border border-neon/20">
+          <span className="text-[8px] md:text-[9px] font-bold tracking-wider px-1.5 md:px-2 py-0.5 rounded-full bg-neon/10 text-neon border border-neon/20">
             {tag}
           </span>
         )}
       </div>
-      <h3 className="text-base font-bold text-white mb-1">{title}</h3>
-      <p className="text-[12px] text-white/45 leading-relaxed">{desc}</p>
+      <h3 className="text-sm md:text-base font-bold text-white mb-1">{title}</h3>
+      <p className="text-[11px] md:text-[12px] text-white/45 leading-relaxed">{desc}</p>
     </div>
   );
 }
 
 function CodeBlock({ code }: { code: string }) {
   return (
-    <pre className="bg-black/40 border border-white/[0.08] rounded-xl p-4 overflow-x-auto">
-      <code className="text-[11px] text-neon/80 font-mono leading-relaxed">{code}</code>
+    <pre className="bg-black/40 border border-white/[0.08] rounded-xl p-3 md:p-4 overflow-x-auto">
+      <code className="text-[10px] md:text-[11px] text-neon/80 font-mono leading-relaxed whitespace-pre-wrap break-all md:whitespace-pre md:break-normal">{code}</code>
     </pre>
   );
 }
@@ -215,53 +215,59 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
         }}
       />
 
-      {/* Header */}
-      <header className="relative z-20 px-8 py-5 flex justify-between items-center border-b border-white/[0.04]">
-        <div className="flex items-center gap-3">
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon via-emerald-400 to-cyan-400 flex items-center justify-center text-lg font-black text-black shadow-lg shadow-neon/20">
+      {/* Header - Mobile Optimized */}
+      <header className="relative z-20 px-4 md:px-8 py-4 flex justify-between items-center border-b border-white/[0.04]">
+        <div className="flex items-center gap-2 md:gap-3">
+          <a href="/" className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-neon via-emerald-400 to-cyan-400 flex items-center justify-center text-base md:text-lg font-black text-black shadow-lg shadow-neon/20">
               ⚡
             </div>
             <div>
-              <div className="text-lg font-bold tracking-wide flex items-center gap-2">
+              <div className="text-base md:text-lg font-bold tracking-wide flex items-center gap-1.5 md:gap-2">
                 NFA Pro
-                <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-neon/20 to-cyan-500/20 text-neon border border-neon/30">
+                <span className="hidden sm:inline text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-neon/20 to-cyan-500/20 text-neon border border-neon/30">
                   v1.0
                 </span>
               </div>
-              <div className="text-[10px] text-white/35 tracking-[2px] font-mono">BAP-578 STANDARD</div>
+              <div className="text-[9px] md:text-[10px] text-white/35 tracking-[1px] md:tracking-[2px] font-mono">BAP-578</div>
             </div>
           </a>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Docs Link */}
+          <a 
+            href="/docs" 
+            className="px-2 md:px-3 py-1 md:py-1.5 text-[11px] md:text-xs text-white/50 hover:text-neon transition-colors"
+          >
+            Docs
+          </a>
           {/* Language Switch */}
           <div className="flex bg-white/[0.04] rounded-lg p-0.5">
             <button 
               onClick={() => setLang("en")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${lang === "en" ? "bg-neon/20 text-neon" : "text-white/40 hover:text-white/60"}`}
+              className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-[11px] md:text-xs font-medium transition-colors ${lang === "en" ? "bg-neon/20 text-neon" : "text-white/40 hover:text-white/60"}`}
             >
               EN
             </button>
             <button 
               onClick={() => setLang("zh")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${lang === "zh" ? "bg-neon/20 text-neon" : "text-white/40 hover:text-white/60"}`}
+              className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-[11px] md:text-xs font-medium transition-colors ${lang === "zh" ? "bg-neon/20 text-neon" : "text-white/40 hover:text-white/60"}`}
             >
-              中文
+              中
             </button>
           </div>
-          <WalletConnect />
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative z-10 px-8 py-14 max-w-[1200px] mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neon/10 border border-neon/20 mb-6">
+      {/* Hero Section - Mobile Optimized */}
+      <section className="relative z-10 px-4 md:px-8 py-10 md:py-14 max-w-[1200px] mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 rounded-full bg-neon/10 border border-neon/20 mb-4 md:mb-6">
           <span className="w-2 h-2 rounded-full bg-neon animate-pulse" />
-          <span className="text-[11px] font-bold tracking-wider text-neon">{t.badge}</span>
+          <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-neon">{t.badge}</span>
         </div>
         
-        <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
+        <h1 className="text-3xl md:text-5xl font-black mb-3 md:mb-4 leading-tight">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/60">
             {t.heroTitle1}
           </span>
@@ -271,16 +277,16 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
           </span>
         </h1>
         
-        <p className="text-base text-white/50 max-w-[550px] mx-auto mb-8 leading-relaxed">
+        <p className="text-sm md:text-base text-white/50 max-w-[550px] mx-auto mb-6 md:mb-8 leading-relaxed px-2">
           {t.heroDesc}
         </p>
 
-        {/* CTA Buttons */}
-        <div className="flex justify-center gap-4 mb-12">
+        {/* CTA Buttons - Stack on Mobile */}
+        <div className="flex flex-col sm:flex-row justify-center gap-3 mb-8 md:mb-12 px-4 sm:px-0">
           <a 
             href="https://github.com/V-SK/synthlaunch-contracts"
             target="_blank"
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-neon to-emerald-400 text-black font-bold text-sm tracking-wide hover:opacity-90 transition-opacity flex items-center gap-2"
+            className="px-5 md:px-6 py-2.5 md:py-3 rounded-xl bg-gradient-to-r from-neon to-emerald-400 text-black font-bold text-sm tracking-wide hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
           >
             <span>{t.viewSource}</span>
             <span>→</span>
@@ -288,55 +294,55 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
           <a 
             href="https://bscscan.com/address/0x7a08ff7ab3EF202F7B499648a25FCD94Fb5a8857#code"
             target="_blank"
-            className="px-6 py-3 rounded-xl bg-white/[0.06] text-white font-bold text-sm tracking-wide hover:bg-white/[0.1] transition-colors border border-white/10"
+            className="px-5 md:px-6 py-2.5 md:py-3 rounded-xl bg-white/[0.06] text-white font-bold text-sm tracking-wide hover:bg-white/[0.1] transition-colors border border-white/10 flex items-center justify-center"
           >
             BscScan ↗
           </a>
         </div>
       </section>
 
-      {/* Tier Comparison */}
-      <section className="relative z-10 px-8 py-10 max-w-[1000px] mx-auto">
-        <h2 className="text-2xl font-bold text-center mb-2">{t.tierTitle}</h2>
-        <p className="text-white/40 text-center mb-8 text-sm">{t.tierDesc}</p>
+      {/* Tier Comparison - Mobile Optimized */}
+      <section className="relative z-10 px-4 md:px-8 py-8 md:py-10 max-w-[1000px] mx-auto">
+        <h2 className="text-xl md:text-2xl font-bold text-center mb-2">{t.tierTitle}</h2>
+        <p className="text-white/40 text-center mb-6 md:mb-8 text-xs md:text-sm">{t.tierDesc}</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-start">
           <TierCard tier={t.lite} lang={lang} />
           <TierCard tier={t.standard} lang={lang} />
           <TierCard tier={t.pro} isPopular lang={lang} />
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="relative z-10 px-8 py-10 max-w-[1100px] mx-auto">
-        <h2 className="text-xl font-bold text-center mb-2">{t.features}</h2>
-        <p className="text-white/40 text-center mb-8 text-sm">{t.featuresDesc}</p>
+      {/* Features Grid - Mobile Optimized */}
+      <section className="relative z-10 px-4 md:px-8 py-8 md:py-10 max-w-[1100px] mx-auto">
+        <h2 className="text-lg md:text-xl font-bold text-center mb-2">{t.features}</h2>
+        <p className="text-white/40 text-center mb-6 md:mb-8 text-xs md:text-sm">{t.featuresDesc}</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {t.featureCards.map((f, i) => (
             <FeatureCard key={i} {...f} />
           ))}
         </div>
       </section>
 
-      {/* Alice Demo */}
-      <section className="relative z-10 px-8 py-10 max-w-[900px] mx-auto">
-        <div className="bg-gradient-to-br from-neon/[0.08] to-cyan-500/[0.05] border border-neon/20 rounded-2xl p-8">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-neon to-cyan-400 flex items-center justify-center text-4xl shadow-lg shadow-neon/30">
+      {/* Alice Demo - Mobile Optimized */}
+      <section className="relative z-10 px-4 md:px-8 py-8 md:py-10 max-w-[900px] mx-auto">
+        <div className="bg-gradient-to-br from-neon/[0.08] to-cyan-500/[0.05] border border-neon/20 rounded-2xl p-5 md:p-8">
+          <div className="flex flex-col md:flex-row gap-5 md:gap-8 items-center">
+            <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-neon to-cyan-400 flex items-center justify-center text-3xl md:text-4xl shadow-lg shadow-neon/30">
               🤖
             </div>
             <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                <h3 className="text-2xl font-bold text-white">{t.aliceTitle}</h3>
-                <span className="px-2 py-0.5 rounded-full bg-neon/20 text-neon text-[10px] font-bold animate-pulse">
+              <div className="flex items-center justify-center md:justify-start gap-2 md:gap-3 mb-2">
+                <h3 className="text-xl md:text-2xl font-bold text-white">{t.aliceTitle}</h3>
+                <span className="px-2 py-0.5 rounded-full bg-neon/20 text-neon text-[9px] md:text-[10px] font-bold animate-pulse">
                   {t.aliceActive}
                 </span>
               </div>
-              <p className="text-white/50 text-sm mb-4">{t.aliceDesc}</p>
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+              <p className="text-white/50 text-xs md:text-sm mb-4">{t.aliceDesc}</p>
+              <div className="flex flex-wrap gap-2 md:gap-3 justify-center md:justify-start">
                 {t.aliceFeatures.map((f, i) => (
-                  <span key={i} className="text-[12px] text-white/60 bg-white/[0.04] px-3 py-1.5 rounded-lg">
+                  <span key={i} className="text-[11px] md:text-[12px] text-white/60 bg-white/[0.04] px-2 md:px-3 py-1 md:py-1.5 rounded-lg">
                     {f}
                   </span>
                 ))}
@@ -346,14 +352,14 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
         </div>
       </section>
 
-      {/* Code Example */}
-      <section className="relative z-10 px-8 py-8 max-w-[800px] mx-auto">
+      {/* Code Example - Mobile Optimized */}
+      <section className="relative z-10 px-4 md:px-8 py-6 md:py-8 max-w-[800px] mx-auto">
         <CodeBlock code={codeExample} />
       </section>
 
-      {/* Contract Addresses */}
-      <section className="relative z-10 px-8 py-8 max-w-[800px] mx-auto">
-        <h2 className="text-lg font-bold text-center mb-4">{t.contracts}</h2>
+      {/* Contract Addresses - Mobile Optimized */}
+      <section className="relative z-10 px-4 md:px-8 py-6 md:py-8 max-w-[800px] mx-auto">
+        <h2 className="text-base md:text-lg font-bold text-center mb-4">{t.contracts}</h2>
         
         <div className="space-y-2">
           {[
@@ -361,12 +367,12 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
             { name: "NFAv2", addr: NFAv2_ADDRESS, status: "✓ Verified" },
             { name: "SynthLaunch Custody", addr: "0x3Fa33A0fb85f11A901e3616E10876d10018f43B7", status: "✓ Timelock" },
           ].map((c, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-              <div>
+            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl gap-2">
+              <div className="min-w-0">
                 <div className="font-semibold text-white text-sm">{c.name}</div>
-                <div className="font-mono text-[11px] text-white/40">{c.addr}</div>
+                <div className="font-mono text-[10px] md:text-[11px] text-white/40 truncate">{c.addr}</div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[10px] text-neon font-medium">{c.status}</span>
                 <a 
                   href={`https://bscscan.com/address/${c.addr}`}
@@ -381,13 +387,16 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 px-8 py-6 border-t border-white/[0.04] mt-8">
-        <div className="max-w-[1200px] mx-auto flex justify-between items-center">
-          <div className="text-[11px] text-white/30">
+      {/* Footer - Mobile Optimized */}
+      <footer className="relative z-10 px-4 md:px-8 py-5 md:py-6 border-t border-white/[0.04] mt-6 md:mt-8">
+        <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="text-[10px] md:text-[11px] text-white/30 text-center sm:text-left">
             © 2026 SynthLaunch · {t.footer}
           </div>
-          <div className="flex gap-5">
+          <div className="flex gap-4 md:gap-5">
+            <a href="/docs" className="text-white/30 hover:text-neon transition-colors text-xs">
+              Docs
+            </a>
             <a href="https://twitter.com/synth_fun" target="_blank" className="text-white/30 hover:text-neon transition-colors text-xs">
               Twitter
             </a>

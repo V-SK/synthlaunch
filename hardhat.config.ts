@@ -26,9 +26,17 @@ const config: HardhatUserConfig = {
       chainId: 97,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
+    xlayer: {
+      url: "https://xlayerrpc.okx.com",
+      chainId: 196,
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+    },
   },
   etherscan: {
-    apiKey: BSC_SCAN_API_KEY,
+    apiKey: {
+      bscMainnet: BSC_SCAN_API_KEY,
+      xlayer: "no-api-key-required",
+    },
     customChains: [
       {
         network: "bscMainnet",
@@ -36,6 +44,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.bscscan.com/api",
           browserURL: "https://bscscan.com",
+        },
+      },
+      {
+        network: "xlayer",
+        chainId: 196,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER",
+          browserURL: "https://www.oklink.com/x-layer",
         },
       },
     ],

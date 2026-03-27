@@ -233,7 +233,7 @@ function checkMacMiniSecurity() {
   try {
     // 检查 .env.local 权限
     const result = execSync(
-      'ssh -o ConnectTimeout=5 -o BatchMode=yes ssv@192.168.1.166 "stat -f %p ~/.synthlaunch/.env.local 2>/dev/null || stat -f %p ~/synthlaunch/.env.local 2>/dev/null" || echo "100644"',
+      'ssh -o ConnectTimeout=5 -o BatchMode=yes ssv@192.168.1.200 "stat -f %p ~/.synthlaunch/.env.local 2>/dev/null || stat -f %p ~/synthlaunch/.env.local 2>/dev/null" || echo "100644"',
       { encoding: 'utf8', timeout: 10000 }
     ).trim();
     
@@ -244,7 +244,7 @@ function checkMacMiniSecurity() {
       
       // 尝试修复
       try {
-        execSync('ssh ssv@192.168.1.166 "chmod 600 ~/synthlaunch/.env.local" 2>/dev/null');
+        execSync('ssh ssv@192.168.1.200 "chmod 600 ~/synthlaunch/.env.local" 2>/dev/null');
         console.log('  🔧 已修复');
       } catch (e) {}
     } else {

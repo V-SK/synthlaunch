@@ -7,12 +7,14 @@ async function main() {
   console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "BNB");
 
   const signerAddress = process.env.SIGNER_ADDRESS || deployer.address;
+  const operatorAddress = process.env.OPERATOR_ADDRESS || deployer.address;
   const platformFeeRate = parseInt(process.env.PLATFORM_FEE_RATE || "2000"); // 20% default
   console.log("Signer address:", signerAddress);
+  console.log("Operator address:", operatorAddress);
   console.log("Platform fee rate:", platformFeeRate, `(${platformFeeRate / 100}%)`);
 
   const SynthLaunchCustody = await ethers.getContractFactory("SynthLaunchCustody");
-  const custody = await SynthLaunchCustody.deploy(signerAddress, platformFeeRate);
+  const custody = await SynthLaunchCustody.deploy(signerAddress, operatorAddress, platformFeeRate);
   await custody.waitForDeployment();
 
   const contractAddress = await custody.getAddress();

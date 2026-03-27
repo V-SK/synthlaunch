@@ -232,7 +232,7 @@ async function checkTwitterBot() {
   try {
     const { execSync } = require('child_process');
     const result = execSync(
-      'ssh -o ConnectTimeout=5 -o BatchMode=yes ssv@192.168.1.166 "pgrep -af twitter-bot | wc -l" 2>/dev/null || echo "0"',
+      'ssh -o ConnectTimeout=5 -o BatchMode=yes ssv@192.168.1.200 "pgrep -af twitter-bot | wc -l" 2>/dev/null || echo "0"',
       { encoding: 'utf8', timeout: 10000 }
     ).trim();
     
