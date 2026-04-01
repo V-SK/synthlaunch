@@ -1,15 +1,29 @@
-'use client';
-
 import { formatUnits, isAddress, type Address } from 'viem';
 import { SYNTH_TOKEN_ADDRESS } from '@/lib/contracts';
 
 export const STAKING_CHAIN_ID = 56;
 export const STAKING_COOLDOWN_SECONDS = 7 * 24 * 60 * 60;
 
-const rawStakingAddress = process.env.NEXT_PUBLIC_STAKING_CONTRACT ?? '0xCDf39d6c55997f3F937287bA45c33d76bB98fE03';
+const FALLBACK_STAKING_CONTRACT_ADDRESS = '0xCDf39d6c55997f3F937287bA45c33d76bB98fE03';
+
+export const STAKING_CONTRACT_ADDRESS_RAW = process.env.NEXT_PUBLIC_STAKING_CONTRACT ?? '';
+export const STAKING_CONTRACT_ADDRESS_NORMALIZED = STAKING_CONTRACT_ADDRESS_RAW.trim();
+const stakingAddressCandidate =
+  STAKING_CONTRACT_ADDRESS_NORMALIZED.length > 0
+    ? STAKING_CONTRACT_ADDRESS_NORMALIZED
+    : FALLBACK_STAKING_CONTRACT_ADDRESS;
 
 export const STAKING_CONTRACT_ADDRESS =
-  rawStakingAddress && isAddress(rawStakingAddress) ? (rawStakingAddress as Address) : undefined;
+  stakingAddressCandidate && isAddress(stakingAddressCandidate)
+    ? (stakingAddressCandidate as Address)
+    : undefined;
+
+export const STAKING_CONTRACT_CONFIG_ERROR =
+  STAKING_CONTRACT_ADDRESS_NORMALIZED.length === 0
+    ? null
+    : STAKING_CONTRACT_ADDRESS
+      ? null
+      : 'invalid';
 
 export const STAKING_ABI = [
   {

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/lib/i18n';
 import {
   STAKING_COOLDOWN_SECONDS,
+  STAKING_CONTRACT_ADDRESS_NORMALIZED,
+  STAKING_CONTRACT_CONFIG_ERROR,
   formatCountdown,
   formatStakingAmount,
   getNextMultiplierInfo,
@@ -165,7 +167,9 @@ export function StakingHome() {
 
           {!hasStakingContract && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-[#F0B90B]">
-              {t('staking.contractUnavailable')}
+              {STAKING_CONTRACT_CONFIG_ERROR === 'invalid'
+                ? t('staking.contractInvalid', { address: STAKING_CONTRACT_ADDRESS_NORMALIZED })
+                : t('staking.contractUnavailable')}
             </div>
           )}
 
