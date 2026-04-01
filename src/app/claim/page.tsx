@@ -75,6 +75,7 @@ function ClaimPageInner() {
   const [approveError, setApproveError] = useState('');
 
   const [knownTokens, setKnownTokens] = useState<Address[]>([]);
+  const [tokenAgentMap, setTokenAgentMap] = useState<Record<string, string>>({});
 
   // Handle Twitter OAuth redirect
   useEffect(() => {
@@ -115,6 +116,14 @@ function ClaimPageInner() {
         .map((t: { address?: string }) => t.address as Address)
         .filter(Boolean)
         .filter((addr: Address) => !CLAIM_BLACKLIST.includes(addr.toLowerCase()));
+      // Build agent_name map from DB (covers tokens registered on old contracts)
+      const agentMap: Record<string, string> = {};
+      for (const t of tokens as { address?: string; agent_name?: string }[]) {
+        if (t.address && t.agent_name) {
+          agentMap[t.address.toLowerCase()] = t.agent_name;
+        }
+      }
+      setTokenAgentMap(agentMap);
       setKnownTokens(Array.from(new Set(addresses)));
     } catch (err) {
       console.error('Failed to fetch registered tokens:', err);
@@ -214,19 +223,25 @@ function ClaimPageInner() {
     if (!publicClient || knownTokens.length === 0) return [];
     const infos: TokenInfo[] = [];
     for (const token of knownTokens) {
-      const [name, totalFees, claimed, pendingClaim, wallet] = await publicClient.readContract({
+      // Use DB agent_name first (covers tokens on old contracts where on-chain agentName may be empty)
+      const dbAgentName = tokenAgentMap[token.toLowerCase()];
+      if (dbAgentName && dbAgentName.toLowerCase() !== agentName.toLowerCase()) continue;
+
+      const [onChainName, totalFees, claimed, pendingClaim, wallet] = await publicClient.readContract({
         address: CUSTODY_ADDRESS,
         abi: CUSTODY_ABI,
         functionName: 'getTokenInfo',
         args: [token],
       }) as [string, bigint, bigint, bigint, Address];
 
-      if (name.toLowerCase() === agentName.toLowerCase()) {
-        infos.push({ token, agentName: name, totalFees, claimed, pendingClaim, wallet });
+      // Match by DB agent_name (fallback) or on-chain name
+      const resolvedName = dbAgentName || onChainName;
+      if (resolvedName.toLowerCase() === agentName.toLowerCase()) {
+        infos.push({ token, agentName: resolvedName, totalFees, claimed, pendingClaim, wallet });
       }
     }
     return infos;
-  }, [publicClient, knownTokens]);
+  }, [publicClient, knownTokens, tokenAgentMap]);
 
   // Fetch agent tokens (Moltbook flow)
   const fetchAgentTokens = useCallback(async (agentName: string) => {
