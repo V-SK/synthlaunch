@@ -16,6 +16,7 @@ export function Header() {
   const MENU_ITEMS = [
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.tokens'), href: '/tokens' },
+    { label: t('nav.claim'), href: '/claim' },
     { label: t('nav.docs'), href: '/docs' },
   ];
 
