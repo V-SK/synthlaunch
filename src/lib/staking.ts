@@ -6,7 +6,7 @@ import { SYNTH_TOKEN_ADDRESS } from '@/lib/contracts';
 export const STAKING_CHAIN_ID = 56;
 export const STAKING_COOLDOWN_SECONDS = 7 * 24 * 60 * 60;
 
-const rawStakingAddress = process.env.NEXT_PUBLIC_STAKING_CONTRACT;
+const rawStakingAddress = process.env.NEXT_PUBLIC_STAKING_CONTRACT ?? '0xCDf39d6c55997f3F937287bA45c33d76bB98fE03';
 
 export const STAKING_CONTRACT_ADDRESS =
   rawStakingAddress && isAddress(rawStakingAddress) ? (rawStakingAddress as Address) : undefined;
