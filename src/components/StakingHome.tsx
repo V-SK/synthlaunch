@@ -131,6 +131,63 @@ export function StakingHome() {
         </p>
       </section>
 
+      {/* Alice Introduction */}
+      <section className="card space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-synth-text">
+            {t('staking.aliceIntroTitle')}
+          </h2>
+          <p className="text-synth-muted text-sm max-w-2xl mx-auto leading-relaxed">
+            {t('staking.aliceIntroDesc')}
+          </p>
+        </div>
+
+        {/* Flow: Tax → Compute → Alice */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-0">
+          {/* Step 1 */}
+          <div className="flex flex-col items-center text-center px-6 py-4 rounded-lg bg-synth-green/5 border border-synth-green/20 min-w-[140px]">
+            <div className="text-2xl mb-2">💰</div>
+            <div className="text-xs font-mono text-synth-green uppercase tracking-wider mb-1">{t('staking.flowStep1Label')}</div>
+            <div className="text-sm text-synth-text font-semibold">{t('staking.flowStep1Title')}</div>
+            <div className="text-xs text-synth-muted mt-1">{t('staking.flowStep1Desc')}</div>
+          </div>
+
+          <div className="text-synth-green text-2xl font-bold md:mx-3 rotate-90 md:rotate-0">→</div>
+
+          {/* Step 2 */}
+          <div className="flex flex-col items-center text-center px-6 py-4 rounded-lg bg-synth-cyan/5 border border-synth-cyan/20 min-w-[140px]">
+            <div className="text-2xl mb-2">⚡</div>
+            <div className="text-xs font-mono text-synth-cyan uppercase tracking-wider mb-1">{t('staking.flowStep2Label')}</div>
+            <div className="text-sm text-synth-text font-semibold">{t('staking.flowStep2Title')}</div>
+            <div className="text-xs text-synth-muted mt-1">{t('staking.flowStep2Desc')}</div>
+          </div>
+
+          <div className="text-synth-green text-2xl font-bold md:mx-3 rotate-90 md:rotate-0">→</div>
+
+          {/* Step 3 */}
+          <div className="flex flex-col items-center text-center px-6 py-4 rounded-lg bg-purple-500/5 border border-purple-500/20 min-w-[140px]">
+            <div className="text-2xl mb-2">🧠</div>
+            <div className="text-xs font-mono text-purple-400 uppercase tracking-wider mb-1">{t('staking.flowStep3Label')}</div>
+            <div className="text-sm text-synth-text font-semibold">{t('staking.flowStep3Title')}</div>
+            <div className="text-xs text-synth-muted mt-1">{t('staking.flowStep3Desc')}</div>
+          </div>
+
+          <div className="text-synth-green text-2xl font-bold md:mx-3 rotate-90 md:rotate-0">→</div>
+
+          {/* Step 4 */}
+          <div className="flex flex-col items-center text-center px-6 py-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20 min-w-[140px]">
+            <div className="text-2xl mb-2">🪙</div>
+            <div className="text-xs font-mono text-yellow-400 uppercase tracking-wider mb-1">{t('staking.flowStep4Label')}</div>
+            <div className="text-sm text-synth-text font-semibold">{t('staking.flowStep4Title')}</div>
+            <div className="text-xs text-synth-muted mt-1">{t('staking.flowStep4Desc')}</div>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-synth-muted border-t border-synth-border pt-4">
+          {t('staking.aliceFlowNote')}
+        </p>
+      </section>
+
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card py-5">
           <div className="text-[10px] text-synth-muted uppercase tracking-wider mb-2">{t('staking.totalStaked')}</div>
