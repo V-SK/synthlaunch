@@ -24,7 +24,7 @@ const CUSTODY = '0x3Fa33A0fb85f11A901e3616E10876d10018f43B7';
 const TO = '0x5c9E31B8E3fDc7356D7398165457423854C72C8e';
 
 // 从queue脚本输出的eta（手动更新）
-const ETA = 1773545264; // 2026/3/14 11:27:44 PM EST (正确格式提案)
+const ETA = 1775187297; // 2026/4/2 23:34:57 EST
 
 const custodyAbi = [{
   inputs: [{type: 'address', name: 'to'}],
