@@ -227,17 +227,25 @@ function ClaimPageInner() {
       const dbAgentName = tokenAgentMap[token.toLowerCase()];
       if (dbAgentName && dbAgentName.toLowerCase() !== agentName.toLowerCase()) continue;
 
-      const [onChainName, totalFees, claimed, pendingClaim, wallet] = await publicClient.readContract({
-        address: CUSTODY_ADDRESS,
-        abi: CUSTODY_ABI,
-        functionName: 'getTokenInfo',
-        args: [token],
-      }) as [string, bigint, bigint, bigint, Address];
+      try {
+        const [onChainName, totalFees, claimed, pendingClaim, wallet] = await publicClient.readContract({
+          address: CUSTODY_ADDRESS,
+          abi: CUSTODY_ABI,
+          functionName: 'getTokenInfo',
+          args: [token],
+        }) as [string, bigint, bigint, bigint, Address];
 
-      // Match by DB agent_name (fallback) or on-chain name
-      const resolvedName = dbAgentName || onChainName;
-      if (resolvedName.toLowerCase() === agentName.toLowerCase()) {
-        infos.push({ token, agentName: resolvedName, totalFees, claimed, pendingClaim, wallet });
+        // Match by DB agent_name (fallback) or on-chain name
+        const resolvedName = dbAgentName || onChainName;
+        if (resolvedName.toLowerCase() === agentName.toLowerCase()) {
+          infos.push({ token, agentName: resolvedName, totalFees, claimed, pendingClaim, wallet });
+        }
+      } catch {
+        // Token not registered on-chain (e.g. registered on older contract version)
+        // If DB confirms this token belongs to the agent, show with zero fees
+        if (dbAgentName && dbAgentName.toLowerCase() === agentName.toLowerCase()) {
+          infos.push({ token, agentName: dbAgentName, totalFees: 0n, claimed: 0n, pendingClaim: 0n, wallet: '0x0000000000000000000000000000000000000000' as Address });
+        }
       }
     }
     return infos;
