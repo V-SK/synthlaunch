@@ -1,0 +1,300 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/lib/i18n';
+import {
+  STAKING_COOLDOWN_SECONDS,
+  formatCountdown,
+  formatStakingAmount,
+  getNextMultiplierInfo,
+} from '@/lib/staking';
+import { useStaking } from '@/hooks/useStaking';
+
+export function StakingHome() {
+  const { locale, t } = useI18n();
+  const [amountInput, setAmountInput] = useState('');
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  const {
+    hasStakingContract,
+    isConnected,
+    stakedAmount,
+    multiplier,
+    stakeTimestamp,
+    unstakeRequestTime,
+    totalActiveStaked,
+    balance,
+    decimals,
+    parsedAmount,
+    needsApproval,
+    hasPendingUnstake,
+    isPending,
+    isConfirming,
+    hash,
+    error,
+    activeAction,
+    approve,
+    stake,
+    requestUnstake,
+    finalizeUnstake,
+  } = useStaking(amountInput);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Math.floor(Date.now() / 1000));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const nextInfo = useMemo(
+    () => getNextMultiplierInfo(stakeTimestamp, now),
+    [now, stakeTimestamp]
+  );
+
+  const cooldownEndsAt = unstakeRequestTime > 0 ? unstakeRequestTime + STAKING_COOLDOWN_SECONDS : 0;
+  const cooldownSecondsRemaining = cooldownEndsAt > now ? cooldownEndsAt - now : 0;
+  const finalizeReady = hasPendingUnstake && cooldownSecondsRemaining === 0;
+
+  const progressText = useMemo(() => {
+    if (!stakedAmount) {
+      return t('staking.progressEmpty');
+    }
+
+    if (hasPendingUnstake) {
+      return t('staking.progressFrozen', { multiplier: String(multiplier) });
+    }
+
+    if (!nextInfo.nextMultiplier || nextInfo.secondsUntilNext === null) {
+      return t('staking.progressMaxed');
+    }
+
+    return t('staking.progressToNext', {
+      current: String(nextInfo.currentMultiplier),
+      next: String(nextInfo.nextMultiplier),
+      remaining: formatCountdown(nextInfo.secondsUntilNext, locale),
+    });
+  }, [hasPendingUnstake, locale, multiplier, nextInfo, stakedAmount, t]);
+
+  const stakeButtonLabel = useMemo(() => {
+    if (activeAction === 'approve' && (isPending || isConfirming)) return t('staking.approving');
+    if (activeAction === 'stake' && (isPending || isConfirming)) return t('staking.staking');
+    return needsApproval ? t('staking.approve') : t('staking.stake');
+  }, [activeAction, isConfirming, isPending, needsApproval, t]);
+
+  const unstakeButtonLabel =
+    activeAction === 'requestUnstake' && (isPending || isConfirming)
+      ? t('staking.requestingUnstake')
+      : t('staking.requestUnstake');
+
+  const finalizeButtonLabel =
+    activeAction === 'finalizeUnstake' && (isPending || isConfirming)
+      ? t('staking.finalizingUnstake')
+      : t('staking.finalizeUnstake');
+
+  const canSubmitStake =
+    hasStakingContract &&
+    isConnected &&
+    !hasPendingUnstake &&
+    parsedAmount !== null &&
+    parsedAmount <= balance &&
+    !isPending &&
+    !isConfirming;
+
+  const unstakeDisabled = !hasStakingContract || !isConnected || hasPendingUnstake || stakedAmount === 0n || isPending || isConfirming;
+  const finalizeDisabled = !hasStakingContract || !isConnected || !finalizeReady || isPending || isConfirming;
+
+  const statusMessage = error?.message
+    ? error.message
+    : hash && (isPending || isConfirming)
+      ? t('staking.txPending')
+      : hash
+        ? t('staking.txSubmitted', { hash: `${hash.slice(0, 10)}...` })
+        : '';
+
+  return (
+    <div className="space-y-8">
+      <section className="text-center py-12 space-y-4">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono">
+            ● {t('staking.liveOnBsc')}
+          </div>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-bold text-synth-text">
+          {t('staking.heroTitle')}
+          <br />
+          <span className="text-synth-green glow-text-green">{t('staking.heroSubtitle')}</span>
+        </h1>
+        <p className="text-synth-muted max-w-2xl mx-auto text-sm leading-relaxed">
+          {t('staking.heroDesc')}
+        </p>
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card py-5">
+          <div className="text-[10px] text-synth-muted uppercase tracking-wider mb-2">{t('staking.totalStaked')}</div>
+          <div className="text-2xl font-bold text-synth-green">{formatStakingAmount(totalActiveStaked, decimals)} SYNTH</div>
+        </div>
+        <div className="card py-5">
+          <div className="text-[10px] text-synth-muted uppercase tracking-wider mb-2">{t('staking.yourStake')}</div>
+          <div className="text-2xl font-bold text-synth-cyan">
+            {isConnected ? `${formatStakingAmount(stakedAmount, decimals)} SYNTH` : '--'}
+          </div>
+        </div>
+        <div className="card py-5">
+          <div className="text-[10px] text-synth-muted uppercase tracking-wider mb-2">{t('staking.yourMultiplier')}</div>
+          <div className="text-2xl font-bold text-synth-text">
+            {isConnected && stakedAmount > 0n ? `${multiplier}x / 5x` : '--'}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
+        <div className="card space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-synth-text">{t('staking.panelTitle')}</h2>
+              <p className="text-xs text-synth-muted mt-1">{t('staking.panelDesc')}</p>
+            </div>
+            {isConnected && (
+              <div className="text-right">
+                <div className="text-[10px] text-synth-muted uppercase tracking-wider">{t('staking.walletBalance')}</div>
+                <div className="text-sm text-synth-green font-bold">{formatStakingAmount(balance, decimals)} SYNTH</div>
+              </div>
+            )}
+          </div>
+
+          {!hasStakingContract && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-[#F0B90B]">
+              {t('staking.contractUnavailable')}
+            </div>
+          )}
+
+          {isConnected ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-lg border border-synth-border bg-synth-bg/70 p-4">
+                <div className="text-[10px] uppercase tracking-wider text-synth-muted mb-2">{t('staking.currentStake')}</div>
+                <div className="text-lg font-bold text-synth-text">{formatStakingAmount(stakedAmount, decimals)} SYNTH</div>
+              </div>
+              <div className="rounded-lg border border-synth-border bg-synth-bg/70 p-4">
+                <div className="text-[10px] uppercase tracking-wider text-synth-muted mb-2">{t('staking.currentMultiplier')}</div>
+                <div className="text-lg font-bold text-synth-green">{stakedAmount > 0n ? `${multiplier}x / 5x` : '--'}</div>
+                <div className="text-xs text-synth-muted mt-2">{progressText}</div>
+              </div>
+              <div className="rounded-lg border border-synth-border bg-synth-bg/70 p-4">
+                <div className="text-[10px] uppercase tracking-wider text-synth-muted mb-2">{t('staking.unstakeStatus')}</div>
+                {hasPendingUnstake ? (
+                  <>
+                    <div className="text-lg font-bold text-[#F0B90B]">
+                      {finalizeReady ? t('staking.readyToFinalize') : t('staking.cooldownActive')}
+                    </div>
+                    <div className="text-xs text-synth-muted mt-2">
+                      {finalizeReady
+                        ? t('staking.finalizeReady')
+                        : t('staking.cooldownRemaining', {
+                            remaining: formatCountdown(cooldownSecondsRemaining, locale),
+                          })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-lg font-bold text-synth-text">{t('staking.noPendingUnstake')}</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-synth-border bg-synth-bg/70 p-5 text-sm text-synth-muted">
+              {t('staking.connectPrompt')}
+            </div>
+          )}
+
+          <div className="space-y-4 border-t border-synth-border pt-5">
+            <div>
+              <label htmlFor="staking-amount" className="block text-xs font-mono text-synth-muted uppercase tracking-wider mb-2">
+                {t('staking.amountLabel')}
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  id="staking-amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={amountInput}
+                  onChange={(event) => setAmountInput(event.target.value)}
+                  placeholder={t('staking.amountPlaceholder')}
+                  className="input-field flex-1"
+                  disabled={!hasStakingContract || hasPendingUnstake}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (needsApproval) {
+                      approve();
+                    } else {
+                      stake();
+                    }
+                  }}
+                  className="btn-primary min-w-[180px]"
+                  disabled={!canSubmitStake}
+                >
+                  {stakeButtonLabel}
+                </button>
+              </div>
+              <div className="mt-2 flex flex-col gap-1 text-xs text-synth-muted">
+                <span>{t('staking.resetTimerNote')}</span>
+                {parsedAmount !== null && parsedAmount > balance && (
+                  <span className="text-red-400">{t('staking.insufficientBalance')}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={requestUnstake}
+                className="w-full px-4 py-3 rounded border border-[#F0B90B]/40 bg-[#F0B90B]/10 text-[#F0B90B] hover:bg-[#F0B90B]/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={unstakeDisabled}
+              >
+                {unstakeButtonLabel}
+              </button>
+              <button
+                type="button"
+                onClick={finalizeUnstake}
+                className="btn-secondary w-full py-3"
+                disabled={finalizeDisabled}
+              >
+                {finalizeButtonLabel}
+              </button>
+            </div>
+
+            {statusMessage && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${error ? 'border border-red-500/30 bg-red-500/10 text-red-400' : 'border border-synth-border bg-synth-bg/70 text-synth-muted'}`}>
+                {statusMessage}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="card space-y-5">
+          <h2 className="text-xl font-bold text-synth-text">{t('staking.scheduleTitle')}</h2>
+          <div className="space-y-3">
+            {[
+              { range: '0-7', multiplier: '1x' },
+              { range: '7-30', multiplier: '2x' },
+              { range: '30-90', multiplier: '3x' },
+              { range: '90-180', multiplier: '4x' },
+              { range: '180+', multiplier: '5x' },
+            ].map((tier) => (
+              <div key={tier.range} className="flex items-center justify-between rounded-lg border border-synth-border bg-synth-bg/70 px-4 py-3">
+                <span className="text-sm text-synth-muted">{t('staking.multiplierRange', { range: tier.range })}</span>
+                <span className="text-lg font-bold text-synth-green">{tier.multiplier}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-lg border border-synth-border bg-synth-bg/70 p-4 text-sm text-synth-muted leading-relaxed">
+            <p>{t('staking.cooldownNote')}</p>
+            <p className="mt-3">{t('staking.rewardNote')}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

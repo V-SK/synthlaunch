@@ -1,12 +1,12 @@
 'use client';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { StakingHome } from '@/components/StakingHome';
+import { TokensHome } from '@/components/TokensHome';
 
-export default function Home() {
+export default function TokensPage() {
   return (
     <ErrorBoundary>
-      <StakingHome />
+      <TokensHome />
     </ErrorBoundary>
   );
 }
