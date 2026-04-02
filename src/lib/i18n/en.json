@@ -78,7 +78,7 @@
   },
   "launch": {
     "title": "Launch Token",
-    "subtitle": "Create a new token on X Layer with AI agent tax routing via OKX Onchain OS.",
+    "subtitle": "Create a new token on BSC with AI agent tax routing.",
     "tokenName": "Token Name",
     "tokenSymbol": "Symbol",
     "tokenDescription": "Description",
@@ -267,10 +267,10 @@
     "unknown": "Unknown"
   },
   "staking": {
-    "liveOnBsc": "LIVE ON X LAYER",
+    "liveOnBsc": "LIVE ON BSC MAINNET",
     "heroTitle": "Stake SYNTH for",
     "heroSubtitle": "Time-Weighted Power",
-    "heroDesc": "Lock SYNTH on X Layer to build your multiplier over time. Requesting an unstake freezes your multiplier and starts a 7 day cooldown before withdrawal.",
+    "heroDesc": "Lock SYNTH on BSC to build your multiplier over time. Requesting an unstake freezes your multiplier and starts a 7 day cooldown before withdrawal.",
     "totalStaked": "Total SYNTH Staked",
     "yourStake": "Your Stake",
     "yourMultiplier": "Your Multiplier",

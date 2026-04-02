@@ -78,7 +78,7 @@
   },
   "launch": {
     "title": "发行代币",
-    "subtitle": "在 X Layer 联合曲线上创建一个带 AI Agent 手续费分润的新代币。",
+    "subtitle": "在 BSC 联合曲线上创建一个带 AI Agent 手续费分润的新代币。",
     "tokenName": "代币名称",
     "tokenSymbol": "代币符号",
     "tokenDescription": "描述",
@@ -270,10 +270,10 @@
     "unknown": "未知"
   },
   "staking": {
-    "liveOnBsc": "X Layer 已上线",
+    "liveOnBsc": "BSC 主网已上线",
     "heroTitle": "质押 SYNTH 获取",
     "heroSubtitle": "时间加权倍率",
-    "heroDesc": "在 X Layer 上质押 SYNTH，随着时间提升 multiplier。发起解质押后倍率会被冻结，并进入 7 天冷静期，冷静期结束后才能提回资产。",
+    "heroDesc": "在 BSC 上质押 SYNTH，随着时间提升 multiplier。发起解质押后倍率会被冻结，并进入 7 天冷静期，冷静期结束后才能提回资产。",
     "totalStaked": "全网质押 SYNTH",
     "yourStake": "我的质押",
     "yourMultiplier": "我的倍率",
