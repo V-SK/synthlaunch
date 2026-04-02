@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import {
   STAKING_COOLDOWN_SECONDS,
@@ -129,6 +130,14 @@ export function StakingHome() {
         <p className="text-synth-muted max-w-2xl mx-auto text-sm leading-relaxed">
           {t('staking.heroDesc')}
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+          <Link href="/ai" className="btn-primary min-w-[180px]">
+            Open AI Terminal
+          </Link>
+          <Link href="/tokens" className="btn-secondary min-w-[160px]">
+            Browse Tokens
+          </Link>
+        </div>
       </section>
 
       {/* Alice Introduction */}
