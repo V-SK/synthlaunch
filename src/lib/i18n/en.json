@@ -79,6 +79,7 @@
   "launch": {
     "title": "Launch Token",
     "subtitle": "Create a new token on BSC with AI agent tax routing.",
+    "subtitleXLayer": "Create a new token on X Layer with AI agent tax routing via OKX Onchain OS.",
     "tokenName": "Token Name",
     "tokenSymbol": "Symbol",
     "tokenDescription": "Description",

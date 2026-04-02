@@ -634,14 +634,24 @@ function LaunchPageInner() {
         <h1 className="text-2xl font-bold text-synth-text terminal-prompt">
           {t('launch.title')}
         </h1>
-        <div
-          className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono"
-          title={`${activeChain.label} (${activeChain.nativeSymbol})`}
-        >
-          ● {activeChain.badge}
+        {/* Chain Selector */}
+        <div className="flex items-center gap-2">
+          {([56, 196] as const).map((cid) => (
+            <button
+              key={cid}
+              onClick={() => setChainId(cid)}
+              className={`text-[10px] px-3 py-1 border rounded font-mono transition-colors ${
+                chainId === cid
+                  ? 'bg-synth-green/20 text-synth-green border-synth-green/50'
+                  : 'bg-transparent text-synth-muted border-synth-border/40 hover:border-synth-green/30 hover:text-synth-text'
+              }`}
+            >
+              ● {chainOptions[cid].label}
+            </button>
+          ))}
         </div>
         <p className="text-sm text-synth-muted">
-          {t('launch.subtitle')}
+          {chainId === 196 ? t('launch.subtitleXLayer') : t('launch.subtitle')}
         </p>
       </div>
 

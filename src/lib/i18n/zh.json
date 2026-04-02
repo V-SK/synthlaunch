@@ -79,6 +79,7 @@
   "launch": {
     "title": "发行代币",
     "subtitle": "在 BSC 联合曲线上创建一个带 AI Agent 手续费分润的新代币。",
+    "subtitleXLayer": "在 X Layer 上创建代币，交易手续费自动分配给 AI Agent。",
     "tokenName": "代币名称",
     "tokenSymbol": "代币符号",
     "tokenDescription": "描述",
