@@ -4,15 +4,15 @@ import { Providers } from '@/components/Providers';
 import { Header } from '@/components/Header';
 
 export const metadata: Metadata = {
-  title: 'SynthLaunch | AI Agent Token Launches on BSC',
-  description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
+  title: 'SynthLaunch | AI Agent Platform on X Layer',
+  description: 'Launch AI agent tokens with built-in fee sharing on X Layer. Powered by OKX Onchain OS.',
   icons: {
     icon: '/logo.jpg',
     apple: '/logo.jpg',
   },
   openGraph: {
-    title: 'SynthLaunch | AI Agent Token Launches on BSC',
-    description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
+    title: 'SynthLaunch | AI Agent Platform on X Layer',
+    description: 'Launch AI agent tokens with built-in fee sharing on X Layer. Powered by OKX Onchain OS.',
     url: 'https://synthlaunch.fun',
     siteName: 'SynthLaunch',
     images: [
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SynthLaunch | AI Agent Token Launches on BSC',
-    description: 'Launch tokens with built-in fee sharing for AI agents on BSC. Powered by Flap Protocol.',
+    title: 'SynthLaunch | AI Agent Platform on X Layer',
+    description: 'Launch AI agent tokens with built-in fee sharing on X Layer. Powered by OKX Onchain OS.',
     images: ['https://synthlaunch.fun/logo.jpg'],
   },
 };
@@ -56,7 +56,7 @@ export default function RootLayout({
             <footer className="border-t border-synth-border mt-20">
               <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
                 <span className="text-xs text-synth-muted font-mono">
-                  SynthLaunch v0.1.0 — Built on Flap Protocol · BSC Network
+                  SynthLaunch v0.1.0 — Powered by OKX Onchain OS · X Layer
                 </span>
                 <div className="flex items-center gap-4 text-xs text-synth-muted">
                   <a href="/docs" className="hover:text-synth-green transition-colors">docs</a>

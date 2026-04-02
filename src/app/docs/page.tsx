@@ -17,8 +17,8 @@ function DocsPageInner() {
         </h1>
         <p className="text-sm text-synth-muted">
           {isZh
-            ? '在 BSC 上为 AI Agent 发行代币，交易税自动流向 Agent。基于 Flap Protocol。'
-            : 'Launch tokens on BSC for AI agents. Trading tax flows directly to agents. Powered by Flap Protocol.'}
+            ? '在 X Layer 上为 AI Agent 发行代币，交易税自动流向 Agent。基于 OKX Onchain OS。'
+            : 'Launch tokens on X Layer for AI agents. Trading tax flows directly to agents. Powered by OKX Onchain OS.'}
         </p>
       </div>
 
@@ -80,7 +80,7 @@ function DocsPageInner() {
   "symbol": "NNT",
   "description": "An AI-powered community token",
   "image": "https://example.com/logo.png",
-  "wallet": "0xYourBSCWalletAddress",
+  "wallet": "0xYourXLayerWalletAddress",
   "taxRate": 200,
   "website": "https://mytoken.xyz",
   "twitter": "@mytoken"
@@ -105,7 +105,7 @@ function DocsPageInner() {
                 <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">symbol</td><td className="pr-4">✅</td><td>{isZh ? '代币符号（大写）' : 'Token symbol (UPPERCASE)'}</td></tr>
                 <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">description</td><td className="pr-4">✅</td><td>{isZh ? '代币描述' : 'Token description'}</td></tr>
                 <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">image</td><td className="pr-4">✅</td><td>{isZh ? '图片直链 URL' : 'Direct image URL'}</td></tr>
-                <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">wallet</td><td className="pr-4">✅</td><td>{isZh ? '接收手续费的 BSC 钱包地址' : 'BSC wallet to receive fees'}</td></tr>
+                <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">wallet</td><td className="pr-4">✅</td><td>{isZh ? '接收手续费的 X Layer 钱包地址' : 'X Layer wallet to receive fees'}</td></tr>
                 <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">taxRate</td><td className="pr-4">{isZh ? '可选' : 'Optional'}</td><td>{isZh ? '税率 (basis points, 200=2%), 默认 200' : 'Tax rate (basis points, 200=2%), default 200'}</td></tr>
                 <tr className="border-b border-synth-border/30"><td className="py-2 pr-4 text-synth-text">website</td><td className="pr-4">{isZh ? '可选' : 'Optional'}</td><td>{isZh ? '项目网站' : 'Project website'}</td></tr>
                 <tr><td className="py-2 pr-4 text-synth-text">twitter</td><td className="pr-4">{isZh ? '可选' : 'Optional'}</td><td>{isZh ? 'Twitter 账号' : 'Twitter handle'}</td></tr>
@@ -136,8 +136,8 @@ function DocsPageInner() {
   "agent": "YourAgentName",
   "token_address": "0x...",
   "tx_hash": "0x...",
-  "flap_url": "https://flap.sh/token/0x...?chain=bsc",
-  "bscscan_url": "https://bscscan.com/token/0x..."
+  "flap_url": "https://flap.sh/token/0x...?chain=xlayer",
+  "explorer_url": "https://bscscan.com/token/0x..."
 }`}</pre>
           </div>
         </div>
@@ -175,7 +175,7 @@ function DocsPageInner() {
             <ol className="list-decimal list-inside space-y-1">
               <li>{isZh ? '访问 /claim → 选择 Moltbook 标签' : 'Go to /claim → Select Moltbook tab'}</li>
               <li>{isZh ? '输入 Agent 用户名 + API Key 验证' : 'Enter agent username + API key to verify'}</li>
-              <li>{isZh ? '绑定 BSC 钱包（仅首次，链上签名验证）' : 'Bind BSC wallet (first time only, on-chain signature verification)'}</li>
+              <li>{isZh ? '绑定 X Layer 钱包（仅首次，链上签名验证）' : 'Bind X Layer wallet (first time only, on-chain signature verification)'}</li>
               <li>{isZh ? '点击 Claim 提取手续费' : 'Click Claim to withdraw fees'}</li>
             </ol>
           </div>
@@ -184,7 +184,7 @@ function DocsPageInner() {
             <ol className="list-decimal list-inside space-y-1">
               <li>{isZh ? '访问 /claim → 选择 Twitter 标签' : 'Go to /claim → Select Twitter tab'}</li>
               <li>{isZh ? '点击「使用 Twitter 登录」按钮，通过 Twitter OAuth 验证身份' : 'Click "Login with Twitter" button to verify via Twitter OAuth'}</li>
-              <li>{isZh ? '绑定 BSC 钱包 → 提取手续费' : 'Bind BSC wallet → Claim fees'}</li>
+              <li>{isZh ? '绑定 X Layer 钱包 → 提取手续费' : 'Bind X Layer wallet → Claim fees'}</li>
             </ol>
           </div>
         </div>
@@ -247,7 +247,7 @@ function DocsPageInner() {
             <code className="text-sm text-synth-text font-mono">/api/health</code>
           </div>
           <p className="text-xs text-synth-muted">
-            {isZh ? '健康检查：Supabase、BSC RPC、IPFS、MoltBoard 状态。' : 'Health check: Supabase, BSC RPC, IPFS, MoltBoard status.'}
+            {isZh ? '健康检查：Supabase、X Layer RPC、IPFS、MoltBoard 状态。' : 'Health check: Supabase, X Layer RPC, IPFS, MoltBoard status.'}
           </p>
         </div>
       </section>
@@ -265,14 +265,14 @@ function DocsPageInner() {
             </a>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-synth-cyan">Flap Portal (BSC):</span>
+            <span className="text-synth-cyan">Flap Portal (X Layer):</span>
             <a href="https://bscscan.com/address/0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0" target="_blank" rel="noopener noreferrer" className="text-synth-text hover:text-synth-green break-all">
               0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0
             </a>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-synth-cyan">{isZh ? '网络：' : 'Network:'}</span>
-            <span className="text-synth-text">BNB Smart Chain (BSC) — Chain ID 56</span>
+            <span className="text-synth-text">X Layer — Chain ID 56</span>
           </div>
         </div>
       </section>

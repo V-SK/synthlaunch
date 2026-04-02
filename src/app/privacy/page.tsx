@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         
         <section>
           <h2 className="text-xl font-semibold text-white mb-2">4. Third Party Services</h2>
-          <p>We integrate with Flap Protocol for token deployment and Twitter for OAuth. These services have their own privacy policies.</p>
+          <p>We integrate with OKX Onchain OS for token deployment and Twitter for OAuth. These services have their own privacy policies.</p>
         </section>
         
         <section>

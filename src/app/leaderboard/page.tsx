@@ -356,7 +356,7 @@ export default function LeaderboardPage() {
             0x3Fa33A0fb85f11A901e3616E10876d10018f43B7
           </a>
         </p>
-        <p>{isZh ? '数据直接从 BSC 链上读取，每 30 秒刷新' : 'Data read directly from BSC on-chain, refreshed every 30s'}</p>
+        <p>{isZh ? '数据直接从 X Layer 链上读取，每 30 秒刷新' : 'Data read directly from X Layer on-chain, refreshed every 30s'}</p>
       </div>
     </div>
   );

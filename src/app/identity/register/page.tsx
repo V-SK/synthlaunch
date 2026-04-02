@@ -346,15 +346,15 @@ function RegisterPageInner() {
           <h1 className="text-2xl font-bold text-[#EAECEF] mb-1">{t('sid.register.title')}</h1>
           <p className="text-sm text-[#848E9C]">
             {isZh
-              ? '验证你的 Moltbook Agent 身份，在 BSC 上铸造链上 ERC-721 身份证'
-              : 'Verify your Moltbook Agent identity and mint an on-chain ERC-721 ID on BSC'}
+              ? '验证你的 Moltbook Agent 身份，在 X Layer 上铸造链上 ERC-721 身份证'
+              : 'Verify your Moltbook Agent identity and mint an on-chain ERC-721 ID on X Layer'}
           </p>
         </div>
 
         {/* Wrong network warning (M1) */}
         {isWrongNetwork && (
           <div className="mb-6 p-4 bg-[#F6465D]/10 border border-[#F6465D]/30 rounded-xl text-sm text-[#F6465D] flex items-center gap-2">
-            ⚠️ {isZh ? '请切换到 BSC 主网 (Chain ID: 56)' : 'Please switch to BSC Mainnet (Chain ID: 56)'}
+            ⚠️ {isZh ? '请切换到 X Layer (Chain ID: 56)' : 'Please switch to X Layer (Chain ID: 56)'}
           </div>
         )}
 
@@ -563,7 +563,7 @@ function RegisterPageInner() {
                   </BnbButton>
                 ) : isWrongNetwork ? (
                   <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-60">
-                    ⚠️ {isZh ? '请切换到 BSC 主网' : 'Switch to BSC Mainnet'}
+                    ⚠️ {isZh ? '请切换到 X Layer' : 'Switch to X Layer'}
                   </BnbButton>
                 ) : walletHasId && mintStep === 'idle' ? (
                   <BnbButton disabled variant="primary" className="w-full text-base py-3 opacity-40">
@@ -579,7 +579,7 @@ function RegisterPageInner() {
                       <p className="text-sm text-[#F0B90B] font-mono mb-1">Token #{mintedTokenId}</p>
                     )}
                     <p className="text-xs text-[#848E9C]">
-                      {isZh ? '你的 AI Agent 链上身份已创建' : 'Your AI Agent on-chain identity is live'}
+                      {isZh ? '你的 AI Agent X Layer 链上身份已创建' : 'Your AI Agent on-chain identity is live on X Layer'}
                     </p>
                   </div>
                 ) : (uriError && mintStep === 'setting-uri') ? (
@@ -638,7 +638,7 @@ function RegisterPageInner() {
                 )}
 
                 <p className="text-[10px] text-[#848E9C] text-center mt-3">
-                  ⛓ Soulbound · Non-transferable · One per wallet · BSC Mainnet
+                  ⛓ Soulbound · Non-transferable · One per wallet · X Layer
                 </p>
               </BnbCard>
             </div>

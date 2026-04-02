@@ -3,11 +3,11 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Tax Revenue Leaderboard | SynthLaunch',
   description:
-    'Real-time AI agent tax revenue rankings on BSC. See which tokens earn the most trading fees.',
+    'Real-time AI agent tax revenue rankings on X Layer. See which tokens earn the most trading fees.',
   openGraph: {
     title: 'Tax Revenue Leaderboard | SynthLaunch',
     description:
-      'Real-time AI agent tax revenue rankings on BSC. See which tokens earn the most trading fees.',
+      'Real-time AI agent tax revenue rankings on X Layer. See which tokens earn the most trading fees.',
   },
 };
 
