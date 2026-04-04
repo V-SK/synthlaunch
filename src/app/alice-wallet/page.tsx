@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { ALICE_SYMBOL, fetchAliceBalance, formatAlice, isValidAliceAddress } from '@/lib/alice';
 import { WalletConnect } from '@/components/WalletConnect';
@@ -29,6 +29,9 @@ export default function AliceWalletPage() {
   const { address: bscAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Wallet state
   const [mnemonic, setMnemonic] = useState('');
   const [aliceAddress, setAliceAddress] = useState('');
@@ -54,6 +57,7 @@ export default function AliceWalletPage() {
 
   // Generate new wallet
   const handleGenerate = useCallback(async () => {
+    if (!mounted) return;
     const { mnemonic: m, address: a } = await generateAliceWallet();
     setMnemonic(m);
     setAliceAddress(a);

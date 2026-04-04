@@ -15,6 +15,21 @@ const nextConfig = {
     optimizePackageImports: ['wagmi', '@tanstack/react-query', 'viem'],
     serverComponentsExternalPackages: ['@aws-sdk/client-kms', '@aws-sdk/client-iam', 'asn1.js', 'aws-kms-signer', 'ethers'],
   },
+  webpack: (config, { isServer }) => {
+    // Enable WASM support (required by @polkadot/wasm-crypto)
+    config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
+    // Polkadot packages must run client-side only
+    if (isServer) {
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : []),
+        '@polkadot/keyring',
+        '@polkadot/util-crypto',
+        '@polkadot/util',
+        '@polkadot/wasm-crypto',
+      ];
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
