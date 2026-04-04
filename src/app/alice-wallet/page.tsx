@@ -57,14 +57,18 @@ export default function AliceWalletPage() {
 
   // Generate new wallet
   const handleGenerate = useCallback(async () => {
-    if (!mounted) return;
-    const { mnemonic: m, address: a } = await generateAliceWallet();
-    setMnemonic(m);
-    setAliceAddress(a);
-    setBalance(null);
-    setShowMnemonic(false); // user must explicitly reveal
-    setImportMode(false);
-    setImportInput('');
+    try {
+      const { mnemonic: m, address: a } = await generateAliceWallet();
+      setMnemonic(m);
+      setAliceAddress(a);
+      setBalance(null);
+      setShowMnemonic(false); // user must explicitly reveal
+      setImportMode(false);
+      setImportInput('');
+    } catch (e) {
+      console.error('generateAliceWallet error:', e);
+      alert('生成钱包失败：' + String(e));
+    }
   }, []);
 
   // Import from mnemonic

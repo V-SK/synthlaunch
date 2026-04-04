@@ -18,14 +18,17 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     // Enable WASM support (required by @polkadot/wasm-crypto)
     config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
-    // Polkadot packages must run client-side only
     if (isServer) {
+      // On server, mark polkadot as external so it doesn't try to bundle WASM
+      const orig = config.externals;
       config.externals = [
-        ...(Array.isArray(config.externals) ? config.externals : []),
-        '@polkadot/keyring',
-        '@polkadot/util-crypto',
-        '@polkadot/util',
-        '@polkadot/wasm-crypto',
+        ...(Array.isArray(orig) ? orig : orig ? [orig] : []),
+        ({ request }, callback) => {
+          if (request && request.startsWith('@polkadot/')) {
+            return callback(null, `commonjs ${request}`);
+          }
+          callback();
+        },
       ];
     }
     return config;
