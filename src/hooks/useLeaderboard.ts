@@ -5,13 +5,12 @@ import { type Address } from 'viem';
 import { useReadContracts } from 'wagmi';
 import { STAKING_ABI, STAKING_CHAIN_ID, STAKING_CONTRACT_ADDRESS } from '@/lib/staking';
 
-const BSCSCAN_API_KEY = 'E5WR8GYV4G77M6DS9SYD68QYCH5915NBI7';
-const STAKED_TOPIC = '0xb4caaf29adda3eefee3ad552a8e85058589bf834c7466cae4ee58787f70589ed';
-// keccak256("UnstakeFinalized(address,uint256)")
-const UNSTAKE_FINALIZED_TOPIC = '0x1a2c5e6b7f8d9e0a3c4b5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f';
+const MORALIS_API_KEY =
+  '***REMOVED_MORALIS_KEY***';
 
-const CACHE_KEY = 'synth_stakers_v1';
-const CACHE_TTL_MS = 30 * 60 * 1000;
+const STAKE_SELECTOR = '0xa694fc3a'; // stake(uint256)
+const CACHE_KEY = 'synth_stakers_v2';
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
 const TOP_N = 20;
 
 export interface LeaderboardEntry {
@@ -28,24 +27,7 @@ interface CachedAddresses {
   timestamp: number;
 }
 
-async function fetchEventAddresses(topic: string): Promise<Set<string>> {
-  const url = `https://api.bscscan.com/api?module=logs&action=getLogs&address=${STAKING_CONTRACT_ADDRESS}&topic0=${topic}&fromBlock=0&toBlock=latest&page=1&offset=1000&apikey=${BSCSCAN_API_KEY}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  const result: Set<string> = new Set();
-  if (!Array.isArray(data.result)) return result;
-  for (const log of data.result) {
-    const topic1 = log.topics?.[1];
-    if (topic1) {
-      // address is padded to 32 bytes, extract last 20
-      const addr = '0x' + topic1.slice(-40);
-      result.add(addr.toLowerCase());
-    }
-  }
-  return result;
-}
-
-async function loadStakerAddresses(): Promise<Address[]> {
+async function fetchStakerAddresses(): Promise<Address[]> {
   // Check cache
   try {
     const cached = localStorage.getItem(CACHE_KEY);
@@ -59,28 +41,36 @@ async function loadStakerAddresses(): Promise<Address[]> {
     // ignore
   }
 
-  const [stakedAddrs, finalizedAddrs] = await Promise.all([
-    fetchEventAddresses(STAKED_TOPIC),
-    fetchEventAddresses(UNSTAKE_FINALIZED_TOPIC),
-  ]);
+  // Fetch from Moralis — all txs for the staking contract
+  const url = `https://deep-index.moralis.io/api/v2.2/${STAKING_CONTRACT_ADDRESS}?chain=0x38&limit=100`;
+  const res = await fetch(url, {
+    headers: { 'X-API-Key': MORALIS_API_KEY },
+  });
 
-  // Active stakers = staked but not finalized
-  const active: Address[] = [];
-  for (const addr of stakedAddrs) {
-    if (!finalizedAddrs.has(addr)) {
-      active.push(addr as Address);
+  if (!res.ok) throw new Error(`Moralis fetch failed: ${res.status}`);
+
+  const data = await res.json();
+  const txs: Array<{ input: string; from_address: string }> = data.result ?? [];
+
+  // Filter stake() calls and dedupe
+  const stakers = new Set<string>();
+  for (const tx of txs) {
+    if (tx.input?.startsWith(STAKE_SELECTOR)) {
+      stakers.add(tx.from_address.toLowerCase());
     }
   }
 
-  // Save cache
+  const addresses = Array.from(stakers) as Address[];
+
+  // Cache
   try {
-    const toCache: CachedAddresses = { addresses: active, timestamp: Date.now() };
+    const toCache: CachedAddresses = { addresses, timestamp: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(toCache));
   } catch {
     // ignore
   }
 
-  return active;
+  return addresses;
 }
 
 export function useLeaderboard() {
@@ -91,7 +81,6 @@ export function useLeaderboard() {
   const [refreshTick, setRefreshTick] = useState(0);
 
   const refresh = useCallback(() => {
-    // Clear cache and reload
     try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
     setRefreshTick((t) => t + 1);
   }, []);
@@ -100,7 +89,7 @@ export function useLeaderboard() {
     let cancelled = false;
     setIsLoadingAddresses(true);
     setError(null);
-    loadStakerAddresses()
+    fetchStakerAddresses()
       .then((addrs) => {
         if (!cancelled) {
           setAddresses(addrs);
@@ -149,6 +138,7 @@ export function useLeaderboard() {
       const [stakedAmount, multiplier, stakeTimestamp] = result.result as [bigint, bigint, bigint, bigint];
       if (stakedAmount === 0n) continue;
 
+      // 权重从链上 stakeTimestamp 实时算，不存数据库
       const daysStaked = Math.max(0, (now - Number(stakeTimestamp)) / 86400);
       const synthFloat = Number(stakedAmount) / 1e18;
       const score = synthFloat * daysStaked;
