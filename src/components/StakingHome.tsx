@@ -138,6 +138,9 @@ export function StakingHome() {
           <Link href="/tokens" className="btn-secondary min-w-[160px]">
             Browse Tokens
           </Link>
+          <Link href="/alice-wallet" className="btn-secondary min-w-[160px] flex items-center justify-center gap-2">
+            ⚡ Alice Wallet
+          </Link>
         </div>
       </section>
 
