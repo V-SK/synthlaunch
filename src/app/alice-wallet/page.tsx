@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { ALICE_SYMBOL, fetchAliceBalance, formatAlice } from '@/lib/alice';
+import { ALICE_SYMBOL, fetchAliceBalance, formatAlice, isValidAliceAddress } from '@/lib/alice';
 import { WalletConnect } from '@/components/WalletConnect';
 
 // Dynamically import polkadot to avoid SSR issues
@@ -34,7 +34,13 @@ export default function AliceWalletPage() {
   const [aliceAddress, setAliceAddress] = useState('');
   const [balance, setBalance] = useState<bigint | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
-  const [showMnemonic, setShowMnemonic] = useState(false);
+  const [showMnemonic, setShowMnemonic] = useState(false); // default hidden
+
+  // Generate a 16-byte hex nonce for replay protection
+  const generateNonce = () =>
+    Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
 
   // Import mode
   const [importMode, setImportMode] = useState(false);
@@ -52,7 +58,7 @@ export default function AliceWalletPage() {
     setMnemonic(m);
     setAliceAddress(a);
     setBalance(null);
-    setShowMnemonic(true);
+    setShowMnemonic(false); // user must explicitly reveal
     setImportMode(false);
     setImportInput('');
   }, []);
@@ -96,12 +102,21 @@ export default function AliceWalletPage() {
     setBindingLoading(true);
     setBindingStatus('');
     try {
-      const message = `Bind Alice address ${aliceAddress} to BSC address ${bscAddress}`;
+      // Validate Alice address format before signing
+      const valid = await isValidAliceAddress(aliceAddress);
+      if (!valid) {
+        setBindingStatus('❌ Alice 地址格式无效');
+        setBindingLoading(false);
+        return;
+      }
+      // Add nonce to prevent replay attacks
+      const nonce = generateNonce();
+      const message = `Bind Alice address ${aliceAddress} to BSC address ${bscAddress.toLowerCase()}\nNonce: ${nonce}`;
       const signature = await signMessageAsync({ message });
       const res = await fetch('/api/alice-binding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bscAddress, aliceAddress, signature, message }),
+        body: JSON.stringify({ bscAddress, aliceAddress, signature, message, nonce }),
       });
       const data = await res.json();
       if (data.ok) {

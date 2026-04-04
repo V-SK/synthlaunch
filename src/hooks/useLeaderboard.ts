@@ -5,10 +5,6 @@ import { type Address } from 'viem';
 import { useReadContracts } from 'wagmi';
 import { STAKING_ABI, STAKING_CHAIN_ID, STAKING_CONTRACT_ADDRESS } from '@/lib/staking';
 
-const MORALIS_API_KEY =
-  '***REMOVED_MORALIS_KEY***';
-
-const STAKE_SELECTOR = '0xa694fc3a'; // stake(uint256)
 const CACHE_KEY = 'synth_stakers_v2';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
 const TOP_N = 20;
@@ -41,26 +37,11 @@ async function fetchStakerAddresses(): Promise<Address[]> {
     // ignore
   }
 
-  // Fetch from Moralis — all txs for the staking contract
-  const url = `https://deep-index.moralis.io/api/v2.2/${STAKING_CONTRACT_ADDRESS}?chain=0x38&limit=100`;
-  const res = await fetch(url, {
-    headers: { 'X-API-Key': MORALIS_API_KEY },
-  });
-
-  if (!res.ok) throw new Error(`Moralis fetch failed: ${res.status}`);
-
+  // Fetch via our own API route (Moralis key stays server-side)
+  const res = await fetch('/api/staking/addresses');
+  if (!res.ok) throw new Error(`Failed to fetch staker addresses: ${res.status}`);
   const data = await res.json();
-  const txs: Array<{ input: string; from_address: string }> = data.result ?? [];
-
-  // Filter stake() calls and dedupe
-  const stakers = new Set<string>();
-  for (const tx of txs) {
-    if (tx.input?.startsWith(STAKE_SELECTOR)) {
-      stakers.add(tx.from_address.toLowerCase());
-    }
-  }
-
-  const addresses = Array.from(stakers) as Address[];
+  const addresses = (data.addresses ?? []) as Address[];
 
   // Cache
   try {
