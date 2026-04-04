@@ -141,7 +141,7 @@ export function useLeaderboard() {
       // 权重从链上 stakeTimestamp 实时算，不存数据库
       const daysStaked = Math.max(0, (now - Number(stakeTimestamp)) / 86400);
       const synthFloat = Number(stakedAmount) / 1e18;
-      const score = synthFloat * daysStaked;
+      const score = synthFloat * daysStaked * Number(multiplier);
 
       entries.push({
         address: addresses[i],
