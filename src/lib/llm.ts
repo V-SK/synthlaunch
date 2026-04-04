@@ -180,7 +180,6 @@ async function callOpenAiChat(
       },
       body: JSON.stringify({
         model: config.model,
-        response_format: { type: 'json_object' },
         temperature: 0.2,
         messages,
       }),
