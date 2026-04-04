@@ -18,6 +18,7 @@ export function Header() {
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.tokens'), href: '/tokens' },
     { label: t('nav.claim'), href: '/claim' },
+    { label: 'Alice Wallet', href: '/alice-wallet' },
     { label: t('nav.docs'), href: '/docs' },
   ];
 
