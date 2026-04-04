@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
+import { StakingLeaderboard } from '@/components/StakingLeaderboard';
 import {
   STAKING_COOLDOWN_SECONDS,
   STAKING_CONTRACT_ADDRESS_NORMALIZED,
@@ -365,6 +366,10 @@ export function StakingHome() {
           </div>
         </div>
       </section>
+
+      <div className="border-t border-synth-border/30 mt-8 pt-8">
+        <StakingLeaderboard />
+      </div>
     </div>
   );
 }
