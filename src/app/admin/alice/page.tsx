@@ -60,7 +60,7 @@ export default function AdminAlicePage() {
       const signature = await signMessageAsync({ message });
       const headers = {
         'x-admin-signature': signature,
-        'x-admin-message': message,
+        'x-admin-message': encodeURIComponent(message),
       };
       setAuthHeaders(headers);
       setAuthed(true);

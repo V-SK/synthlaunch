@@ -13,9 +13,10 @@ function getSupabase() {
 
 async function verifyAdmin(req: NextRequest): Promise<boolean> {
   const sig = req.headers.get('x-admin-signature');
-  const msg = req.headers.get('x-admin-message');
-  if (!sig || !msg) return false;
+  const rawMsg = req.headers.get('x-admin-message');
+  if (!sig || !rawMsg) return false;
   try {
+    const msg = decodeURIComponent(rawMsg);
     const valid = await verifyMessage({
       address: ADMIN_ADDRESS as `0x${string}`,
       message: msg,
