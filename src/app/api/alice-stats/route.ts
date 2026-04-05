@@ -73,10 +73,12 @@ export async function GET() {
     const supabase = getSupabase();
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'none';
 
-    const [balanceResult, roundsRes, totalsRes] = await Promise.all([
+    // Debug: also do a raw count
+    const [balanceResult, roundsRes, totalsRes, countRes] = await Promise.all([
       fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),
       supabase.from('alice_distribution_rounds').select('*').order('created_at', { ascending: false }).limit(10),
       supabase.from('alice_distributions').select('bsc_address, alice_amount, status').eq('status', 'success'),
+      supabase.from('alice_distribution_rounds').select('round_id', { count: 'exact' }),
     ]);
     const balanceRaw = balanceResult;
 
@@ -101,10 +103,14 @@ export async function GET() {
       perAddressTotals: perAddress,
       _debug: {
         supabaseUrl: supabaseUrl.slice(0, 30) + '...',
+        keyPrefix: (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '').slice(0, 15) + '...',
+        keySource: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE_KEY' : process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : 'none',
         roundsCount: (roundsRes.data ?? []).length,
         roundsError: roundsRes.error?.message ?? null,
         totalsCount: (totalsRes.data ?? []).length,
         totalsError: totalsRes.error?.message ?? null,
+        exactCount: countRes.count,
+        countError: countRes.error?.message ?? null,
       },
     };
 
