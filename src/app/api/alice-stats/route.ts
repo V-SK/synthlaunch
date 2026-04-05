@@ -72,11 +72,12 @@ export async function GET() {
   try {
     const supabase = getSupabase();
 
-    const [balanceRaw, roundsRes, totalsRes] = await Promise.all([
-      fetchPoolBalance(),
+    const [balanceResult, roundsRes, totalsRes] = await Promise.all([
+      fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),
       supabase.from('alice_distribution_rounds').select('*').order('created_at', { ascending: false }).limit(10),
       supabase.from('alice_distributions').select('bsc_address, alice_amount, status').eq('status', 'success'),
     ]);
+    const balanceRaw = balanceResult;
 
     // Aggregate per-address
     const addressTotals = new Map<string, bigint>();
