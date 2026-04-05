@@ -210,7 +210,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, reason: 'distribution already running' });
     }
     const lastTime = new Date(recent[0].created_at).getTime();
-    if (Date.now() - lastTime < 55 * 60 * 1000) {
+    if (Date.now() - lastTime < 50 * 60 * 1000) {
       return NextResponse.json({ ok: false, reason: 'too soon since last distribution' });
     }
   }
