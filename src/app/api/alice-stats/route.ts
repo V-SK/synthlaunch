@@ -104,6 +104,7 @@ export async function GET() {
         keySource: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE_KEY' : process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : 'NONE',
         supabaseUrl: (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').slice(0, 40),
         keyPrefix: (process.env.SUPABASE_SERVICE_ROLE_KEY || '').slice(0, 15),
+        keyRole: (() => { try { const k = process.env.SUPABASE_SERVICE_ROLE_KEY || ''; const p = JSON.parse(Buffer.from(k.split('.')[1] || '', 'base64').toString()); return p.role; } catch { return 'not-jwt'; } })(),
         latestRound: roundsRes.data?.[0]?.round_id ?? 'none',
         oldestRound: roundsRes.data?.[roundsRes.data.length - 1]?.round_id ?? 'none',
       },
