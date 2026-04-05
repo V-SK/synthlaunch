@@ -304,7 +304,7 @@
     "scheduleTitle": "Multiplier Schedule",
     "multiplierRange": "{range} days",
     "cooldownNote": "Request Unstake removes your position from active staking immediately. Funds stay locked for 7 days before you can finalize.",
-    "rewardNote": "Phase 1 does not distribute reward tokens yet. The reward token constructor slot remains reserved for future activation.",
+    "rewardNote": "ALICE token rewards are distributed automatically every hour, proportional to staking weight (staked amount × multiplier), at ~1% of the reward pool balance per round. Make sure to bind your Alice wallet address.",
     "progressEmpty": "Stake SYNTH to start at 1x.",
     "progressFrozen": "{multiplier}x frozen during cooldown",
     "progressMaxed": "5x reached. No further multiplier upgrades.",

@@ -307,7 +307,7 @@
     "scheduleTitle": "倍率档位",
     "multiplierRange": "{range} 天",
     "cooldownNote": "Request Unstake 会立即把仓位移出全网活跃质押统计，但资金仍会锁定 7 天，之后才能 Finalize。",
-    "rewardNote": "Phase 1 暂无奖励分发逻辑。rewardToken 仅保留构造参数位，方便后续版本启用。",
+    "rewardNote": "ALICE 代币奖励每小时自动分发一次，按质押权重（质押量 × 倍率）等比例分配，每次分发当前奖励池余额的约 1%。请确保已绑定 Alice 钱包地址。",
     "progressEmpty": "先质押 SYNTH，从 1x 开始累计。",
     "progressFrozen": "冷静期中，倍率冻结在 {multiplier}x",
     "progressMaxed": "已达到 5x，不再继续提升。",

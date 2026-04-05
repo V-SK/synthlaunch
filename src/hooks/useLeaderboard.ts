@@ -7,7 +7,7 @@ import { STAKING_ABI, STAKING_CHAIN_ID, STAKING_CONTRACT_ADDRESS } from '@/lib/s
 
 const CACHE_KEY = 'synth_stakers_v2';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
-const TOP_N = 20;
+const TOP_N = 100;
 
 export interface LeaderboardEntry {
   rank: number;

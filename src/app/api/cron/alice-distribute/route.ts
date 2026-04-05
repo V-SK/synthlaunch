@@ -192,6 +192,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
+  // Start time gate: don't distribute before ALICE_DISTRIBUTION_START
+  const startTime = process.env.ALICE_DISTRIBUTION_START;
+  if (startTime && Date.now() < new Date(startTime).getTime()) {
+    return NextResponse.json({ ok: false, reason: `distribution starts at ${startTime}` });
+  }
+
   const supabase = getSupabase();
 
   // Concurrency guard: refuse if a round is already running
