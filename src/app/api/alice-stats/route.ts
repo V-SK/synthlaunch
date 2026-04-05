@@ -102,7 +102,10 @@ export async function GET() {
         roundsError: roundsRes.error?.message ?? null,
         roundsCount: roundsRes.data?.length ?? 0,
         keySource: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE_KEY' : process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : 'NONE',
-        cachedAt: statsCache ? new Date(statsCache.ts).toISOString() : null,
+        supabaseUrl: (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').slice(0, 40),
+        keyPrefix: (process.env.SUPABASE_SERVICE_ROLE_KEY || '').slice(0, 15),
+        latestRound: roundsRes.data?.[0]?.round_id ?? 'none',
+        oldestRound: roundsRes.data?.[roundsRes.data.length - 1]?.round_id ?? 'none',
       },
     };
 
