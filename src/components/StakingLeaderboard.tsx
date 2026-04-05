@@ -73,22 +73,31 @@ function AliceDistributionRanking() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/alice-stats')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.perAddressTotals) return;
-        const totals: Record<string, string> = data.perAddressTotals;
-        const sorted = Object.entries(totals)
-          .map(([address, total]) => ({ address, total }))
-          .sort((a, b) => {
-            const diff = BigInt(b.total) - BigInt(a.total);
-            return diff > 0n ? 1 : diff < 0n ? -1 : 0;
-          })
-          .map((e, i) => ({ ...e, rank: i + 1 }));
-        setEntries(sorted);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let active = true;
+
+    const fetchData = () => {
+      fetch('/api/alice-stats')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!active || !data?.perAddressTotals) return;
+          const totals: Record<string, string> = data.perAddressTotals;
+          const sorted = Object.entries(totals)
+            .map(([address, total]) => ({ address, total }))
+            .sort((a, b) => {
+              const diff = BigInt(b.total) - BigInt(a.total);
+              return diff > 0n ? 1 : diff < 0n ? -1 : 0;
+            })
+            .map((e, i) => ({ ...e, rank: i + 1 }));
+          setEntries(sorted);
+        })
+        .catch(() => {})
+        .finally(() => { if (active) setLoading(false); });
+    };
+
+    fetchData();
+    // Poll every 2 minutes to pick up new distributions
+    const interval = window.setInterval(fetchData, 2 * 60 * 1000);
+    return () => { active = false; window.clearInterval(interval); };
   }, []);
 
   if (loading) {
