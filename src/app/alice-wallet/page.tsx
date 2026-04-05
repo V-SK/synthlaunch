@@ -2,44 +2,30 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { ALICE_SYMBOL, fetchAliceBalance, formatAlice, isValidAliceAddress } from '@/lib/alice';
+import { ALICE_SYMBOL, fetchAliceBalance, formatAlice } from '@/lib/alice';
 import { WalletConnect } from '@/components/WalletConnect';
 import { useI18n } from '@/lib/i18n';
 
-// Retry dynamic import on ChunkLoadError (Vercel redeployment cache mismatch)
-async function importWithRetry<T>(loader: () => Promise<T>): Promise<T> {
-  try {
-    return await loader();
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '';
-    if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError')) {
-      if (!sessionStorage.getItem('chunk-reload')) {
-        sessionStorage.setItem('chunk-reload', '1');
-        window.location.reload();
-      }
-    }
-    throw e;
-  }
-}
-
-// Dynamically import polkadot to avoid SSR issues
-async function generateAliceWallet() {
-  const { Keyring } = await importWithRetry(() => import('@polkadot/keyring'));
-  const { mnemonicGenerate, cryptoWaitReady } = await importWithRetry(() => import('@polkadot/util-crypto'));
-  await cryptoWaitReady();
-  const mnemonic = mnemonicGenerate(12);
-  const keyring = new Keyring({ type: 'sr25519', ss58Format: 300 });
-  const pair = keyring.addFromMnemonic(mnemonic);
-  return { mnemonic, address: pair.address };
+// Server-side wallet generation (no polkadot WASM needed in browser)
+async function generateAliceWallet(): Promise<{ mnemonic: string; address: string }> {
+  const res = await fetch('/api/alice-wallet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'generate' }),
+  });
+  if (!res.ok) throw new Error('wallet generation failed');
+  return res.json();
 }
 
 async function aliceAddressFromMnemonic(mnemonic: string): Promise<string> {
-  const { Keyring } = await importWithRetry(() => import('@polkadot/keyring'));
-  const { cryptoWaitReady } = await importWithRetry(() => import('@polkadot/util-crypto'));
-  await cryptoWaitReady();
-  const keyring = new Keyring({ type: 'sr25519', ss58Format: 300 });
-  const pair = keyring.addFromMnemonic(mnemonic.trim());
-  return pair.address;
+  const res = await fetch('/api/alice-wallet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'import', mnemonic }),
+  });
+  if (!res.ok) throw new Error('invalid mnemonic');
+  const data = await res.json();
+  return data.address;
 }
 
 export default function AliceWalletPage() {
@@ -152,13 +138,6 @@ export default function AliceWalletPage() {
     setBindingLoading(true);
     setBindingStatus('');
     try {
-      // Validate Alice address format before signing
-      const valid = await isValidAliceAddress(aliceAddress);
-      if (!valid) {
-        setBindingStatus('❌ ' + t('aliceWallet.invalidAliceAddress'));
-        setBindingLoading(false);
-        return;
-      }
       // Add nonce to prevent replay attacks
       const nonce = generateNonce();
       const message = `Bind Alice address ${aliceAddress} to BSC address ${bscAddress.toLowerCase()}\nNonce: ${nonce}`;
