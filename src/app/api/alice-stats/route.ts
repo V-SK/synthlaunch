@@ -97,6 +97,13 @@ export async function GET() {
       poolBalanceReadable: formatAlice(balance),
       recentRounds: roundsRes.data ?? [],
       perAddressTotals: perAddress,
+      _debug: {
+        fetchedAt: new Date().toISOString(),
+        roundsError: roundsRes.error?.message ?? null,
+        roundsCount: roundsRes.data?.length ?? 0,
+        keySource: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE_KEY' : process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : 'NONE',
+        cachedAt: statsCache ? new Date(statsCache.ts).toISOString() : null,
+      },
     };
 
     statsCache = { data: result, ts: Date.now() };
