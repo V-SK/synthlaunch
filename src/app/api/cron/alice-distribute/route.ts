@@ -145,21 +145,18 @@ async function sendAliceTransfers(
   const mnemonic = process.env.ALICE_SENDER_MNEMONIC;
   if (!mnemonic) throw new Error('ALICE_SENDER_MNEMONIC not set');
 
-  let api: InstanceType<typeof ApiPromise>;
-  try {
-    api = await ApiPromise.create({ provider: new WsProvider('wss://rpc.aliceprotocol.org') });
-  } catch {
-    const { HttpProvider } = await import('@polkadot/rpc-provider');
-    api = await ApiPromise.create({ provider: new HttpProvider(ALICE_RPC) });
-  }
+  const api = await ApiPromise.create({
+    provider: new WsProvider('wss://rpc.aliceprotocol.org', undefined, undefined, 15000),
+  });
 
   const keyring = new Keyring({ type: 'sr25519', ss58Format: ALICE_SS58_PREFIX });
-  const sender = keyring.addFromMnemonic(mnemonic);
+  const sender = keyring.addFromMnemonic(mnemonic.trim());
 
   const results = new Map<number, { hash: string } | { error: string }>();
 
-  // Fetch nonce once and increment manually to avoid nonce collisions
-  let nonce = (await api.rpc.system.accountNextIndex(sender.address)).toNumber();
+  // Use storage query for nonce (accountNextIndex fails with SS58 prefix 300)
+  const accountInfo = await api.query.system.account(sender.publicKey);
+  let nonce = accountInfo.nonce.toNumber();
 
   for (let i = 0; i < distributions.length; i++) {
     const { aliceAddress, aliceAmount } = distributions[i];
