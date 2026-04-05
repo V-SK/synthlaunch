@@ -158,6 +158,9 @@ async function sendAliceTransfers(
 
   const results = new Map<number, { hash: string } | { error: string }>();
 
+  // Fetch nonce once and increment manually to avoid nonce collisions
+  let nonce = (await api.rpc.system.accountNextIndex(sender.address)).toNumber();
+
   for (let i = 0; i < distributions.length; i++) {
     const { aliceAddress, aliceAmount } = distributions[i];
     if (aliceAmount <= 0n) {
@@ -166,10 +169,8 @@ async function sendAliceTransfers(
     }
     try {
       const tx = api.tx.balances.transferKeepAlive(aliceAddress, aliceAmount);
-      const hash = await tx.signAndSend(sender);
+      const hash = await tx.signAndSend(sender, { nonce: nonce++ });
       results.set(i, { hash: hash.toHex() });
-      // Brief pause between txs to avoid nonce issues
-      await new Promise((r) => setTimeout(r, 1500));
     } catch (e) {
       results.set(i, { error: String(e) });
     }
@@ -200,31 +201,35 @@ export async function GET(req: NextRequest) {
 
   const supabase = getSupabase();
 
-  // Concurrency guard: refuse if a round is already running
-  const { data: running } = await supabase
-    .from('alice_distribution_rounds')
-    .select('round_id')
-    .eq('status', 'running')
-    .limit(1);
-  if (running && running.length > 0) {
-    return NextResponse.json({ ok: false, reason: 'distribution already running' });
-  }
-
-  // Rate limit: refuse if last completed round was less than 30 minutes ago
+  // Rate limit: refuse if last round was less than 55 minutes ago
   const { data: recent } = await supabase
     .from('alice_distribution_rounds')
-    .select('created_at')
-    .in('status', ['completed', 'running'])
+    .select('created_at, status')
     .order('created_at', { ascending: false })
     .limit(1);
   if (recent && recent.length > 0) {
+    // Block if still running (concurrency guard)
+    if (recent[0].status === 'running') {
+      return NextResponse.json({ ok: false, reason: 'distribution already running' });
+    }
     const lastTime = new Date(recent[0].created_at).getTime();
-    if (Date.now() - lastTime < 30 * 60 * 1000) {
+    if (Date.now() - lastTime < 55 * 60 * 1000) {
       return NextResponse.json({ ok: false, reason: 'too soon since last distribution' });
     }
   }
 
+  // Create round record immediately as an atomic lock
   const roundId = new Date().toISOString().replace(/[:.]/g, '-');
+  const { error: insertErr } = await supabase.from('alice_distribution_rounds').insert({
+    round_id: roundId,
+    total_pool: '0',
+    pool_balance: '0',
+    recipient_count: 0,
+    status: 'running',
+  });
+  if (insertErr) {
+    return NextResponse.json({ ok: false, reason: 'failed to acquire lock' });
+  }
 
   try {
     // 1. Get sender wallet address and balance
@@ -238,12 +243,14 @@ export async function GET(req: NextRequest) {
 
     const poolBalance = await fetchAliceBalance(sender.address);
     if (poolBalance <= 0n) {
+      await supabase.from('alice_distribution_rounds').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('round_id', roundId);
       return NextResponse.json({ ok: false, reason: 'pool balance is 0' });
     }
 
     // 2. Calculate 1% of balance
     const totalPool = poolBalance / 100n;
     if (totalPool <= 0n) {
+      await supabase.from('alice_distribution_rounds').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('round_id', roundId);
       return NextResponse.json({ ok: false, reason: 'pool too small for 1% distribution' });
     }
 
@@ -261,11 +268,13 @@ export async function GET(req: NextRequest) {
     // 5. Calculate distribution
     const eligible = stakeInfos.filter((s) => bindings.has(s.address));
     if (eligible.length === 0) {
+      await supabase.from('alice_distribution_rounds').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('round_id', roundId);
       return NextResponse.json({ ok: false, reason: 'no eligible stakers with bindings' });
     }
 
     const totalWeight = eligible.reduce((sum, s) => sum + s.weight, 0n);
     if (totalWeight === 0n) {
+      await supabase.from('alice_distribution_rounds').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('round_id', roundId);
       return NextResponse.json({ ok: false, reason: 'total weight is 0' });
     }
 
@@ -284,14 +293,12 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // 6. Create round record
-    await supabase.from('alice_distribution_rounds').insert({
-      round_id: roundId,
+    // 6. Update round record with actual data
+    await supabase.from('alice_distribution_rounds').update({
       total_pool: totalPool.toString(),
       pool_balance: poolBalance.toString(),
       recipient_count: distributions.length,
-      status: 'running',
-    });
+    }).eq('round_id', roundId);
 
     // 7. Insert distribution records
     await supabase.from('alice_distributions').insert(
