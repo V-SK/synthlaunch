@@ -71,6 +71,7 @@ export async function GET() {
 
   try {
     const supabase = getSupabase();
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'none';
 
     const [balanceResult, roundsRes, totalsRes] = await Promise.all([
       fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),
@@ -98,6 +99,13 @@ export async function GET() {
       poolBalanceReadable: formatAlice(balance),
       recentRounds: roundsRes.data ?? [],
       perAddressTotals: perAddress,
+      _debug: {
+        supabaseUrl: supabaseUrl.slice(0, 30) + '...',
+        roundsCount: (roundsRes.data ?? []).length,
+        roundsError: roundsRes.error?.message ?? null,
+        totalsCount: (totalsRes.data ?? []).length,
+        totalsError: totalsRes.error?.message ?? null,
+      },
     };
 
     statsCache = { data: result, ts: Date.now() };
