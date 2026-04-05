@@ -190,31 +190,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
+  console.log('[ALICE] cron triggered, passed auth');
+
   // Start time gate: don't distribute before ALICE_DISTRIBUTION_START
   const startTime = process.env.ALICE_DISTRIBUTION_START;
   if (startTime && Date.now() < new Date(startTime).getTime()) {
+    console.log('[ALICE] blocked by start time gate:', startTime);
     return NextResponse.json({ ok: false, reason: `distribution starts at ${startTime}` });
   }
 
   const supabase = getSupabase();
 
   // Rate limit: refuse if last round was less than 55 minutes ago
-  const { data: recent } = await supabase
+  const { data: recent, error: recentErr } = await supabase
     .from('alice_distribution_rounds')
     .select('created_at, status')
     .order('created_at', { ascending: false })
     .limit(1);
+  console.log('[ALICE] recent round:', JSON.stringify(recent?.[0] ?? null), 'error:', recentErr?.message ?? 'none');
   if (recent && recent.length > 0) {
     // Block if still running (concurrency guard)
     if (recent[0].status === 'running') {
+      console.log('[ALICE] blocked: already running');
       return NextResponse.json({ ok: false, reason: 'distribution already running' });
     }
     const lastTime = new Date(recent[0].created_at).getTime();
+    const minutesAgo = Math.round((Date.now() - lastTime) / 60000);
+    console.log('[ALICE] last round was', minutesAgo, 'minutes ago');
     if (Date.now() - lastTime < 50 * 60 * 1000) {
+      console.log('[ALICE] blocked: too soon');
       return NextResponse.json({ ok: false, reason: 'too soon since last distribution' });
     }
   }
 
+  console.log('[ALICE] passed rate limit, creating round');
   // Create round record immediately as an atomic lock
   const roundId = new Date().toISOString().replace(/[:.]/g, '-');
   const { error: insertErr } = await supabase.from('alice_distribution_rounds').insert({
@@ -238,6 +247,7 @@ export async function GET(req: NextRequest) {
     const keyring = new Keyring({ type: 'sr25519', ss58Format: ALICE_SS58_PREFIX });
     const sender = keyring.addFromMnemonic(mnemonic);
 
+    console.log('[ALICE] round created, fetching pool balance');
     const poolBalance = await fetchAliceBalance(sender.address);
     if (poolBalance <= 0n) {
       await supabase.from('alice_distribution_rounds').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('round_id', roundId);
@@ -251,10 +261,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, reason: 'pool too small for 1% distribution' });
     }
 
+    console.log('[ALICE] pool balance:', poolBalance.toString(), 'totalPool:', totalPool.toString());
     // 3. Fetch stakers
     const addresses = await fetchStakerAddresses();
     const stakeInfos = await fetchStakeInfos(addresses);
 
+    console.log('[ALICE] stakers:', addresses.length, 'stakeInfos:', stakeInfos.length);
     // 4. Load bindings
     const { data: bindingsData } = await supabase.from('alice_bindings').select('bsc_address, alice_address');
     const bindings = new Map<string, string>();
@@ -262,6 +274,7 @@ export async function GET(req: NextRequest) {
       bindings.set(row.bsc_address.toLowerCase(), row.alice_address);
     }
 
+    console.log('[ALICE] bindings:', bindings.size);
     // 5. Calculate distribution
     const eligible = stakeInfos.filter((s) => bindings.has(s.address));
     if (eligible.length === 0) {
@@ -313,6 +326,7 @@ export async function GET(req: NextRequest) {
       })),
     );
 
+    console.log('[ALICE] eligible:', eligible.length, 'sending transfers...');
     // 8. Send transfers
     const txResults = await sendAliceTransfers(distributions);
 
