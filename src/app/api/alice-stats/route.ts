@@ -16,7 +16,11 @@ function getSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) throw new Error('Supabase env vars not configured');
-  return createClient(url, key);
+  return createClient(url, key, {
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }),
+    },
+  });
 }
 
 async function fetchPoolBalance(): Promise<string> {
@@ -97,24 +101,6 @@ export async function GET() {
       poolBalanceReadable: formatAlice(balance),
       recentRounds: roundsRes.data ?? [],
       perAddressTotals: perAddress,
-      _debug: {
-        fetchedAt: new Date().toISOString(),
-        roundsError: roundsRes.error?.message ?? null,
-        roundsCount: roundsRes.data?.length ?? 0,
-        keyRole: (() => { try { const k = process.env.SUPABASE_SERVICE_ROLE_KEY || ''; const p = JSON.parse(Buffer.from(k.split('.')[1] || '', 'base64').toString()); return p.role; } catch { return 'not-jwt'; } })(),
-        latestRound: roundsRes.data?.[0]?.round_id ?? 'none',
-        directRestLatest: await (async () => {
-          try {
-            const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-            const r = await fetch(`${url}/rest/v1/alice_distribution_rounds?select=round_id&order=created_at.desc&limit=1`, {
-              headers: { apikey: key, Authorization: `Bearer ${key}` },
-            });
-            const d = await r.json();
-            return d[0]?.round_id ?? 'empty';
-          } catch (e) { return `error: ${e}`; }
-        })(),
-      },
     };
 
     statsCache = { data: result, ts: Date.now() };
