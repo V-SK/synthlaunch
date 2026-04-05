@@ -571,6 +571,7 @@
     "updateBinding": "更新绑定",
     "signBind": "签名绑定",
     "generateFirst": "请先生成或导入 Alice 地址",
+    "mustStakeFirst": "请先质押 SYNTH 才能绑定 Alice 地址。前往质押页面进行质押。",
     "bindSuccess": "绑定成功！ALICE 奖励将发送到此地址。",
     "bindFailed": "绑定失败：",
     "invalidAliceAddress": "Alice 地址格式无效",

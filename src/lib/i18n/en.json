@@ -568,6 +568,7 @@
     "updateBinding": "Update Binding",
     "signBind": "Sign & Bind",
     "generateFirst": "Please generate or import an Alice address first",
+    "mustStakeFirst": "You must stake SYNTH before binding an Alice address. Go to the staking page to stake first.",
     "bindSuccess": "Binding successful! ALICE rewards will be sent to this address.",
     "bindFailed": "Binding failed: ",
     "invalidAliceAddress": "Invalid Alice address format",

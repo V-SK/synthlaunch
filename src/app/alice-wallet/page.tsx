@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { ALICE_SYMBOL, fetchAliceBalance, formatAlice } from '@/lib/alice';
 import { WalletConnect } from '@/components/WalletConnect';
+import { useStaking } from '@/hooks/useStaking';
 import { useI18n } from '@/lib/i18n';
 
 // Server-side wallet generation (no polkadot WASM needed in browser)
@@ -32,6 +33,7 @@ export default function AliceWalletPage() {
   const { t } = useI18n();
   const { address: bscAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { stakedAmount } = useStaking('');
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -341,13 +343,19 @@ export default function AliceWalletPage() {
                     <p className="text-synth-muted text-xs">{t('aliceWallet.willBindTo')}</p>
                     <p className="font-mono text-xs text-synth-green break-all">{aliceAddress}</p>
                   </div>
-                  <button
-                    onClick={handleBind}
-                    disabled={bindingLoading}
-                    className="w-full bg-synth-green text-black font-bold rounded-lg py-3 hover:opacity-90 disabled:opacity-50 transition-opacity"
-                  >
-                    {bindingLoading ? t('aliceWallet.signing') : binding ? t('aliceWallet.updateBinding') : t('aliceWallet.signBind')}
-                  </button>
+                  {stakedAmount > 0n ? (
+                    <button
+                      onClick={handleBind}
+                      disabled={bindingLoading}
+                      className="w-full bg-synth-green text-black font-bold rounded-lg py-3 hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    >
+                      {bindingLoading ? t('aliceWallet.signing') : binding ? t('aliceWallet.updateBinding') : t('aliceWallet.signBind')}
+                    </button>
+                  ) : (
+                    <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-400 text-center">
+                      {t('aliceWallet.mustStakeFirst')}
+                    </div>
+                  )}
                   {bindingStatus && (
                     <p className="text-sm text-center">{bindingStatus}</p>
                   )}
