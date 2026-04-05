@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 const DISTRIBUTION_WALLET = 'a2t35oD3DjDnFbe3RRm6g4nzp7SBSjVrWVu6h4cpR1chRXhkL';
 const ALICE_RPC = 'https://rpc.aliceprotocol.org';
 const ALICE_SS58_PREFIX = 300;

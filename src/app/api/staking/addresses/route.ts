@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY ?? '';
 const STAKING_CONTRACT = '0xcdf39d6c55997f3f937287ba45c33d76bb98fe03';
 const STAKE_SELECTOR = '0xa694fc3a';
