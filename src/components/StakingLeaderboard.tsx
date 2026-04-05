@@ -1,6 +1,19 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
+
+const ALICE_DECIMALS = 12;
+
+function formatAliceAmount(raw: string): string {
+  const n = BigInt(raw);
+  const divisor = BigInt(10 ** ALICE_DECIMALS);
+  const whole = n / divisor;
+  const frac = (n % divisor).toString().padStart(ALICE_DECIMALS, '0').slice(0, 2);
+  if (whole >= 1000000n) return `${(Number(whole) / 1e6).toFixed(1)}M`;
+  if (whole >= 1000n) return `${(Number(whole) / 1e3).toFixed(1)}K`;
+  return `${whole}.${frac}`;
+}
 
 function formatScore(n: number): string {
   if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
@@ -49,6 +62,16 @@ function SkeletonRow({ i }: { i: number }) {
 
 export function StakingLeaderboard() {
   const { leaderboard, isLoading, error, lastUpdated, refresh } = useLeaderboard();
+  const [aliceTotals, setAliceTotals] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('/api/alice-stats')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.perAddressTotals) setAliceTotals(data.perAddressTotals);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -70,6 +93,7 @@ export function StakingLeaderboard() {
           <span className="flex-1">地址</span>
           <span className="w-24 text-right">质押量</span>
           <span className="w-10 text-center">倍率</span>
+          <span className="w-20 text-right">ALICE</span>
           <span className="w-20 text-right">积分</span>
         </div>
 
@@ -116,6 +140,9 @@ export function StakingLeaderboard() {
               <span className="text-xs font-bold text-synth-green border border-synth-green/30 rounded px-1 py-0.5">
                 {entry.multiplier}x
               </span>
+            </span>
+            <span className="w-20 text-right text-sm text-yellow-400 font-mono">
+              {aliceTotals[entry.address.toLowerCase()] ? formatAliceAmount(aliceTotals[entry.address.toLowerCase()]) : '—'}
             </span>
             <span className="w-20 text-right text-sm font-bold text-synth-green font-mono">
               {formatScore(entry.score)}

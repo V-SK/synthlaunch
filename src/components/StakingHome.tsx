@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { StakingLeaderboard } from '@/components/StakingLeaderboard';
@@ -41,6 +41,27 @@ export function StakingHome() {
     requestUnstake,
     finalizeUnstake,
   } = useStaking(amountInput);
+
+  // Distribution pool balance
+  const [poolBalance, setPoolBalance] = useState<string | null>(null);
+  const [poolAddress] = useState('a2t35oD3DjDnFbe3RRm6g4nzp7SBSjVrWVu6h4cpR1chRXhkL');
+
+  const fetchPoolBalance = useCallback(async () => {
+    try {
+      const res = await fetch('/api/alice-stats');
+      if (!res.ok) return;
+      const data = await res.json();
+      setPoolBalance(data.poolBalanceReadable ?? null);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPoolBalance();
+    const interval = window.setInterval(fetchPoolBalance, 30 * 60 * 1000); // 30 min
+    return () => window.clearInterval(interval);
+  }, [fetchPoolBalance]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -201,7 +222,7 @@ export function StakingHome() {
         </p>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="card py-5">
           <div className="text-[10px] text-synth-muted uppercase tracking-wider mb-2">{t('staking.totalStaked')}</div>
           <div className="text-2xl font-bold text-synth-green">{formatStakingAmount(totalActiveStaked, decimals)} SYNTH</div>
@@ -217,6 +238,20 @@ export function StakingHome() {
           <div className="text-2xl font-bold text-synth-text">
             {isConnected && stakedAmount > 0n ? `${multiplier}x / 5x` : '--'}
           </div>
+        </div>
+        <div className="card py-5">
+          <div className="text-[10px] text-synth-muted uppercase tracking-wider mb-2">ALICE Distribution Pool</div>
+          <div className="text-2xl font-bold text-yellow-400">
+            {poolBalance ? `${poolBalance} ALICE` : '--'}
+          </div>
+          <a
+            href={`https://aliceprotocol.org`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-synth-muted hover:text-synth-green mt-1 inline-block font-mono truncate max-w-full"
+          >
+            {poolAddress.slice(0, 10)}...{poolAddress.slice(-6)}
+          </a>
         </div>
       </section>
 

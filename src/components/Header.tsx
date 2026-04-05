@@ -4,14 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { WalletConnect } from './WalletConnect';
 import { useI18n, LanguageToggle } from '@/lib/i18n';
+
+const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
 
 export function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const { address } = useAccount();
+
+  const isAdmin = address?.toLowerCase() === ADMIN_ADDRESS;
 
   const MENU_ITEMS = [
     { label: t('nav.ai'), href: '/ai' },
@@ -20,6 +26,7 @@ export function Header() {
     { label: t('nav.claim'), href: '/claim' },
     { label: 'Alice Wallet', href: '/alice-wallet' },
     { label: t('nav.docs'), href: '/docs' },
+    ...(isAdmin ? [{ label: 'Admin', href: '/admin/alice' }] : []),
   ];
 
   const getNavItemClasses = (item: { href: string }) => {

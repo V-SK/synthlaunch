@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/expire-agents",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/alice-distribute",
+      "schedule": "30 * * * *"
     }
   ]
 }
