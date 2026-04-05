@@ -17,13 +17,6 @@ function formatAliceAmount(raw: string): string {
   return `${whole}.${frac}`;
 }
 
-function formatScore(n: number): string {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return n.toFixed(0);
-}
-
 function formatSynth(amount: bigint): string {
   const n = Number(amount) / 1e18;
   if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
@@ -57,7 +50,6 @@ function SkeletonRow() {
       <div className="flex-1 h-4 bg-zinc-700 rounded" />
       <div className="w-20 h-4 bg-zinc-700 rounded" />
       <div className="w-10 h-5 bg-zinc-800 rounded" />
-      <div className="w-16 h-4 bg-zinc-700 rounded" />
     </div>
   );
 }
@@ -210,8 +202,7 @@ export function StakingLeaderboard() {
               </div>
               <div className="text-right">
                 <span className="text-xs text-synth-muted mr-2">{formatSynth(myEntry.stakedAmount)} SYNTH</span>
-                <span className="text-xs font-bold text-synth-green mr-2">{myEntry.multiplier}x</span>
-                <span className="text-sm font-bold text-synth-green">{formatScore(myEntry.score)} 积分</span>
+                <span className="text-xs font-bold text-synth-green">{myEntry.multiplier}x</span>
               </div>
             </div>
           )}
@@ -231,7 +222,6 @@ export function StakingLeaderboard() {
               <span className="flex-1">地址</span>
               <span className="w-24 text-right">质押量</span>
               <span className="w-10 text-center">倍率</span>
-              <span className="w-20 text-right">积分</span>
             </div>
 
             {isLoading && (
@@ -279,9 +269,6 @@ export function StakingLeaderboard() {
                         {entry.multiplier}x
                       </span>
                     </span>
-                    <span className="w-20 text-right text-sm font-bold text-synth-green font-mono">
-                      {formatScore(entry.score)}
-                    </span>
                   </div>
                 );
               })}
@@ -311,7 +298,7 @@ export function StakingLeaderboard() {
           )}
 
           <p className="text-xs text-synth-muted text-right">
-            积分 = 质押量（SYNTH）× 质押天数
+            分红权重 = 质押量 × 倍率
             {lastUpdated && <span className="ml-2">· {timeSince(lastUpdated)}</span>}
           </p>
         </div>

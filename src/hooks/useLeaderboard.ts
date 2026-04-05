@@ -14,8 +14,7 @@ export interface LeaderboardEntry {
   address: Address;
   stakedAmount: bigint;
   multiplier: number;
-  daysStaked: number;
-  score: number;
+  weight: number;
 }
 
 interface CachedAddresses {
@@ -109,32 +108,28 @@ export function useLeaderboard() {
   const leaderboard = useMemo<LeaderboardEntry[]>(() => {
     if (!stakeInfoResults || stakeInfoResults.length === 0) return [];
 
-    const now = Math.floor(Date.now() / 1000);
     const entries: Omit<LeaderboardEntry, 'rank'>[] = [];
 
     for (let i = 0; i < stakeInfoResults.length; i++) {
       const result = stakeInfoResults[i];
       if (result?.status !== 'success') continue;
 
-      const [stakedAmount, multiplier, stakeTimestamp] = result.result as [bigint, bigint, bigint, bigint];
+      const [stakedAmount, multiplier] = result.result as [bigint, bigint, bigint, bigint];
       if (stakedAmount === 0n) continue;
 
-      // 权重从链上 stakeTimestamp 实时算，不存数据库
-      const daysStaked = Math.max(0, (now - Number(stakeTimestamp)) / 86400);
       const synthFloat = Number(stakedAmount) / 1e18;
-      const score = synthFloat * daysStaked * Number(multiplier);
+      const weight = synthFloat * Number(multiplier);
 
       entries.push({
         address: addresses[i],
         stakedAmount,
         multiplier: Number(multiplier),
-        daysStaked,
-        score,
+        weight,
       });
     }
 
     return entries
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.weight - a.weight)
       .slice(0, TOP_N)
       .map((e, i) => ({ ...e, rank: i + 1 }));
   }, [stakeInfoResults, addresses]);
