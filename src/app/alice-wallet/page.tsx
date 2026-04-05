@@ -1,14 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { ALICE_SYMBOL, fetchAliceBalance, formatAlice, isValidAliceAddress } from '@/lib/alice';
 import { WalletConnect } from '@/components/WalletConnect';
+import { useI18n } from '@/lib/i18n';
+
+// Retry dynamic import on ChunkLoadError (Vercel redeployment cache mismatch)
+async function importWithRetry<T>(loader: () => Promise<T>): Promise<T> {
+  try {
+    return await loader();
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError')) {
+      if (!sessionStorage.getItem('chunk-reload')) {
+        sessionStorage.setItem('chunk-reload', '1');
+        window.location.reload();
+      }
+    }
+    throw e;
+  }
+}
 
 // Dynamically import polkadot to avoid SSR issues
 async function generateAliceWallet() {
-  const { Keyring } = await import('@polkadot/keyring');
-  const { mnemonicGenerate, cryptoWaitReady } = await import('@polkadot/util-crypto');
+  const { Keyring } = await importWithRetry(() => import('@polkadot/keyring'));
+  const { mnemonicGenerate, cryptoWaitReady } = await importWithRetry(() => import('@polkadot/util-crypto'));
   await cryptoWaitReady();
   const mnemonic = mnemonicGenerate(12);
   const keyring = new Keyring({ type: 'sr25519', ss58Format: 300 });
@@ -17,8 +34,8 @@ async function generateAliceWallet() {
 }
 
 async function aliceAddressFromMnemonic(mnemonic: string): Promise<string> {
-  const { Keyring } = await import('@polkadot/keyring');
-  const { cryptoWaitReady } = await import('@polkadot/util-crypto');
+  const { Keyring } = await importWithRetry(() => import('@polkadot/keyring'));
+  const { cryptoWaitReady } = await importWithRetry(() => import('@polkadot/util-crypto'));
   await cryptoWaitReady();
   const keyring = new Keyring({ type: 'sr25519', ss58Format: 300 });
   const pair = keyring.addFromMnemonic(mnemonic.trim());
@@ -26,6 +43,7 @@ async function aliceAddressFromMnemonic(mnemonic: string): Promise<string> {
 }
 
 export default function AliceWalletPage() {
+  const { t } = useI18n();
   const { address: bscAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
@@ -37,7 +55,9 @@ export default function AliceWalletPage() {
   const [aliceAddress, setAliceAddress] = useState('');
   const [balance, setBalance] = useState<bigint | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState(false);
   const [showMnemonic, setShowMnemonic] = useState(false); // default hidden
+  const [generating, setGenerating] = useState(false);
 
   // Generate a 16-byte hex nonce for replay protection
   const generateNonce = () =>
@@ -49,6 +69,7 @@ export default function AliceWalletPage() {
   const [importMode, setImportMode] = useState(false);
   const [importInput, setImportInput] = useState('');
   const [importError, setImportError] = useState('');
+  const [importPreview, setImportPreview] = useState('');
 
   // Binding state
   const [binding, setBinding] = useState<string | null>(null);
@@ -57,17 +78,22 @@ export default function AliceWalletPage() {
 
   // Generate new wallet
   const handleGenerate = useCallback(async () => {
+    setGenerating(true);
     try {
       const { mnemonic: m, address: a } = await generateAliceWallet();
       setMnemonic(m);
       setAliceAddress(a);
       setBalance(null);
+      setBalanceError(false);
       setShowMnemonic(false); // user must explicitly reveal
       setImportMode(false);
       setImportInput('');
+      setImportPreview('');
     } catch (e) {
       console.error('generateAliceWallet error:', e);
-      alert('生成钱包失败：' + String(e));
+      alert(t('aliceWallet.walletGenFailed') + String(e));
+    } finally {
+      setGenerating(false);
     }
   }, []);
 
@@ -81,27 +107,43 @@ export default function AliceWalletPage() {
       setImportMode(false);
       setShowMnemonic(false);
     } catch {
-      setImportError('助记词无效，请检查后重试');
+      setImportError(t('aliceWallet.invalidMnemonic'));
     }
   }, [importInput]);
 
   // Fetch balance when address changes
-  useEffect(() => {
+  const fetchBalance = useCallback(() => {
     if (!aliceAddress) return;
     setBalanceLoading(true);
+    setBalanceError(false);
     fetchAliceBalance(aliceAddress)
       .then(setBalance)
-      .catch(() => setBalance(null))
+      .catch(() => { setBalance(null); setBalanceError(true); })
       .finally(() => setBalanceLoading(false));
   }, [aliceAddress]);
+
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
+
+  // Import mnemonic real-time preview (debounced)
+  useEffect(() => {
+    if (!importMode) return;
+    const words = importInput.trim().split(/\s+/);
+    if (words.length !== 12) { setImportPreview(''); return; }
+    const timer = setTimeout(() => {
+      aliceAddressFromMnemonic(importInput)
+        .then(setImportPreview)
+        .catch(() => setImportPreview(''));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [importInput, importMode]);
 
   // Check existing binding
   useEffect(() => {
     if (!bscAddress) return;
     fetch(`/api/alice-binding?bsc=${bscAddress}`)
       .then((r) => r.json())
-      .then((d) => setBinding(d.binding?.aliceAddress ?? null))
-      .catch(() => {});
+      .then((d) => setBinding(d.binding?.alice_address ?? null))
+      .catch((e) => console.error('binding lookup failed:', e));
   }, [bscAddress]);
 
   // Sign & bind
@@ -113,7 +155,7 @@ export default function AliceWalletPage() {
       // Validate Alice address format before signing
       const valid = await isValidAliceAddress(aliceAddress);
       if (!valid) {
-        setBindingStatus('❌ Alice 地址格式无效');
+        setBindingStatus('❌ ' + t('aliceWallet.invalidAliceAddress'));
         setBindingLoading(false);
         return;
       }
@@ -129,13 +171,19 @@ export default function AliceWalletPage() {
       const data = await res.json();
       if (data.ok) {
         setBinding(aliceAddress);
-        setBindingStatus('✅ 绑定成功！ALICE 奖励将发送到此地址。');
+        setBindingStatus('✅ ' + t('aliceWallet.bindSuccess'));
       } else {
-        setBindingStatus('❌ 绑定失败：' + (data.error ?? '未知错误'));
+        setBindingStatus('❌ ' + t('aliceWallet.bindFailed') + (data.error ?? 'unknown'));
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      setBindingStatus('❌ ' + msg);
+      if (msg.includes('User rejected') || msg.includes('user denied') || msg.includes('User denied')) {
+        setBindingStatus('❌ ' + t('aliceWallet.userRejected'));
+      } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch')) {
+        setBindingStatus('❌ ' + t('aliceWallet.networkError'));
+      } else {
+        setBindingStatus('❌ ' + msg);
+      }
     } finally {
       setBindingLoading(false);
     }
@@ -146,28 +194,32 @@ export default function AliceWalletPage() {
       <div className="max-w-2xl mx-auto px-4 py-12 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-synth-green">⚡ Alice Wallet</h1>
+          <h1 className="text-3xl font-bold text-synth-green">⚡ {t('aliceWallet.title')}</h1>
           <p className="text-synth-muted text-sm">
-            生成 Alice 公链地址，接收 SYNTH 质押奖励
+            {t('aliceWallet.subtitle')}
           </p>
         </div>
 
         {/* Wallet Card */}
         <div className="card border border-synth-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Alice 地址</h2>
+            <h2 className="font-semibold text-lg">{t('aliceWallet.aliceAddress')}</h2>
             <div className="flex gap-2">
               <button
-                onClick={() => { setImportMode(true); setMnemonic(''); setAliceAddress(''); setBalance(null); }}
+                onClick={() => {
+                  if (aliceAddress && !window.confirm(t('aliceWallet.confirmClear'))) return;
+                  setImportMode(true); setMnemonic(''); setAliceAddress(''); setBalance(null); setBalanceError(false); setImportPreview('');
+                }}
                 className="text-xs text-synth-muted hover:text-white border border-synth-border rounded px-3 py-1 transition-colors"
               >
-                导入助记词
+                {t('aliceWallet.importMnemonic')}
               </button>
               <button
                 onClick={handleGenerate}
-                className="text-xs bg-synth-green text-black font-semibold rounded px-3 py-1 hover:opacity-90 transition-opacity"
+                disabled={generating}
+                className="text-xs bg-synth-green text-black font-semibold rounded px-3 py-1 hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
-                生成新钱包
+                {generating ? t('aliceWallet.generating') : t('aliceWallet.generateWallet')}
               </button>
             </div>
           </div>
@@ -178,22 +230,28 @@ export default function AliceWalletPage() {
               <textarea
                 value={importInput}
                 onChange={(e) => setImportInput(e.target.value)}
-                placeholder="输入 12 个助记词，空格分隔..."
+                placeholder={t('aliceWallet.importPlaceholder')}
                 className="w-full bg-black/30 border border-synth-border rounded-lg p-3 text-sm font-mono resize-none h-20 focus:outline-none focus:border-synth-green"
               />
+              {importPreview && (
+                <div className="bg-black/30 border border-synth-border rounded-lg p-2">
+                  <p className="text-synth-muted text-xs">{t('aliceWallet.previewAddress')}</p>
+                  <p className="font-mono text-xs text-synth-green break-all">{importPreview}</p>
+                </div>
+              )}
               {importError && <p className="text-red-400 text-xs">{importError}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={handleImport}
                   className="flex-1 bg-synth-green text-black font-semibold rounded-lg py-2 text-sm hover:opacity-90 transition-opacity"
                 >
-                  导入
+                  {t('aliceWallet.import')}
                 </button>
                 <button
                   onClick={() => { setImportMode(false); setImportError(''); }}
                   className="text-synth-muted text-sm px-4 hover:text-white transition-colors"
                 >
-                  取消
+                  {t('aliceWallet.cancel')}
                 </button>
               </div>
             </div>
@@ -203,32 +261,44 @@ export default function AliceWalletPage() {
           {aliceAddress ? (
             <div className="space-y-3">
               <div className="bg-black/30 border border-synth-border rounded-lg p-3 space-y-1">
-                <p className="text-synth-muted text-xs">Alice 地址（SS58）</p>
+                <p className="text-synth-muted text-xs">{t('aliceWallet.addressSS58')}</p>
                 <p className="font-mono text-sm break-all text-synth-green">{aliceAddress}</p>
               </div>
 
               {/* Balance */}
               <div className="bg-black/30 border border-synth-border rounded-lg p-3 flex items-center justify-between">
-                <p className="text-synth-muted text-xs">余额</p>
-                <p className="font-semibold text-white">
-                  {balanceLoading
-                    ? '查询中...'
-                    : balance !== null
-                    ? `${formatAlice(balance)} ${ALICE_SYMBOL}`
-                    : '—'}
-                </p>
+                <p className="text-synth-muted text-xs">{t('aliceWallet.balance')}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-white">
+                    {balanceLoading
+                      ? t('aliceWallet.loadingBalance')
+                      : balanceError
+                      ? t('aliceWallet.balanceFailed')
+                      : balance !== null
+                      ? `${formatAlice(balance)} ${ALICE_SYMBOL}`
+                      : '—'}
+                  </p>
+                  {balanceError && !balanceLoading && (
+                    <button
+                      onClick={fetchBalance}
+                      className="text-xs text-synth-green hover:underline"
+                    >
+                      {t('aliceWallet.retry')}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Mnemonic */}
               {mnemonic && (
                 <div className="bg-yellow-900/20 border border-yellow-600/40 rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-yellow-400 text-xs font-semibold">⚠️ 助记词（保存后请勿泄露）</p>
+                    <p className="text-yellow-400 text-xs font-semibold">⚠️ {t('aliceWallet.mnemonicWarning')}</p>
                     <button
                       onClick={() => setShowMnemonic((v) => !v)}
                       className="text-xs text-yellow-400/70 hover:text-yellow-400 transition-colors"
                     >
-                      {showMnemonic ? '隐藏' : '显示'}
+                      {showMnemonic ? t('aliceWallet.hide') : t('aliceWallet.show')}
                     </button>
                   </div>
                   {showMnemonic && (
@@ -238,7 +308,7 @@ export default function AliceWalletPage() {
                         onClick={() => navigator.clipboard.writeText(mnemonic)}
                         className="text-xs text-yellow-400/70 hover:text-yellow-400 transition-colors"
                       >
-                        复制助记词
+                        {t('aliceWallet.copyMnemonic')}
                       </button>
                     </>
                   )}
@@ -250,21 +320,21 @@ export default function AliceWalletPage() {
                 onClick={() => navigator.clipboard.writeText(aliceAddress)}
                 className="w-full text-xs text-synth-muted hover:text-white border border-synth-border rounded-lg py-2 transition-colors"
               >
-                复制地址
+                {t('aliceWallet.copyAddress')}
               </button>
             </div>
           ) : !importMode ? (
             <div className="text-center py-8 text-synth-muted text-sm">
-              点击「生成新钱包」创建 Alice 地址，或导入已有助记词
+              {t('aliceWallet.hintText')}
             </div>
           ) : null}
         </div>
 
         {/* Binding Card */}
         <div className="card border border-synth-border rounded-xl p-6 space-y-4">
-          <h2 className="font-semibold text-lg">绑定 SYNTH 质押钱包</h2>
+          <h2 className="font-semibold text-lg">{t('aliceWallet.bindTitle')}</h2>
           <p className="text-synth-muted text-sm">
-            将你的 BSC 质押钱包与 Alice 地址绑定，SYNTH 质押奖励将发送到绑定的 Alice 地址。
+            {t('aliceWallet.bindDescription')}
           </p>
 
           {!isConnected ? (
@@ -273,14 +343,14 @@ export default function AliceWalletPage() {
             <div className="space-y-3">
               {/* BSC address */}
               <div className="bg-black/30 border border-synth-border rounded-lg p-3 space-y-1">
-                <p className="text-synth-muted text-xs">BSC 钱包</p>
+                <p className="text-synth-muted text-xs">{t('aliceWallet.bscWallet')}</p>
                 <p className="font-mono text-sm text-white truncate">{bscAddress}</p>
               </div>
 
               {/* Current binding */}
               {binding && (
                 <div className="bg-green-900/20 border border-green-600/40 rounded-lg p-3 space-y-1">
-                  <p className="text-green-400 text-xs font-semibold">✅ 当前绑定</p>
+                  <p className="text-green-400 text-xs font-semibold">✅ {t('aliceWallet.currentBinding')}</p>
                   <p className="font-mono text-xs text-green-300 break-all">{binding}</p>
                 </div>
               )}
@@ -289,7 +359,7 @@ export default function AliceWalletPage() {
               {aliceAddress ? (
                 <div className="space-y-2">
                   <div className="bg-black/30 border border-synth-border rounded-lg p-3 space-y-1">
-                    <p className="text-synth-muted text-xs">将绑定到</p>
+                    <p className="text-synth-muted text-xs">{t('aliceWallet.willBindTo')}</p>
                     <p className="font-mono text-xs text-synth-green break-all">{aliceAddress}</p>
                   </div>
                   <button
@@ -297,7 +367,7 @@ export default function AliceWalletPage() {
                     disabled={bindingLoading}
                     className="w-full bg-synth-green text-black font-bold rounded-lg py-3 hover:opacity-90 disabled:opacity-50 transition-opacity"
                   >
-                    {bindingLoading ? '签名中...' : binding ? '更新绑定' : '签名绑定'}
+                    {bindingLoading ? t('aliceWallet.signing') : binding ? t('aliceWallet.updateBinding') : t('aliceWallet.signBind')}
                   </button>
                   {bindingStatus && (
                     <p className="text-sm text-center">{bindingStatus}</p>
@@ -305,7 +375,7 @@ export default function AliceWalletPage() {
                 </div>
               ) : (
                 <p className="text-synth-muted text-sm text-center py-2">
-                  请先生成或导入 Alice 地址
+                  {t('aliceWallet.generateFirst')}
                 </p>
               )}
             </div>
@@ -314,14 +384,14 @@ export default function AliceWalletPage() {
 
         {/* Info */}
         <div className="text-center text-synth-muted text-xs space-y-1">
-          <p>Alice 是去中心化 AI 训练公链，代币 ALICE 通过挖矿 100% 公平分配</p>
+          <p>{t('aliceWallet.infoText')}</p>
           <a
             href="https://aliceprotocol.org"
             target="_blank"
             rel="noopener noreferrer"
             className="text-synth-green hover:underline"
           >
-            了解更多 →
+            {t('aliceWallet.learnMore')}
           </a>
         </div>
       </div>

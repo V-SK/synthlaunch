@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
 // ---------------------------------------------------------------------------
-// Supabase client (server-side, service role)
+// Supabase client (server-side, service role only)
 // ---------------------------------------------------------------------------
 function getSupabase() {
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('Supabase env vars not configured');
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
   return createClient(url, key);
 }
 
@@ -16,6 +17,12 @@ function getSupabase() {
 // Returns the current binding for a BSC address
 // ---------------------------------------------------------------------------
 export async function GET(req: NextRequest) {
+  const ip = getClientIP(req);
+  const rl = rateLimit(`alice-binding-get:${ip}`, 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'rate limit exceeded' }, { status: 429 });
+  }
+
   const bscAddress = req.nextUrl.searchParams.get('bsc')?.toLowerCase();
   if (!bscAddress || !/^0x[0-9a-f]{40}$/i.test(bscAddress)) {
     return NextResponse.json({ error: 'invalid bsc address' }, { status: 400 });
@@ -42,6 +49,12 @@ export async function GET(req: NextRequest) {
 // Body: { bscAddress, aliceAddress, signature, message, nonce }
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
+  const ip = getClientIP(req);
+  const rl = rateLimit(`alice-binding-post:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'rate limit exceeded' }, { status: 429 });
+  }
+
   let body: Record<string, string>;
   try {
     body = await req.json();
@@ -100,23 +113,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid signature' }, { status: 403 });
   }
 
-  // --- Nonce replay check (store used nonces in Supabase) ---
+  // --- Nonce replay check (rely on DB primary key constraint) ---
   try {
     const supabase = getSupabase();
 
-    // Check nonce not already used
-    const { data: nonceRow } = await supabase
+    // Insert nonce — PK constraint prevents replay (no TOCTOU race)
+    const { error: nonceErr } = await supabase
       .from('alice_binding_nonces')
-      .select('nonce')
-      .eq('nonce', nonce)
-      .maybeSingle();
+      .insert({ nonce, bsc_address: bscAddress.toLowerCase() });
 
-    if (nonceRow) {
-      return NextResponse.json({ error: 'nonce already used' }, { status: 409 });
+    if (nonceErr) {
+      if (nonceErr.code === '23505') {
+        return NextResponse.json({ error: 'nonce already used' }, { status: 409 });
+      }
+      throw nonceErr;
     }
-
-    // Store nonce
-    await supabase.from('alice_binding_nonces').insert({ nonce, bsc_address: bscAddress.toLowerCase() });
 
     // Upsert binding
     const { error } = await supabase.from('alice_bindings').upsert(

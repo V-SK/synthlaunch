@@ -69,6 +69,6 @@ function hexToU128LE(hex: string): bigint {
   const h = hex.startsWith('0x') ? hex.slice(2) : hex;
   if (!h || h.length < 2) return 0n;
   const bytes = h.match(/.{2}/g) ?? [];
-  const beHex = bytes.reverse().join('');
+  const beHex = [...bytes].reverse().join('');
   return BigInt('0x' + (beHex || '0'));
 }
