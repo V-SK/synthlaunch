@@ -61,7 +61,12 @@ export async function GET(req: NextRequest) {
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
       console.error('Twitter token exchange failed:', tokenRes.status, errBody);
-      return NextResponse.redirect('https://synthlaunch.fun/claim?twitter_error=token_exchange');
+      const idLen = (CLIENT_ID || '').length;
+      const secLen = (CLIENT_SECRET || '').length;
+      const idTrim = CLIENT_ID !== CLIENT_ID?.trim();
+      const secTrim = CLIENT_SECRET !== CLIENT_SECRET?.trim();
+      const dbg = encodeURIComponent(`status=${tokenRes.status}|body=${errBody}|idLen=${idLen}|secLen=${secLen}|idTrim=${idTrim}|secTrim=${secTrim}|cb=${CALLBACK_URL}`);
+      return NextResponse.redirect(`https://synthlaunch.fun/claim?twitter_error=token_exchange&dbg=${dbg}`);
     }
 
     const tokenData = await tokenRes.json();
