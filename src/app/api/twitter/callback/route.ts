@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  const CLIENT_ID = process.env.TWITTER_CLIENT_ID;
-  const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
+  const CLIENT_ID = process.env.TWITTER_CLIENT_ID?.trim();
+  const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET?.trim();
   const CALLBACK_URL = 'https://synthlaunch.fun/api/twitter/callback';
 
   if (!CLIENT_ID || !CLIENT_SECRET) {
@@ -61,12 +61,7 @@ export async function GET(req: NextRequest) {
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
       console.error('Twitter token exchange failed:', tokenRes.status, errBody);
-      const idLen = (CLIENT_ID || '').length;
-      const secLen = (CLIENT_SECRET || '').length;
-      const idTrim = CLIENT_ID !== CLIENT_ID?.trim();
-      const secTrim = CLIENT_SECRET !== CLIENT_SECRET?.trim();
-      const dbg = encodeURIComponent(`status=${tokenRes.status}|body=${errBody}|idLen=${idLen}|secLen=${secLen}|idTrim=${idTrim}|secTrim=${secTrim}|cb=${CALLBACK_URL}`);
-      return NextResponse.redirect(`https://synthlaunch.fun/claim?twitter_error=token_exchange&dbg=${dbg}`);
+      return NextResponse.redirect('https://synthlaunch.fun/claim?twitter_error=token_exchange');
     }
 
     const tokenData = await tokenRes.json();

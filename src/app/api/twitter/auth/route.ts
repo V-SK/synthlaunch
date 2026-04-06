@@ -6,7 +6,7 @@ function base64url(buffer: Buffer): string {
 }
 
 export async function GET() {
-  const CLIENT_ID = process.env.TWITTER_CLIENT_ID;
+  const CLIENT_ID = process.env.TWITTER_CLIENT_ID?.trim();
   const CALLBACK_URL = 'https://synthlaunch.fun/api/twitter/callback';
 
   if (!CLIENT_ID) {

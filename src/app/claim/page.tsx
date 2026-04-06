@@ -86,8 +86,7 @@ function ClaimPageInner() {
     const twitterError = params.get('twitter_error');
 
     if (twitterError) {
-      const dbg = params.get('dbg');
-      setTwitterVerifyError(`Twitter login failed: ${twitterError}${dbg ? ` :: ${dbg}` : ''}`);
+      setTwitterVerifyError(`Twitter login failed: ${twitterError}`);
       setTab('twitter');
       // Clean URL
       window.history.replaceState({}, '', '/claim');
