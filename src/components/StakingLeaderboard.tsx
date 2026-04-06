@@ -68,7 +68,7 @@ function AliceDistributionRanking() {
     let active = true;
 
     const fetchData = () => {
-      fetch('/api/alice-stats')
+      fetch('/api/alice-stats', { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!active || !data?.perAddressTotals) return;
