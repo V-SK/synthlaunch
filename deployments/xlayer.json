@@ -1,0 +1,26 @@
+{
+  "network": "xlayer",
+  "chainId": 196,
+  "deployedAt": "2026-04-08T15:23:26.214Z",
+  "deployer": "0x0198B366978fF0ee67BF308B0367c9B6FCeD2725",
+  "contracts": {
+    "SynthLaunchCustody": {
+      "address": "0xb381e840AAB505132506781eAFD3c38398B58462",
+      "constructorArgs": [
+        "0x0198B366978fF0ee67BF308B0367c9B6FCeD2725",
+        "0x0198B366978fF0ee67BF308B0367c9B6FCeD2725",
+        "2000"
+      ]
+    },
+    "SynthID": {
+      "address": "0xE7369f4bA311f59C7476e4A0279d42F767cddd20",
+      "constructorArgs": []
+    },
+    "NFAv2": {
+      "address": "0x68FF6877A17e12Ccbb19beaADb8785CE4E4b949E",
+      "constructorArgs": [
+        "0x0198B366978fF0ee67BF308B0367c9B6FCeD2725"
+      ]
+    }
+  }
+}

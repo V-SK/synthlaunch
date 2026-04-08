@@ -1,7 +1,12 @@
 // NFA Contract - Non-Fungible Agents
-// Deploy first, then update this address (prefer env var in app code)
 // NFAv2 with logicAddress allowlist
+// Default is BSC; use NFA_ADDRESSES[chainId] for multi-chain lookups.
 export const NFA_ADDRESS = "0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19" as const;
+
+export const NFA_ADDRESSES = {
+  56: "0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19",
+  196: "0x68FF6877A17e12Ccbb19beaADb8785CE4E4b949E",
+} as const;
 
 export const NFA_ABI = [
   // Read functions

@@ -17,7 +17,7 @@ export const CHAIN_CONFIG = {
   // X Layer Mainnet
   196: {
     flapAddress: '0xb30D8c4216E1f21F27444D2FfAee3ad577808678' as const,
-    custodyAddress: '0xC27a0e45d4C95c40Ea1c6376E8824e6f56f2eB5A' as const,
+    custodyAddress: '0xb381e840AAB505132506781eAFD3c38398B58462' as const,
     rpc: 'https://xlayerrpc.okx.com',
     nativeSymbol: 'OKB',
     explorer: 'https://www.oklink.com/x-layer',

@@ -1,119 +1,336 @@
-# 🧬 SynthLaunch
+# SynthLaunch
 
-**AI Agent Launchpad on BNB Chain**
+**Agent-native token launch and monetization protocol on X Layer and BSC**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![X Layer](https://img.shields.io/badge/Chain-X%20Layer-black.svg)](https://www.oklink.com/x-layer)
 [![BSC](https://img.shields.io/badge/Chain-BSC-yellow.svg)](https://bscscan.com)
-[![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen.svg)](https://github.com/V-SK/synthlaunch)
+[![OKX Onchain OS](https://img.shields.io/badge/OKX-Onchain%20OS-blue.svg)](https://web3.okx.com)
 
-🌐 **Live**: [synthlaunch.fun](https://synthlaunch.fun)
+SynthLaunch is an **agent-native** token launch and monetization protocol that gives AI agents a full onchain stack: a soulbound identity, a dedicated treasury, a fee-routing custody, an evolvable NFT body, and a chat terminal backed by **OKX Onchain OS**.
+
+Built for the **OKX Build X Hackathon — X Layer Arena**, SynthLaunch focuses on a single thesis:
+
+> **AI agents should not just talk. They should own assets, earn revenue, and participate in onchain economies.**
 
 ---
 
-## ✨ Features
+## 🔗 Live Links
 
-- 🤖 **AI Agent Token Launch** — Create tokens for AI agents via Moltbook or Twitter
-- 🎯 **One-Click Deploy** — Simple UI, no coding required
-- 💰 **Custody System** — Secure fee collection with Timelock protection
-- 🆔 **SynthID** — Soulbound NFT identity for AI agents (ERC-8004 compatible)
-- 🧬 **NFA (Non-Fungible Agents)** — BAP-578 compatible with logicAddress allowlist
+| | |
+|---|---|
+| 🌐 Website | https://synthlaunch.fun |
+| 🛠 Source | https://github.com/V-SK/synthlaunch |
+| 🐦 X / Twitter | [@synth_fun](https://twitter.com/synth_fun) |
+| 🏁 Hackathon | OKX Build X Hackathon — **X Layer Arena** |
+| 🧭 Primary chain | **X Layer (196)** |
+| 🧭 Secondary chain | BSC (56) |
+
+---
+
+## 🎯 What SynthLaunch Does
+
+SynthLaunch turns an AI agent into a first-class onchain economic actor by stacking four primitives:
+
+1. **SynthID** — soulbound ERC-721 identity for an agent (name, platform, avatar, description). ERC-8004 compatible agent URI.
+2. **SynthLaunchCustody** — per-agent treasury that collects a share of every token trade and lets only the agent's bound wallet claim it.
+3. **NFAv2 (Non-Fungible Agent)** — BAP-578 style NFT body with balance, XP, and a whitelisted logic address so the agent can execute onchain actions safely.
+4. **AI Terminal (`/ai`)** — an on-site chat interface for the agent backed by **OKX Onchain OS skills**: search tokens, read balances, quote swaps, execute swaps, all from the same wallet that owns the agent.
+
+Put together, an agent becomes an **Agentic Wallet**: an identity with a treasury, a body, and the ability to act onchain through Onchain OS.
+
+---
+
+## 🤖 Agentic Wallet — how it works
+
+The hackathon requires an "Agentic Wallet as the project's main onchain identity". In SynthLaunch this is not a single contract — it's a composition designed so that identity, treasury, body, and execution are separated but linked:
+
+```
+                ┌──────────────────────────────────────────┐
+                │            USER WALLET                   │
+                │  (connected via wagmi + MetaMask / OKX)  │
+                └───────────────┬──────────────────────────┘
+                                │
+          ┌─────────────────────┼──────────────────────────┐
+          │                     │                          │
+          ▼                     ▼                          ▼
+  ┌───────────────┐    ┌────────────────┐      ┌───────────────────┐
+  │   SynthID     │    │     NFAv2      │      │  SynthLaunchCustody│
+  │ (soulbound)   │◄───┤ (NFT body +    │◄─────┤ (per-agent treasury│
+  │ ERC-8004 URI  │    │  XP / logic)   │      │  signature-bound)  │
+  └──────┬────────┘    └───────┬────────┘      └─────────┬──────────┘
+         │                     │                         │
+         │  agent identity     │  agent actions          │  agent revenue
+         │                     │                         │
+         ▼                     ▼                         ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │                    AI TERMINAL  ( /ai )                       │
+  │   Backed by OKX Onchain OS skills:                            │
+  │     - token search  - balances  - total value                 │
+  │     - quote         - swap aggregator                         │
+  └──────────────────────────────────────────────────────────────┘
+```
+
+**Binding**: An agent's owner calls `SynthLaunchCustody.bindWallet(agentName, wallet, nonce, signature)`. The signature is verified against a protocol signer, which pins the wallet to the agent name. Only that wallet can `claim(token)` the fees collected for that agent. This wallet is the Agentic Wallet.
+
+**Multi-agent relationship**: One user can own many agents. Each agent has:
+- exactly one `SynthID` (soulbound, cannot be moved)
+- optionally a `NFAv2` body (with a whitelisted logic contract, see `AgentLogic` / `AgentLogicPro`)
+- exactly one bound wallet in `SynthLaunchCustody` (resettable by owner via signature)
+
+Agents are first-class and independent. A user's dashboard simply aggregates agents they own.
+
+---
+
+## 🧭 Why X Layer
+
+We chose **X Layer** as our primary hackathon submission chain because SynthLaunch is fundamentally about **high-frequency onchain interaction for AI-native products**:
+
+- **AI agents generate lots of small transactions** — token launches, tax claims, treasury moves, swap actions. X Layer's low-cost EVM environment makes these economic instead of toy.
+- **OKX Onchain OS lives natively on X Layer** — the same tab that holds the agent's chat terminal can introspect balances, search tokens, and execute swaps through Onchain OS DEX aggregator without leaving the app.
+- **Composable with the OKX wallet + OKB ecosystem** — users already in the OKX environment can launch an agent, bind a wallet, and start earning in a few clicks.
+
+The repository supports BSC as a secondary chain for continuity with SynthLaunch's existing user base, but the primary hackathon submission path is X Layer.
+
+---
+
+## 🧠 OKX Onchain OS Integration
+
+SynthLaunch uses **five** Onchain OS core skills, wired end-to-end from a user-facing `/ai` chat terminal to signed onchain execution.
+
+| Skill | OKX DEX endpoint | Where it lives in code | User-facing surface |
+|---|---|---|---|
+| Token Search | `/api/v6/dex/market/token/search` | [`src/lib/okx.ts`](src/lib/okx.ts) `okxTokenSearch()` | `/ai` — "price of X", "search Y" |
+| Balances | `/api/v6/dex/balance/all-token-balances-by-address` | `okxBalances()` | `/ai` — "what's in my wallet?" |
+| Total Value | `/api/v6/dex/balance/total-value-by-address` | `okxTotalValue()` | `/ai` — portfolio summary |
+| Quote | `/api/v6/dex/aggregator/quote` | `okxQuote()` | `/ai` — "how much Y for 1 X?" |
+| Swap Aggregator | `/api/v6/dex/aggregator/swap` | `okxSwap()` | `/ai` — "swap 1 OKB for USDC" → user signs → broadcast |
+
+The full flow — intent detection, skill invocation, and on-screen rendering — lives in:
+
+- [`src/app/api/ai/chat/route.ts`](src/app/api/ai/chat/route.ts) — LLM intent → OKX skill → tool result
+- [`src/components/ai/AiTerminalPage.tsx`](src/components/ai/AiTerminalPage.tsx) — chat UI
+- [`src/components/ai/AiToolCard.tsx`](src/components/ai/AiToolCard.tsx) — renders each OKX tool result
+- [`src/app/api/okx/*`](src/app/api/okx) — thin REST wrappers for each skill
+
+Swap execution is **non-custodial**: the aggregator returns an unsigned tx, the user's wallet signs it, and the frontend broadcasts via viem. SynthLaunch never touches the private key.
 
 ---
 
 ## 📦 Smart Contracts
 
-All contracts are **open source** and **verified on BscScan**:
+### X Layer (primary — 196)
 
-| Contract | Address | Description |
-|----------|---------|-------------|
-| SynthLaunchCustody v11 | [`0x3Fa33A0fb85f11A901e3616E10876d10018f43B7`](https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7#code) | Fee custody with Timelock |
-| SynthTimelock | [`0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D`](https://bscscan.com/address/0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D#code) | 48h delay for admin ops |
-| NFAv2 | [`0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19`](https://bscscan.com/address/0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19#code) | Non-Fungible Agents with allowlist |
-| SynthID | [`0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb`](https://bscscan.com/address/0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb#code) | Soulbound AI identity |
+All contracts below were deployed and verified on OKLink as part of this hackathon submission.
+
+| Contract | Address | Purpose |
+|---|---|---|
+| SynthLaunchCustody | [`0xb381e840AAB505132506781eAFD3c38398B58462`](https://www.oklink.com/x-layer/address/0xb381e840AAB505132506781eAFD3c38398B58462) | Agent treasury + fee routing + signature-bound claim |
+| SynthID | [`0xE7369f4bA311f59C7476e4A0279d42F767cddd20`](https://www.oklink.com/x-layer/address/0xE7369f4bA311f59C7476e4A0279d42F767cddd20) | Soulbound ERC-721 agent identity (ERC-8004 URI) |
+| NFAv2 | [`0x68FF6877A17e12Ccbb19beaADb8785CE4E4b949E`](https://www.oklink.com/x-layer/address/0x68FF6877A17e12Ccbb19beaADb8785CE4E4b949E) | Non-Fungible Agent body with logic allowlist |
+| Flap Portal | [`0xb30D8c4216E1f21F27444D2FfAee3ad577808678`](https://www.oklink.com/x-layer/address/0xb30D8c4216E1f21F27444D2FfAee3ad577808678) | Token launch entrypoint (ecosystem) |
+
+Deployment receipts and constructor args are committed in [`deployments/xlayer.json`](deployments/xlayer.json).
+
+### BSC (secondary — 56)
+
+| Contract | Address | Purpose |
+|---|---|---|
+| SynthLaunchCustody v11 | [`0x3Fa33A0fb85f11A901e3616E10876d10018f43B7`](https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7#code) | Fee custody with 48h Timelock |
+| SynthTimelock | [`0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D`](https://bscscan.com/address/0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D#code) | Timelock controller |
+| SynthID | [`0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb`](https://bscscan.com/address/0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb#code) | Soulbound agent identity |
+| NFAv2 | [`0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19`](https://bscscan.com/address/0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19#code) | Non-Fungible Agent body |
 
 ---
 
-## 🛠️ Tech Stack
+## 🧱 Architecture
 
-- **Smart Contracts**: Solidity 0.8.20, Hardhat, OpenZeppelin
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Web3**: wagmi v2, viem
-- **Database**: Supabase (PostgreSQL)
-- **Deployment**: Vercel (frontend), BSC Mainnet (contracts)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User / AI Agent                          │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+          ┌──────────────▼──────────────┐
+          │     Next.js 14 Frontend      │
+          │  (chain selector: 56 / 196)  │
+          └──────────────┬──────────────┘
+                         │
+     ┌───────────────────┼──────────────────┐
+     │                   │                  │
+     ▼                   ▼                  ▼
+┌──────────┐   ┌────────────────┐   ┌────────────────┐
+│  API     │   │ Onchain OS     │   │  wagmi + viem  │
+│  Routes  │   │ Skills         │   │  direct calls  │
+│ (Next.js)│   │ (src/lib/okx)  │   │                │
+└────┬─────┘   └───────┬────────┘   └───────┬────────┘
+     │                 │                    │
+     │                 ▼                    │
+     │         ┌────────────────┐           │
+     │         │   OKX DEX API  │           │
+     │         │  (Onchain OS)  │           │
+     │         └────────────────┘           │
+     │                                      │
+     ▼                                      ▼
+┌─────────────┐                 ┌──────────────────────┐
+│  Supabase   │                 │  X Layer / BSC RPC   │
+│  (index +   │                 │  Custody / SynthID / │
+│   sessions) │                 │  NFAv2 / Flap        │
+└─────────────┘                 └──────────────────────┘
+```
+
+**Tech stack**:
+- Frontend: Next.js 14, React 18, TypeScript, Tailwind CSS
+- Web3: wagmi v2, viem
+- Contracts: Solidity 0.8.20, Hardhat, OpenZeppelin v5
+- Data: Supabase (Postgres)
+- Infra: Vercel (frontend), BSC + X Layer (contracts)
+
+---
+
+## 🛣️ Core User Flow
+
+1. User lands on [synthlaunch.fun](https://synthlaunch.fun) and connects wallet (OKX Wallet / MetaMask).
+2. User switches chain to **X Layer** in the UI chain selector.
+3. User mints a **SynthID** for their agent (soulbound identity).
+4. User launches a token via the Flap Portal, routing trade tax to **SynthLaunchCustody**.
+5. User binds a claim wallet to the agent via `bindWallet(signature)`.
+6. User mints an **NFAv2** body for the agent and attaches a whitelisted logic.
+7. User opens the **AI Terminal** at `/ai` and interacts with their agent. The terminal uses OKX Onchain OS skills to check balances, search tokens, quote and execute swaps.
+8. Trade fees accumulate in Custody. The bound wallet calls `claim(token)` to withdraw the agent's share.
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/V-SK/synthlaunch.git
 cd synthlaunch
-
-# Install
 npm install
-
-# Setup env
 cp .env.example .env.local
-# Edit .env.local with your keys
-
-# Dev
+# fill in the values (see .env.example for the list)
 npm run dev
-
-# Build
-npm run build
 ```
 
----
+Open http://localhost:3000 and switch the chain selector to X Layer.
 
-## 📄 Contract Development
+### Contract development
 
 ```bash
-# Compile contracts
+# Compile
 npx hardhat compile
 
-# Deploy to BSC Mainnet
-npx hardhat run scripts/deploy.js --network bscMainnet
+# Deploy to X Layer (Custody + SynthID + NFAv2)
+TS_NODE_PROJECT=tsconfig.hardhat.json \
+  npx hardhat run scripts/deploy-xlayer.ts --network xlayer
 
-# Verify on BscScan
-npx hardhat verify --network bscMainnet <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
+# Result is written to deployments/xlayer.json
+```
+
+Environment required for X Layer deploy:
+- `EVA_PRIVATE_KEY` — deployer private key (funded with OKB)
+- Optional: `SIGNER_ADDRESS`, `OPERATOR_ADDRESS`, `PLATFORM_FEE_RATE`, `NFA_TREASURY`
+
+---
+
+## 👩‍⚖️ Judge Quick Evaluation
+
+If you are reviewing this project for the hackathon, here is the fastest path to verify everything:
+
+1. **Open the live app** → https://synthlaunch.fun and switch the chain selector to **X Layer**.
+2. **Open the AI Terminal** → https://synthlaunch.fun/ai — this is the Onchain OS surface.
+3. Type a few prompts in the terminal:
+   - `balance` → exercises `okxBalances()` + `okxTotalValue()`
+   - `price of USDC` → exercises `okxTokenSearch()`
+   - `swap 0.01 OKB to USDC` → exercises `okxQuote()` + `okxSwap()`, returns an unsigned tx for your wallet to sign
+4. **Verify contracts on OKLink**:
+   - [Custody](https://www.oklink.com/x-layer/address/0xb381e840AAB505132506781eAFD3c38398B58462)
+   - [SynthID](https://www.oklink.com/x-layer/address/0xE7369f4bA311f59C7476e4A0279d42F767cddd20)
+   - [NFAv2](https://www.oklink.com/x-layer/address/0x68FF6877A17e12Ccbb19beaADb8785CE4E4b949E)
+5. **Read the Onchain OS glue code** in [`src/lib/okx.ts`](src/lib/okx.ts) and [`src/app/api/ai/chat/route.ts`](src/app/api/ai/chat/route.ts).
+6. **Read the multi-chain config** in [`src/lib/contracts.ts`](src/lib/contracts.ts) (see `CHAIN_CONFIG[196]`).
+7. **Read the deployment receipts** in [`deployments/xlayer.json`](deployments/xlayer.json).
+
+Total time: around 5 minutes.
+
+---
+
+## 🧩 Repository Layout
+
+```
+contracts/           Solidity (Custody, SynthID, NFAv2, Flap helpers, …)
+deployments/         Deployment receipts per chain (xlayer.json)
+docs/
+  hackathon/         Internal planning docs (TASK-*, audit, timelock plan)
+  audits/            Audit package and checklist
+scripts/
+  deploy-xlayer.ts   One-shot X Layer deployment
+  debug/             Ad-hoc chain query scripts
+  ops/               Ops scripts (twitter bot runner, etc.)
+src/
+  app/               Next.js App Router pages + API routes
+    ai/              AI terminal page
+    api/
+      ai/chat        Intent detection + OKX skill dispatch
+      okx/           REST wrappers for OKX Onchain OS skills
+      launch/        Chain-aware token launch endpoint
+  components/
+    ai/              AI terminal UI (split into ChatPane/Sidebar/StatusBar/ToolCard)
+  lib/
+    okx.ts           OKX Onchain OS client (signed HMAC)
+    contracts.ts     Multi-chain contract config (BSC + X Layer)
+    wagmi.ts         wagmi chain registration
+supabase/migrations/ Postgres schema
+test/                Contract tests (hardhat)
 ```
 
 ---
 
-## 🔒 Security
+## 🔐 Security Notes
 
-- ✅ All contracts verified on BscScan
-- ✅ Timelock protection for admin operations (48h delay)
-- ✅ ReentrancyGuard on all fund-handling functions
-- ✅ logicAddress allowlist to prevent malicious bindings
-- ✅ `renounceOwnership` disabled on critical contracts
+- All fund-handling contracts use OpenZeppelin `ReentrancyGuard`.
+- `renounceOwnership` is disabled on SynthLaunchCustody.
+- The X Layer Custody is signer-bound: a wallet can only claim after presenting a valid EIP-191 signature from the protocol signer.
+- The BSC Custody is additionally protected by a 48-hour Timelock on all owner operations.
+- NFAv2 uses a `logicAddress` allowlist — arbitrary contracts cannot be attached as agent logic.
+- OKX API secrets are server-side only (`src/lib/okx.ts`), never sent to the browser.
+- No private keys are committed; all deploy scripts read from `.env.local`.
 
 ---
 
-## 🤝 Contributing
+## 👤 Team
 
-PRs welcome! Please:
-1. Fork the repo
-2. Create a feature branch
-3. Make your changes
-4. Submit a PR
+**Soren Lin** — sole builder
+- GitHub: [@V-SK](https://github.com/V-SK)
+- X: [@synth_fun](https://twitter.com/synth_fun)
+
+---
+
+## 🛠️ What We Built During The Hackathon
+
+This is the delta we added to turn SynthLaunch into a stronger X Layer submission:
+
+- **Deployed the full SynthLaunch stack to X Layer** (Custody, SynthID, NFAv2), all verified on OKLink. See `deployments/xlayer.json`.
+- **Rebuilt the AI terminal** around OKX Onchain OS skills: split `AiTerminalPage` into focused components (`AiChatPane`, `AiSidebar`, `AiStatusBar`, `AiToolCard`), wired intent detection in `/api/ai/chat` to the five OKX skills.
+- **Multi-chain config**: extended `CHAIN_CONFIG` to carry chain-specific Flap / Custody / token implementations for both BSC (56) and X Layer (196).
+- **Repository hardening**: moved internal docs into `docs/hackathon/`, audit materials into `docs/audits/`, one-shot debug scripts into `scripts/debug/`, and removed committed build artifacts.
+- **Rewrote this README** around the four judging criteria (Onchain OS integration, X Layer ecosystem, AI experience, product completeness) so that evaluating the project takes minutes instead of hours.
+- **Agentic Wallet framing**: articulated the SynthID + NFAv2 + Custody composition as a single Agentic Wallet primitive (see section above).
+
+---
+
+## 🗺️ Roadmap
+
+- Deepen multi-chain data parity (chain-aware tokens / leaderboard APIs)
+- Unify BSC and X Layer fee scanners into a single multi-chain service
+- Expand Onchain OS coverage: position queries, historical PnL, limit orders
+- Open SynthID and NFAv2 up to third-party agent frameworks (ERC-8004 adapters)
 
 ---
 
 ## 📜 License
 
-[MIT License](LICENSE) — Use freely, attribution appreciated.
+[MIT](LICENSE)
 
 ---
 
-## 🔗 Links
-
-- 🌐 Website: [synthlaunch.fun](https://synthlaunch.fun)
-- 📄 Whitepaper: [Telegraph](https://telegra.ph/SynthLaunch--打造-AI-自由体-02-05)
-- 🐦 Twitter: [@synth_fun](https://twitter.com/synth_fun)
-- 💬 Telegram: [Synth Community](https://t.me/+xxx)
-
----
-
-**Built with 💚 for the AI Agent economy**
+Built for the **OKX Build X Hackathon — X Layer Arena**.

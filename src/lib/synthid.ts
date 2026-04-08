@@ -1,4 +1,11 @@
+// Default SynthID address (BSC mainnet). Use SYNTHID_ADDRESSES[chainId] for
+// multi-chain lookups.
 export const SYNTHID_ADDRESS = "0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb" as const;
+
+export const SYNTHID_ADDRESSES = {
+  56: "0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb",
+  196: "0xE7369f4bA311f59C7476e4A0279d42F767cddd20",
+} as const;
 
 export const SYNTHID_ABI = [
   {
