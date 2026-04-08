@@ -6,7 +6,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaxRateSlider } from '@/components/TaxRateSlider';
 import { AgentSelector } from '@/components/AgentSelector';
 import { WalletConnect } from '@/components/WalletConnect';
-import { useAccount } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
 import { useLaunchToken } from '@/hooks/useFlap';
 import { useCreateFairMint } from '@/hooks/useFairMint';
 import { useHasSynthID } from '@/hooks/useSynthID';
@@ -494,9 +494,19 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
 
 function LaunchPageInner() {
   const { t } = useI18n();
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chain: walletChain } = useAccount();
+  const { switchChain } = useSwitchChain();
   const searchParams = useSearchParams();
-  const [chainId, setChainId] = useState<56 | 196>(56);
+  // Default to the wallet's currently connected chain if it's one we support;
+  // otherwise default to X Layer (the primary submission chain for the
+  // hackathon), not BSC. This prevents a wallet-on-X-Layer user from
+  // accidentally submitting a transaction to BSC because the page picker
+  // silently reset to 56.
+  const [chainId, setChainId] = useState<56 | 196>(() => {
+    if (walletChain?.id === 196) return 196;
+    if (walletChain?.id === 56) return 56;
+    return 196;
+  });
   const { launch, hash, isPending, isConfirming, isSuccess, error: txError, reset } = useLaunchToken(chainId);
   const { hasSynthID } = useHasSynthID(address);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -528,6 +538,20 @@ function LaunchPageInner() {
       setChainId(parsed);
     }
   }, [searchParams]);
+
+  // Keep the form chain in sync with the wallet chain when the user switches
+  // networks in their wallet. Without this, it's way too easy to have the
+  // wallet on X Layer while the form picker silently says BSC.
+  useEffect(() => {
+    if (walletChain?.id === 196 || walletChain?.id === 56) {
+      setChainId(walletChain.id as 56 | 196);
+    }
+  }, [walletChain?.id]);
+
+  const walletChainMismatch =
+    isConnected &&
+    walletChain?.id !== undefined &&
+    walletChain.id !== chainId;
 
   const chainOptions = useMemo(
     () => ({
@@ -635,20 +659,44 @@ function LaunchPageInner() {
           {t('launch.title')}
         </h1>
         {/* Chain Selector */}
-        <div className="flex items-center gap-2">
-          {([56, 196] as const).map((cid) => (
-            <button
-              key={cid}
-              onClick={() => setChainId(cid)}
-              className={`text-[10px] px-3 py-1 border rounded font-mono transition-colors ${
-                chainId === cid
-                  ? 'bg-synth-green/20 text-synth-green border-synth-green/50'
-                  : 'bg-transparent text-synth-muted border-synth-border/40 hover:border-synth-green/30 hover:text-synth-text'
-              }`}
-            >
-              ● {chainOptions[cid].label}
-            </button>
-          ))}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-synth-muted uppercase tracking-wider">Target chain:</span>
+            {([196, 56] as const).map((cid) => (
+              <button
+                key={cid}
+                onClick={() => {
+                  setChainId(cid);
+                  if (isConnected && walletChain?.id !== cid) {
+                    try {
+                      switchChain({ chainId: cid });
+                    } catch {
+                      /* user can switch manually in wallet */
+                    }
+                  }
+                }}
+                className={`text-sm px-4 py-2 border-2 rounded font-mono transition-colors ${
+                  chainId === cid
+                    ? 'bg-synth-green/20 text-synth-green border-synth-green'
+                    : 'bg-transparent text-synth-muted border-synth-border/60 hover:border-synth-green/50 hover:text-synth-text'
+                }`}
+              >
+                ● {chainOptions[cid].label}
+              </button>
+            ))}
+          </div>
+          {walletChainMismatch && (
+            <div className="border border-red-500/60 bg-red-500/10 text-red-400 text-xs font-mono px-3 py-2 rounded">
+              ⚠ Wallet is on chain {walletChain?.id} but you selected {activeChain.label} ({chainId}).{' '}
+              <button
+                className="underline hover:text-red-300"
+                onClick={() => switchChain({ chainId })}
+              >
+                Switch wallet to {activeChain.label}
+              </button>{' '}
+              before submitting, or the transaction will be sent to the wrong network.
+            </div>
+          )}
         </div>
         <p className="text-sm text-synth-muted">
           {chainId === 196 ? t('launch.subtitleXLayer') : t('launch.subtitle')}
@@ -899,16 +947,18 @@ function LaunchPageInner() {
               {isConnected ? (
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2"
+                  disabled={isLoading || walletChainMismatch}
+                  className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isLoading ? (
+                  {walletChainMismatch ? (
+                    `⚠ Switch wallet to ${activeChain.label} first`
+                  ) : isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-synth-green border-t-transparent rounded-full animate-spin" />
                       {t('launch.processing')}
                     </>
                   ) : (
-                    `🚀 ${t('launch.launchToken')}`
+                    `🚀 ${t('launch.launchToken')} on ${activeChain.label}`
                   )}
                 </button>
               ) : (
