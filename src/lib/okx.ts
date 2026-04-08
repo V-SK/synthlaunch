@@ -169,7 +169,7 @@ export async function okxBalances(address: string): Promise<OkxBalanceItem[]> {
   return await okxRequest<OkxBalanceItem[]>({
     path: '/api/v6/dex/balance/all-token-balances-by-address',
     query: {
-      chainIndex: OKX_X_LAYER_CHAIN_INDEX,
+      chains: OKX_X_LAYER_CHAIN_INDEX,
       address,
     },
   });
@@ -183,7 +183,7 @@ export async function okxTotalValue(
   >({
     path: '/api/v6/dex/balance/total-value-by-address',
     query: {
-      chainIndex: OKX_X_LAYER_CHAIN_INDEX,
+      chains: OKX_X_LAYER_CHAIN_INDEX,
       address,
     },
   });

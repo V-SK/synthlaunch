@@ -5,6 +5,16 @@ import { verifySignature } from '@/lib/auth';
 const AI_AUTH_COOKIE = 'synth_ai_session';
 const AI_AUTH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const AI_AUTH_NONCE_TTL_MS = 10 * 60 * 1000;
+// TODO(ai-auth): consumedChallengeTokens is an in-memory Set and does not
+// survive across serverless instances or cold starts. Migrate to a Supabase
+// table to enforce one-shot challenge consumption cluster-wide:
+//   create table ai_consumed_challenges (
+//     token text primary key,
+//     expires_at timestamptz not null,
+//     created_at timestamptz not null default now()
+//   );
+//   create index on ai_consumed_challenges (expires_at);
+// Then replace the Set with insert-on-consume + periodic cleanup of expired rows.
 const consumedChallengeTokens = new Set<string>();
 
 type AiSessionPayload = {
@@ -38,13 +48,17 @@ function fromBase64Url(value: string): Buffer {
 }
 
 function getAiAuthSecret(): string {
+  // Never fall back to SUPABASE_SERVICE_KEY (which historically was the
+  // anon/public key in some envs). Require an explicit AI_SESSION_SECRET, or
+  // fall back only to SUPABASE_SERVICE_ROLE_KEY. Using the anon key here would
+  // allow anyone with the public env to forge AI session cookies.
   const secret =
-    process.env.AI_SESSION_SECRET ??
-    process.env.SUPABASE_SERVICE_KEY ??
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.AI_SESSION_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!secret) {
-    throw new Error('AI session secret is not configured');
+    throw new Error(
+      'AI session secret is not configured (set AI_SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY)',
+    );
   }
 
   return secret;

@@ -3,9 +3,13 @@ import { createClient } from '@/lib/supabase';
 import { getAiAuthState } from '@/lib/ai/auth';
 import { getLastLlmProbeResult, getLlmProviderStatus, probeLlmProvider } from '@/lib/llm';
 import { isOkxConfigured, okxTokenSearch } from '@/lib/okx';
+import { getClientIP, rateLimit } from '@/lib/rateLimit';
 import type { AiHealthResponse } from '@/lib/ai/types';
 
 export const dynamic = 'force-dynamic';
+
+const HEALTH_CACHE_TTL_MS = 30_000;
+let healthCache: { result: AiHealthResponse; expiresAt: number } | null = null;
 
 async function checkSupabase() {
   try {
@@ -58,8 +62,22 @@ async function checkOkx() {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const ip = getClientIP(request);
+  const limit = rateLimit(`ai-health:${ip}`, 10, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.resetIn / 1000)) } },
+    );
+  }
+
   const auth = getAiAuthState();
+
+  if (healthCache && healthCache.expiresAt > Date.now()) {
+    return NextResponse.json({ ...healthCache.result, auth });
+  }
+
   const [supabase, okx] = await Promise.all([checkSupabase(), checkOkx()]);
 
   let llm = getLlmProviderStatus();
@@ -75,6 +93,8 @@ export async function GET() {
     okx,
     supabase,
   };
+
+  healthCache = { result: payload, expiresAt: Date.now() + HEALTH_CACHE_TTL_MS };
 
   return NextResponse.json(payload);
 }

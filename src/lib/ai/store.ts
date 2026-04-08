@@ -142,7 +142,7 @@ export async function ensureAiUser(walletAddress: string): Promise<AiUserProfile
     .request<AiUserRow[]>(
       `ai_users?wallet_address=eq.${wallet}&select=wallet_address,risk_bias,preferred_quote_token,watchlist,last_session_id&limit=1`,
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   if (existing.length > 0) {
     return mapUserRow(existing[0] ?? null, wallet, true);
@@ -165,7 +165,7 @@ export async function ensureAiUser(walletAddress: string): Promise<AiUserProfile
         }),
       },
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   return mapUserRow(created[0] ?? null, wallet, true);
 }
@@ -240,7 +240,7 @@ export async function getOrCreateAiSession(
       .request<AiSessionRow[]>(
         `ai_sessions?id=eq.${sessionId}&wallet_address=eq.${wallet}&select=id,wallet_address,chain_id,title,created_at,last_message_at&limit=1`,
       )
-      .catch(() => []);
+      .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
     if (existing.length > 0) {
       const session = mapSessionRow(existing[0]!, wallet);
       await updateAiUser(wallet, { lastSessionId: session.id });
@@ -252,7 +252,7 @@ export async function getOrCreateAiSession(
     .request<AiSessionRow[]>(
       `ai_sessions?wallet_address=eq.${wallet}&select=id,wallet_address,chain_id,title,created_at,last_message_at&order=last_message_at.desc&limit=1`,
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   if (latest.length > 0) {
     const session = mapSessionRow(latest[0]!, wallet);
@@ -296,12 +296,12 @@ export async function getAiHistory(
       .request<AiMessageRow[]>(
         `ai_messages?wallet_address=eq.${wallet}&session_id=eq.${sessionId}&select=id,session_id,wallet_address,role,content,metadata,created_at&order=created_at.asc&limit=200`,
       )
-      .catch(() => []),
+      .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; }),
     client
       .request<AiActionRow[]>(
         `ai_actions?wallet_address=eq.${wallet}&session_id=eq.${sessionId}&select=id,session_id,wallet_address,action_type,status,tx_hash,payload,created_at&order=created_at.desc&limit=50`,
       )
-      .catch(() => []),
+      .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; }),
   ]);
 
   return {
@@ -351,7 +351,7 @@ export async function insertAiMessage(input: {
         }),
       },
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   await touchAiSession(input.sessionId);
   return rows[0] ? mapMessageRow(rows[0]) : fallback;
@@ -401,7 +401,7 @@ export async function recordAiAction(input: {
         }),
       },
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   await touchAiSession(input.sessionId);
   return rows[0] ? mapActionRow(rows[0]) : fallback;
@@ -442,7 +442,7 @@ export async function updateAiAction(
         }),
       },
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   return rows[0] ? mapActionRow(rows[0]) : null;
 }
@@ -465,7 +465,7 @@ export async function touchAiSession(sessionId: string): Promise<void> {
         body: JSON.stringify({ last_message_at: new Date().toISOString() }),
       },
     )
-    .catch(() => undefined);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return undefined; });
 }
 
 export async function createAiAuthNonceRecord(input: {
@@ -496,7 +496,7 @@ export async function createAiAuthNonceRecord(input: {
         },
       },
     )
-    .catch(() => undefined);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return undefined; });
 
   const rows = await client
     .request<AiAuthNonceRow[]>(
@@ -515,7 +515,7 @@ export async function createAiAuthNonceRecord(input: {
         }),
       },
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   if (rows.length === 0) {
     inMemoryAuthNonces.set(input.nonce, {
@@ -559,7 +559,7 @@ export async function consumeAiAuthNonceRecord(input: {
     .request<AiAuthNonceRow[]>(
       `ai_auth_nonces?nonce=eq.${input.nonce}&wallet_address=eq.${wallet}&select=nonce,wallet_address,message,expires_at,consumed_at,created_at&limit=1`,
     )
-    .catch(() => []);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return []; });
 
   const row = rows[0];
   if (!row || row.consumed_at || Date.parse(row.expires_at) <= Date.now()) {
@@ -593,7 +593,7 @@ export async function consumeAiAuthNonceRecord(input: {
         }),
       },
     )
-    .catch(() => undefined);
+    .catch((err) => { console.error('[ai/store] supabase request failed', err); return undefined; });
 
   return {
     message: row.message,

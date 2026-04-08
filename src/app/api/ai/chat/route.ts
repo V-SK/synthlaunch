@@ -186,7 +186,15 @@ async function decideIntent(
       };
     }
 
-    const parsed = JSON.parse(response.content) as LlmDecision;
+    const stripped = response.content
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim();
+    const jsonStart = stripped.indexOf('{');
+    const jsonEnd = stripped.lastIndexOf('}');
+    const jsonText = jsonStart >= 0 && jsonEnd > jsonStart ? stripped.slice(jsonStart, jsonEnd + 1) : stripped;
+    const parsed = JSON.parse(jsonText) as LlmDecision;
     if (!parsed.intent) {
       return {
         decision: extractHeuristics(message),
@@ -490,12 +498,17 @@ export async function POST(request: NextRequest) {
             decision.amount,
             Number(fromToken.decimal || '18'),
           );
+          const userSlippage = (currentUser as unknown as { slippage?: string }).slippage;
+          const slippage =
+            (typeof userSlippage === 'string' && userSlippage.trim().length > 0
+              ? userSlippage
+              : process.env.AI_DEFAULT_SLIPPAGE) || '0.5';
           const swapData = await okxSwap({
             fromTokenAddress: fromToken.tokenContractAddress,
             toTokenAddress: toToken.tokenContractAddress,
             amount: amountBase,
             userWalletAddress: walletAddress,
-            slippage: '0.5',
+            slippage,
           });
           const first = swapData[0] ?? {};
           const execution = getSwapExecutionData(first);
@@ -533,7 +546,7 @@ export async function POST(request: NextRequest) {
             amountIn: decision.amount,
             amountOut: execution.amountOut,
             minAmountOut: execution.minAmountOut,
-            slippage: '0.5',
+            slippage,
             execution: {
               to: execution.to,
               data: execution.data,

@@ -21,3 +21,4 @@ wallet-backups/
 .env*.local
 .env.vercel
 .env.vercel-check
+tsconfig.tsbuildinfo

@@ -4,6 +4,52 @@
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 
+:root {
+  --ai-radius: 12px;
+  --ai-border: rgba(255, 255, 255, 0.08);
+  --ai-border-strong: rgba(0, 255, 136, 0.2);
+  --ai-gap: 16px;
+}
+
+@keyframes ai-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ai-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(0, 255, 136, 0); }
+}
+
+@keyframes ai-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes ai-slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.ai-fade-up { animation: ai-fade-up 200ms ease-out both; }
+.ai-pulse { animation: ai-pulse 1.6s ease-out infinite; }
+.ai-slide-in { animation: ai-slide-in 220ms ease-out both; }
+.ai-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 800px 100%;
+  animation: ai-shimmer 1.6s linear infinite;
+}
+.ai-press { transition: transform 120ms ease-out; }
+.ai-press:active { transform: scale(0.96); }
+.ai-collapse { transition: max-height 220ms ease, opacity 180ms ease; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fade-up, .ai-pulse, .ai-slide-in, .ai-shimmer, .ai-press, .ai-collapse {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @layer base {
   * {
     scrollbar-width: thin;

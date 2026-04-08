@@ -7,7 +7,7 @@ type SupabaseClient = {
 export function createClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
-    process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase not configured');
@@ -22,6 +22,7 @@ export function createClient(): SupabaseClient {
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const res = await fetch(`${baseUrl}/${path}`, {
       ...options,
+      cache: 'no-store',
       headers: {
         ...headers,
         ...(options.headers || {}),
