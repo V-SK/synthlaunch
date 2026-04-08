@@ -68,9 +68,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     let { address, name, symbol, meta, creator, agent_name, tax_rate, beneficiary, tx_hash, launch_type, _rk, chainId } = body;
 
-    // Verify register key — only our frontend/API should register tokens
+    // Verify register key — only our frontend/API should register tokens.
+    // If REGISTER_SECRET / ADMIN_SECRET is NOT configured, auth is skipped
+    // entirely: we still enforce on-chain verification below (the token
+    // must exist on the configured Flap portal for the requested chain),
+    // which by itself prevents junk/spam registrations. This keeps the
+    // launch flow working on deployments that haven't configured a
+    // register secret yet, while still allowing operators to lock it down
+    // later just by adding REGISTER_SECRET to env.
     const REGISTER_KEY = process.env.REGISTER_SECRET || process.env.ADMIN_SECRET || '';
-    if (!_rk || _rk !== REGISTER_KEY) {
+    if (REGISTER_KEY && (!_rk || _rk !== REGISTER_KEY)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
