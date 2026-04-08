@@ -483,7 +483,7 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
           )}
           {hash && !tokenAddress && (
             <p className="text-synth-cyan text-xs text-center mt-2">
-              Tx submitted: <a href={`https://bscscan.com/tx/${hash}`} target="_blank" className="underline">{hash.slice(0, 10)}...</a>
+              Tx submitted: <a href={`${CHAIN_CONFIG[chainId].explorer}/tx/${hash}`} target="_blank" className="underline">{hash.slice(0, 10)}...</a>
             </p>
           )}
         </>
@@ -744,7 +744,7 @@ function LaunchPageInner() {
                   </p>
                   {hash && (
                     <a
-                      href={`https://bscscan.com/tx/${hash}`}
+                      href={`${CHAIN_CONFIG[chainId].explorer}/tx/${hash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-synth-muted hover:text-synth-green truncate block"
