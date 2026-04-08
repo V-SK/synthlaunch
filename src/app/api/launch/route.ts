@@ -92,7 +92,8 @@ function incrementHandleLaunch(handle: string): void {
 async function findVanitySalt(
   hasTax: boolean,
   tokenImpl: { standard: string; tax: string },
-  vanitySuffix: { standard: string; tax: string }
+  vanitySuffix: { standard: string; tax: string },
+  portal: `0x${string}` = PORTAL,
 ): Promise<{ salt: `0x${string}`; tokenAddress: string }> {
   const suffix = hasTax ? vanitySuffix.tax : vanitySuffix.standard;
   const impl = hasTax ? tokenImpl.tax : tokenImpl.standard;
@@ -104,7 +105,7 @@ async function findVanitySalt(
 
   for (let i = 0; i < maxIterations; i++) {
     const addr = getContractAddress({
-      from: PORTAL,
+      from: portal,
       salt: toBytes(salt),
       bytecode,
       opcode: 'CREATE2',
@@ -249,7 +250,7 @@ async function handleTwitterLaunch(
   let tokenAddress: string;
   try {
     console.log(`[launch/twitter] Mining vanity salt (hasTax: ${hasTax})...`);
-    const result = await findVanitySalt(hasTax, chainConfig.tokenImpl, chainConfig.vanitySuffix);
+    const result = await findVanitySalt(hasTax, chainConfig.tokenImpl, chainConfig.vanitySuffix, chainConfig.flapAddress);
     salt = result.salt;
     tokenAddress = result.tokenAddress;
   } catch (err: unknown) {
@@ -527,7 +528,7 @@ export async function POST(request: NextRequest) {
     const migratorType = hasTax ? 1 : 0;
 
     try {
-      const result = await findVanitySalt(hasTax, chainConfig.tokenImpl, chainConfig.vanitySuffix);
+      const result = await findVanitySalt(hasTax, chainConfig.tokenImpl, chainConfig.vanitySuffix, chainConfig.flapAddress);
       salt = result.salt;
       tokenAddress = result.tokenAddress;
     } catch (err: unknown) {

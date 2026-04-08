@@ -2,8 +2,6 @@ import { getContractAddress, keccak256, toBytes, toHex } from 'viem';
 import { generatePrivateKey } from 'viem/accounts';
 import { CHAIN_CONFIG, type SupportedChainId } from '@/lib/contracts';
 
-const PORTAL = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as const;
-
 const EIP1167_PREFIX = '0x3d602d80600a3d3981f3363d3d373d3d3d363d73';
 const EIP1167_SUFFIX = '5af43d82803e903d91602b57fd5bf3';
 
@@ -13,13 +11,17 @@ function buildBytecode(impl: string): `0x${string}` {
 
 /**
  * Find a salt that produces a CREATE2 address ending with the required vanity suffix.
- * Vanity suffixes are chain-specific (tax vs standard).
- * Uses the same approach as Flap's official example: keccak256 hashing.
+ * Vanity suffixes are chain-specific (tax vs standard). The CREATE2 deployer
+ * address is the Flap portal for the selected chain, so the salt search MUST
+ * use the chain-specific portal address — otherwise the deployed token address
+ * will not match the vanity suffix and the portal reverts with
+ * VanityAddressRequirementNotMet.
  */
 export async function findVanitySalt(hasTax: boolean, chainId: SupportedChainId = 56): Promise<`0x${string}`> {
   const chainConfig = CHAIN_CONFIG[chainId] ?? CHAIN_CONFIG[56];
   const suffix = hasTax ? chainConfig.vanitySuffix.tax : chainConfig.vanitySuffix.standard;
   const impl = hasTax ? chainConfig.tokenImpl.tax : chainConfig.tokenImpl.standard;
+  const portal = chainConfig.flapAddress;
   const bytecode = buildBytecode(impl);
 
   const maxIterations = 500000;
@@ -31,7 +33,7 @@ export async function findVanitySalt(hasTax: boolean, chainId: SupportedChainId 
 
   for (let i = 0; i < maxIterations; i++) {
     const addr = getContractAddress({
-      from: PORTAL,
+      from: portal,
       salt: toBytes(salt),
       bytecode,
       opcode: 'CREATE2',
