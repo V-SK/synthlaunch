@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, formatEther, parseAbi, getAddress, type Address } from 'viem';
+import { createPublicClient, http, formatEther, parseAbi, getAddress, defineChain, type Address } from 'viem';
 import { bsc } from 'viem/chains';
+import { CHAIN_CONFIG, type SupportedChainId } from '@/lib/contracts';
 
 export const dynamic = 'force-dynamic';
 
 // --- Constants ---
-const PORTAL_ADDRESS = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0' as Address;
-const BSC_RPC = 'https://bsc-dataseed.binance.org';
 const BILLION = 1000000000;
 const CACHE_TTL = 15000; // 45 seconds
+
+const xlayer = defineChain({
+  id: 196,
+  name: 'X Layer',
+  nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
+  rpcUrls: { default: { http: [CHAIN_CONFIG[196].rpc] } },
+});
+
+function getViemChain(chainId: SupportedChainId) {
+  return chainId === 196 ? xlayer : bsc;
+}
 
 const PORTAL_ABI = parseAbi([
   'function getTokenV5(address token) external view returns ((uint8,uint256,uint256,uint256,uint8,uint256,uint256,uint256,uint256,address,bool,bytes32))',
@@ -47,19 +57,46 @@ interface CachedToken {
   dexSupplyThreshold: number;
 }
 
-let tokenCache: CachedToken[] = [];
-let cacheTimestamp = 0;
+// Per-chain cache so BSC and X Layer don't stomp on each other.
+interface ChainCache {
+  tokens: CachedToken[];
+  timestamp: number;
+  isFetching: boolean;
+  fetchStartTime: number;
+  lastKnownSupabase: SupabaseToken[];
+  lastRefreshDebug: string;
+  client: ReturnType<typeof createPublicClient>;
+}
+
+const chainCaches: Record<SupportedChainId, ChainCache> = {
+  56: {
+    tokens: [],
+    timestamp: 0,
+    isFetching: false,
+    fetchStartTime: 0,
+    lastKnownSupabase: [],
+    lastRefreshDebug: '',
+    client: createPublicClient({
+      chain: bsc,
+      transport: http(CHAIN_CONFIG[56].rpc, { batch: true, retryCount: 3 }),
+    }),
+  },
+  196: {
+    tokens: [],
+    timestamp: 0,
+    isFetching: false,
+    fetchStartTime: 0,
+    lastKnownSupabase: [],
+    lastRefreshDebug: '',
+    client: createPublicClient({
+      chain: xlayer,
+      transport: http(CHAIN_CONFIG[196].rpc, { batch: true, retryCount: 3 }),
+    }),
+  },
+};
+
 let bnbPriceCache = 0;
 let bnbPriceTimestamp = 0;
-let isFetching = false;
-let fetchStartTime = 0;
-let lastKnownSupabaseTokens: SupabaseToken[] = []; // fallback if Supabase goes down
-let lastRefreshDebug = '';
-
-const client = createPublicClient({
-  chain: bsc,
-  transport: http(BSC_RPC, { batch: true, retryCount: 3 }),
-});
 
 // --- BNB Price ---
 async function fetchBnbPrice(): Promise<number> {
@@ -111,18 +148,26 @@ interface SupabaseToken {
   created_at: string;
 }
 
-async function fetchTokenList(): Promise<SupabaseToken[]> {
+async function fetchTokenList(chainId: SupportedChainId): Promise<SupabaseToken[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const cache = chainCaches[chainId];
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('[tokens] Supabase not configured');
     return [];
   }
 
+  // chain_id column may not yet exist in older supabase instances; the
+  // default filter `chain_id=eq.<n>` is safe after running migration 008.
+  // For BSC we also accept rows missing the column (treated as legacy BSC).
+  const filter = chainId === 56
+    ? `or=(chain_id.eq.56,chain_id.is.null)`
+    : `chain_id=eq.${chainId}`;
+
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/tokens?select=*&order=created_at.desc`,
+      `${supabaseUrl}/rest/v1/tokens?select=*&${filter}&order=created_at.desc`,
       {
         headers: {
           apikey: supabaseKey,
@@ -136,58 +181,80 @@ async function fetchTokenList(): Promise<SupabaseToken[]> {
     );
 
     if (!res.ok) {
-      console.error('[tokens] Supabase error:', res.status, await res.text());
-      if (lastKnownSupabaseTokens.length > 0) {
+      const errText = await res.text();
+      console.error('[tokens] Supabase error:', res.status, errText);
+      // Fallback: if chain_id column is missing, the or= filter will 400.
+      // Retry without filter and tag everything as the requested chain.
+      if (res.status === 400 && errText.includes('chain_id')) {
+        console.warn('[tokens] chain_id column missing — falling back to unfiltered query');
+        const fallback = await fetch(`${supabaseUrl}/rest/v1/tokens?select=*&order=created_at.desc`, {
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            'Cache-Control': 'no-cache, no-store',
+          },
+          signal: AbortSignal.timeout(5000),
+          cache: 'no-store',
+        });
+        if (fallback.ok && chainId === 56) {
+          const data = await fallback.json();
+          const HIDDEN_TOKENS = ['0xf0af019693179ae0fd4b92ec39068b16f4887777'];
+          const valid = data.filter((t: any) => t.address && t.address.startsWith('0x') && t.address.length === 42 && !HIDDEN_TOKENS.includes(t.address.toLowerCase()));
+          if (valid.length > 0) cache.lastKnownSupabase = valid;
+          return valid;
+        }
+      }
+      if (cache.lastKnownSupabase.length > 0) {
         console.log('[tokens] Using last-known-good Supabase data as fallback');
-        return lastKnownSupabaseTokens;
+        return cache.lastKnownSupabase;
       }
       return [];
     }
 
     const data = await res.json();
-    // Hidden tokens (not shown on frontend)
     const HIDDEN_TOKENS = ['0xf0af019693179ae0fd4b92ec39068b16f4887777'];
-    // Filter out invalid addresses and hidden tokens
     const valid = data.filter((t: any) => t.address && t.address.startsWith('0x') && t.address.length === 42 && !HIDDEN_TOKENS.includes(t.address.toLowerCase()));
-    console.log(`[tokens] Supabase raw=${data.length} valid=${valid.length} addrs=${data.map((t:any)=>t.address?.slice(0,8)||'null').join(',')}`);
+    console.log(`[tokens] chain=${chainId} Supabase raw=${data.length} valid=${valid.length}`);
     if (valid.length > 0) {
-      lastKnownSupabaseTokens = valid;
+      cache.lastKnownSupabase = valid;
     }
     return valid;
   } catch (e) {
     console.error('[tokens] Failed to fetch from Supabase:', e);
-    if (lastKnownSupabaseTokens.length > 0) {
+    if (cache.lastKnownSupabase.length > 0) {
       console.log('[tokens] Using last-known-good Supabase data as fallback');
-      return lastKnownSupabaseTokens;
+      return cache.lastKnownSupabase;
     }
     return [];
   }
 }
 
 // --- Main data fetch ---
-async function refreshTokens(): Promise<void> {
+async function refreshTokens(chainId: SupportedChainId): Promise<void> {
+  const cache = chainCaches[chainId];
+  const PORTAL_ADDRESS = CHAIN_CONFIG[chainId].flapAddress as Address;
+
   // Reset stale lock (stuck for > 30s)
-  if (isFetching && Date.now() - fetchStartTime > 30000) {
-    console.warn('[tokens] Resetting stale isFetching lock');
-    isFetching = false;
+  if (cache.isFetching && Date.now() - cache.fetchStartTime > 30000) {
+    console.warn(`[tokens] chain=${chainId} Resetting stale isFetching lock`);
+    cache.isFetching = false;
   }
-  if (isFetching) return;
-  isFetching = true;
-  fetchStartTime = Date.now();
+  if (cache.isFetching) return;
+  cache.isFetching = true;
+  cache.fetchStartTime = Date.now();
 
   try {
     const [bnbPrice, supabaseTokens] = await Promise.all([
       fetchBnbPrice(),
-      fetchTokenList(),
+      fetchTokenList(chainId),
     ]);
 
     if (supabaseTokens.length === 0) {
-      console.log('[tokens] No tokens from Supabase, keeping existing cache');
-      isFetching = false;
+      console.log(`[tokens] chain=${chainId} No tokens from Supabase, keeping existing cache`);
+      cache.isFetching = false;
       return;
     }
-    const debugParts: string[] = [`sb=${supabaseTokens.length}`, `addrs=${supabaseTokens.map(t=>t.address?.slice(0,6)).join('|')}`];
-    console.log(`[tokens] Fetched ${supabaseTokens.length} tokens from Supabase: ${supabaseTokens.map(t => t.address?.slice(0,8)).join(',')}`);
+    const debugParts: string[] = [`chain=${chainId}`, `sb=${supabaseTokens.length}`, `addrs=${supabaseTokens.map(t=>t.address?.slice(0,6)).join('|')}`];
 
     const tokens: CachedToken[] = [];
 
@@ -197,7 +264,7 @@ async function refreshTokens(): Promise<void> {
       const results = await Promise.allSettled(
         batch.map(async (info) => {
           try {
-            const result = await client.readContract({
+            const result = await cache.client.readContract({
               address: PORTAL_ADDRESS,
               abi: PORTAL_ABI,
               functionName: 'getTokenV5',
@@ -314,13 +381,13 @@ async function refreshTokens(): Promise<void> {
     }
 
     debugParts.push(`ok=${tokens.length}`);
-    lastRefreshDebug = debugParts.join(',');
-    tokenCache = tokens;
-    cacheTimestamp = Date.now();
+    cache.lastRefreshDebug = debugParts.join(',');
+    cache.tokens = tokens;
+    cache.timestamp = Date.now();
   } catch (e) {
-    console.error('[tokens] Error refreshing:', e);
+    console.error(`[tokens] chain=${chainId} Error refreshing:`, e);
   } finally {
-    isFetching = false;
+    cache.isFetching = false;
   }
 }
 
@@ -329,17 +396,23 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
 
+  // Parse chainId (default BSC for backward compat)
+  const rawChainId = searchParams.get('chainId');
+  const chainId: SupportedChainId =
+    rawChainId === '196' ? 196 : 56;
+  const cache = chainCaches[chainId];
+
   const forceRefresh = searchParams.get('refresh') === '1';
-  if (forceRefresh || Date.now() - cacheTimestamp > CACHE_TTL || tokenCache.length === 0) {
+  if (forceRefresh || Date.now() - cache.timestamp > CACHE_TTL || cache.tokens.length === 0) {
     if (forceRefresh) {
-      cacheTimestamp = 0;
-      isFetching = false;
+      cache.timestamp = 0;
+      cache.isFetching = false;
     }
-    await refreshTokens();
+    await refreshTokens(chainId);
   }
 
   if (address) {
-    const token = tokenCache.find(t => t.address.toLowerCase() === address.toLowerCase());
+    const token = cache.tokens.find(t => t.address.toLowerCase() === address.toLowerCase());
     if (!token) {
       return NextResponse.json({ error: 'Token not found' }, { status: 404 });
     }
@@ -347,7 +420,7 @@ export async function GET(request: NextRequest) {
   }
 
   const sort = searchParams.get('sort') || 'new';
-  let sorted = [...tokenCache];
+  let sorted = [...cache.tokens];
 
   switch (sort) {
     case 'hot':
@@ -368,8 +441,9 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.json(sorted);
   response.headers.set('X-Token-Count', String(sorted.length));
-  response.headers.set('X-Cache-Age', String(Math.floor((Date.now() - cacheTimestamp) / 1000)));
-  response.headers.set('X-Build', '20260201-v3');
-  response.headers.set('X-Debug', lastRefreshDebug);
+  response.headers.set('X-Chain-Id', String(chainId));
+  response.headers.set('X-Cache-Age', String(Math.floor((Date.now() - cache.timestamp) / 1000)));
+  response.headers.set('X-Build', '20260408-multichain');
+  response.headers.set('X-Debug', cache.lastRefreshDebug);
   return response;
 }
