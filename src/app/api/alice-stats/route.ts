@@ -75,16 +75,42 @@ export async function GET() {
 
   try {
     const supabase = getSupabase();
-    const [balanceResult, roundsRes, totalsRes] = await Promise.all([
+
+    // Page through alice_distributions so we get every success row.
+    // PostgREST defaults to max 1000 rows per request; relying on that
+    // default silently stopped the leaderboard updating once the table
+    // grew past 1000 rows — the aggregate was always computed from the
+    // oldest 1000 inserts. Explicitly page with .range() and keep going
+    // until a page comes back short.
+    async function fetchAllSuccessDistributions() {
+      const pageSize = 1000;
+      const rows: Array<{ bsc_address: string; alice_amount: string }> = [];
+      for (let from = 0; ; from += pageSize) {
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from('alice_distributions')
+          .select('bsc_address, alice_amount')
+          .eq('status', 'success')
+          .order('id', { ascending: true })
+          .range(from, to);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+      }
+      return rows;
+    }
+
+    const [balanceResult, roundsRes, allDistRows] = await Promise.all([
       fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),
       supabase.from('alice_distribution_rounds').select('*').order('created_at', { ascending: false }).limit(10),
-      supabase.from('alice_distributions').select('bsc_address, alice_amount, status').eq('status', 'success'),
+      fetchAllSuccessDistributions().catch((e) => { console.error('distributions paginate error:', e); return []; }),
     ]);
     const balanceRaw = balanceResult;
 
-    // Aggregate per-address
+    // Aggregate per-address across ALL success rows
     const addressTotals = new Map<string, bigint>();
-    for (const row of totalsRes.data ?? []) {
+    for (const row of allDistRows) {
       const prev = addressTotals.get(row.bsc_address) ?? 0n;
       addressTotals.set(row.bsc_address, prev + BigInt(row.alice_amount));
     }
