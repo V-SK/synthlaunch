@@ -75,6 +75,40 @@ function sanitizeTicker(value?: string): string | undefined {
   return cleaned.length > 0 ? cleaned.toUpperCase() : undefined;
 }
 
+function normalizeTokenQuery(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const direct = sanitizeTicker(value);
+  if (direct && /^[A-Z0-9]{2,12}$/.test(direct)) {
+    return direct;
+  }
+
+  const text = value.trim();
+  const upper = text.toUpperCase();
+  const candidates = upper.match(/\b[A-Z0-9]{2,12}\b/g) ?? [];
+  const noise = new Set([
+    'PRICE',
+    'QUOTE',
+    'TOKEN',
+    'BUY',
+    'SWAP',
+    'BALANCE',
+    'BALANCES',
+    'CHECK',
+    'SHOW',
+    'THE',
+    'ON',
+    'FOR',
+    'WITH',
+    'MY',
+    'X',
+    'LAYER',
+  ]);
+
+  const filtered = candidates.filter((item) => !noise.has(item));
+  return filtered[0] ?? candidates[0] ?? direct;
+}
+
 function extractHeuristics(message: string): LlmDecision {
   const text = message.trim();
   const upper = text.toUpperCase();
@@ -255,7 +289,7 @@ function preferBestToken(results: TokenSearchItem[], query?: string): TokenSearc
 }
 
 async function resolveToken(query?: string): Promise<TokenSearchItem | null> {
-  const normalized = sanitizeTicker(query);
+  const normalized = normalizeTokenQuery(query);
   if (!normalized) {
     return null;
   }
@@ -431,11 +465,17 @@ export async function POST(request: NextRequest) {
             'ok',
           );
           const query =
-            decision.query ??
-            sanitizeTicker(body.message.match(/\b([A-Za-z]{2,12})\b/g)?.slice(-1)?.[0]) ??
+            normalizeTokenQuery(decision.query) ??
+            normalizeTokenQuery(body.message) ??
             'OKB';
-          const results = (await okxTokenSearch(query)) as TokenSearchItem[];
-          const token = preferBestToken(results, query);
+          const results =
+            decision.intent === 'search'
+              ? ((await okxTokenSearch(query)) as TokenSearchItem[])
+              : [];
+          const token =
+            decision.intent === 'search'
+              ? preferBestToken(results, query)
+              : await resolveToken(query);
 
           if (!token) {
             toolResult = {
