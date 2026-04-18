@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { WalletConnect } from './WalletConnect';
+import { WalletDownload } from './WalletDownload';
 import { useI18n, LanguageToggle } from '@/lib/i18n';
 
 const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
@@ -120,6 +121,7 @@ export function Header() {
               </div>
             )}
           </div>
+          <WalletDownload />
           <WalletConnect />
         </div>
       </div>
