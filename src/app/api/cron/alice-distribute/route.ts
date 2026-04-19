@@ -98,8 +98,14 @@ async function fetchStakeInfos(addresses: string[]): Promise<StakeInfo[]> {
     for (let j = 0; j < batch.length; j++) {
       const result = data[j];
       if (result.status === 'success') {
-        const [stakedAmount, multiplier] = result.result;
-        if (stakedAmount > 0n) {
+        // getStakeInfo returns (stakedAmount, multiplier, stakeTimestamp, unstakeRequestTime).
+        // SynthStaking.requestUnstake() decrements totalActiveStaked immediately
+        // but leaves position.amount intact until finalizeUnstake(), so a user
+        // who has requested unstake still has stakedAmount > 0 — they would
+        // wrongly keep receiving Alice rewards forever if they never finalize.
+        // Treat any address with unstakeRequestTime > 0 as ineligible.
+        const [stakedAmount, multiplier, , unstakeRequestTime] = result.result;
+        if (stakedAmount > 0n && unstakeRequestTime === 0n) {
           results.push({ address: batch[j], stakedAmount, multiplier, weight: stakedAmount * multiplier });
         }
       }

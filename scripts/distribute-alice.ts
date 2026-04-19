@@ -148,8 +148,12 @@ async function fetchStakeInfos(addresses: string[]): Promise<StakeInfo[]> {
     for (let j = 0; j < batch.length; j++) {
       const result = data[j];
       if (result.status === 'success') {
-        const [stakedAmount, multiplier] = result.result;
-        if (stakedAmount > 0n) {
+        // Mirror the cron route: exclude addresses in the unstake cooldown.
+        // SynthStaking keeps position.amount > 0 between requestUnstake() and
+        // finalizeUnstake(), so a stake-amount-only check would keep paying
+        // out to people who have already requested to leave.
+        const [stakedAmount, multiplier, , unstakeRequestTime] = result.result;
+        if (stakedAmount > 0n && unstakeRequestTime === 0n) {
           results.push({
             address: batch[j],
             stakedAmount,
