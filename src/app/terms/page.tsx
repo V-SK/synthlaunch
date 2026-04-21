@@ -7,7 +7,7 @@ export default function TermsPage() {
       <div className="space-y-6 text-gray-300">
         <section>
           <h2 className="text-xl font-semibold text-white mb-2">1. Acceptance of Terms</h2>
-          <p>By accessing SynthLaunch, you agree to these terms. SynthLaunch is a token launchpad on BNB Chain.</p>
+          <p>By accessing SynthLaunch, you agree to these terms. SynthLaunch is an agent-native token launch and monetization protocol deployed on X Layer (primary) and BNB Chain.</p>
         </section>
         
         <section>

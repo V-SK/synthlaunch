@@ -268,10 +268,10 @@
     "unknown": "Unknown"
   },
   "staking": {
-    "liveOnBsc": "LIVE ON BSC MAINNET",
+    "liveOnBsc": "LIVE ON X LAYER + BSC",
     "heroTitle": "Stake SYNTH for",
     "heroSubtitle": "Time-Weighted Power",
-    "heroDesc": "Lock SYNTH on BSC to build your multiplier over time. Requesting an unstake freezes your multiplier and starts a 7 day cooldown before withdrawal.",
+    "heroDesc": "Lock SYNTH to build your multiplier over time. Live on X Layer (primary) and BSC. Requesting an unstake freezes your multiplier and starts a 7 day cooldown before withdrawal.",
     "totalStaked": "Total SYNTH Staked",
     "yourStake": "Your Stake",
     "yourMultiplier": "Your Multiplier",

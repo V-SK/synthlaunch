@@ -139,10 +139,23 @@ export function StakingHome() {
   return (
     <div className="space-y-8">
       <section className="text-center py-12 space-y-4">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="inline-block text-[10px] px-2 py-1 bg-synth-green/10 text-synth-green border border-synth-green/20 rounded font-mono">
-            ● {t('staking.liveOnBsc')}
-          </div>
+        <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
+          <a
+            href="https://www.oklink.com/x-layer/address/0xb381e840AAB505132506781eAFD3c38398B58462"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-[10px] px-2 py-1 bg-synth-green/15 text-synth-green border border-synth-green/40 rounded font-mono hover:bg-synth-green/25 transition-colors"
+          >
+            ● LIVE ON X LAYER ↗
+          </a>
+          <a
+            href="https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-[10px] px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded font-mono hover:bg-yellow-500/20 transition-colors"
+          >
+            ● LIVE ON BSC ↗
+          </a>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-synth-text">
           {t('staking.heroTitle')}

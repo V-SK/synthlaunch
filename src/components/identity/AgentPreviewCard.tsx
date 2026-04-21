@@ -60,7 +60,7 @@ export function AgentPreviewCard({ name, platform, platformId, avatar, descripti
 
       <div className="flex items-center justify-between text-[10px] text-[#848E9C] pt-3 mt-3 border-t border-[#2B3139]">
         <span>⛓ Soulbound · ERC-721</span>
-        <span>BSC Mainnet</span>
+        <span>X Layer · BSC</span>
       </div>
     </BnbCard>
   );

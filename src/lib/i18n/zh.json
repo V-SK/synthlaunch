@@ -271,10 +271,10 @@
     "unknown": "未知"
   },
   "staking": {
-    "liveOnBsc": "BSC 主网已上线",
+    "liveOnBsc": "X LAYER + BSC 已上线",
     "heroTitle": "质押 SYNTH 获取",
     "heroSubtitle": "时间加权倍率",
-    "heroDesc": "在 BSC 上质押 SYNTH，随着时间提升 multiplier。发起解质押后倍率会被冻结，并进入 7 天冷静期，冷静期结束后才能提回资产。",
+    "heroDesc": "质押 SYNTH，随着时间提升 multiplier。X Layer（主链）+ BSC 均已上线。发起解质押后倍率会被冻结，并进入 7 天冷静期，冷静期结束后才能提回资产。",
     "totalStaked": "全网质押 SYNTH",
     "yourStake": "我的质押",
     "yourMultiplier": "我的倍率",

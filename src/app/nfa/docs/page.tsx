@@ -193,7 +193,7 @@ function OverviewSection() {
       <SectionTitle>🎯 Overview</SectionTitle>
       <Paragraph>
         <strong className="text-white">NFA Pro</strong> is SynthLaunch's implementation of the <strong className="text-neon">BAP-578</strong> standard 
-        — a framework for creating autonomous AI agents that live and operate on the BNB Chain.
+        — a framework for creating autonomous AI agents that live and operate on X Layer and BNB Chain.
       </Paragraph>
       <Paragraph>
         Unlike traditional NFTs that are static collectibles, NFA agents are <strong className="text-white">programmable entities</strong> capable of:
