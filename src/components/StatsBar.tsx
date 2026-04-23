@@ -17,9 +17,13 @@ export function StatsBar({ chainId = 56 }: StatsBarProps) {
   const nativeSymbol = CHAIN_CONFIG[chainId]?.nativeSymbol ?? 'BNB';
 
   useEffect(() => {
+    // Important: pass chainId so /api/stats and /api/leaderboard return
+    // chain-correct numbers. Without this, X Layer view would silently
+    // show BSC totals with the OKB unit label, which is misleading.
+    setLoading(true);
     Promise.all([
-      fetch('/api/stats').then(r => r.json()),
-      fetch('/api/leaderboard').then(r => r.json()).catch(() => ({ entries: [] })),
+      fetch(`/api/stats?chainId=${chainId}`).then(r => r.json()),
+      fetch(`/api/leaderboard?chainId=${chainId}`).then(r => r.json()).catch(() => ({ entries: [] })),
     ])
       .then(([statsData, lbData]) => {
         setStats(statsData);
@@ -31,7 +35,7 @@ export function StatsBar({ chainId = 56 }: StatsBarProps) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [chainId]);
 
   const items = [
     { label: t('stats.totalTokens'), value: stats?.totalTokens?.toString() || '0', icon: '◆', color: 'text-synth-green' },

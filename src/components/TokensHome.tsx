@@ -140,9 +140,12 @@ export function TokensHome() {
           <span className="text-synth-green glow-text-green">{t('home.subtitle')}</span>
         </h1>
         <p className="text-synth-muted max-w-xl mx-auto text-sm">
-          {selectedChain === 196
-            ? '在 X Layer 上创建代币，交易手续费自动分配给 AI Agent。'
-            : t('home.heroDesc')}
+          {/*
+            Always run through t() so the locale toggle actually flips this
+            block. Previously the X Layer branch hardcoded a Chinese string,
+            so EN <-> 中 had no effect on this page when X Layer was selected.
+          */}
+          {t('home.heroDesc')}
           <br />
           {t('home.heroPowered')}
         </p>
