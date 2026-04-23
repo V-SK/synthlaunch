@@ -17,6 +17,39 @@ export interface Token {
   progress: number;
   createdAt: number;
   reserve: number;
+  /**
+   * Chain the token is deployed on. Defaults to 56 (BSC) for legacy
+   * rows that predate the chain_id column.
+   */
+  chain_id?: 56 | 196;
+}
+
+/**
+ * Per-chain explorer / dex / portal URLs. Keep label + URL helpers in
+ * one place so token detail pages can render the right links per chain
+ * without scattering `if chainId === 196` branches everywhere.
+ */
+export const CHAIN_LABELS = {
+  56: {
+    name: 'BSC',
+    explorer: 'https://bscscan.com',
+    explorerName: 'BscScan',
+    dex: 'https://dexscreener.com/bsc',
+    flap: (addr: string) => `https://flap.sh/token/${addr}?chain=bsc`,
+    nativeSymbol: 'BNB',
+  },
+  196: {
+    name: 'X Layer',
+    explorer: 'https://www.oklink.com/x-layer',
+    explorerName: 'OKLink',
+    dex: 'https://dexscreener.com/x-layer',
+    flap: (addr: string) => `https://flap.sh/token/${addr}?chain=xlayer`,
+    nativeSymbol: 'OKB',
+  },
+} as const;
+
+export function chainLabelOf(chainId: 56 | 196 | undefined) {
+  return CHAIN_LABELS[chainId ?? 56];
 }
 
 export interface PlatformStats {

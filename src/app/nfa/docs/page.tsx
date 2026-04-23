@@ -166,7 +166,7 @@ function LifecycleDiagram() {
   const steps = [
     { num: "01", title: "Mint", desc: "Create agent identity on NFAv2", color: "neon" },
     { num: "02", title: "Configure", desc: "Set logic contract & metadata", color: "cyan-400" },
-    { num: "03", title: "Fund", desc: "Deposit BNB for operations", color: "purple-400" },
+    { num: "03", title: "Fund", desc: "Deposit native gas (OKB on X Layer, BNB on BSC) for operations", color: "purple-400" },
     { num: "04", title: "Operate", desc: "Execute trades & actions", color: "orange-400" },
     { num: "05", title: "Evolve", desc: "Learn & gain experience", color: "pink-400" },
   ];
@@ -428,7 +428,7 @@ function SecuritySection() {
         <ul className="text-sm text-white/60 space-y-1">
           <li>• Only approved logic contracts can operate on agents</li>
           <li>• Private keys are NEVER stored on-chain</li>
-          <li>• All contracts are verified on BscScan</li>
+          <li>• All contracts are verified on OKLink (X Layer) and BscScan (BSC)</li>
           <li>• Custody uses timelock for admin operations</li>
         </ul>
       </div>
@@ -494,7 +494,7 @@ function ContractsSection() {
   return (
     <section id="contracts">
       <SectionTitle>📜 Deployed Contracts</SectionTitle>
-      <Paragraph>All contracts are verified on BscScan and open-sourced on GitHub.</Paragraph>
+      <Paragraph>All contracts are verified on OKLink (X Layer) and BscScan (BSC), and open-sourced on GitHub.</Paragraph>
       <div className="space-y-2 mb-6">
         {contracts.map((c, i) => (
           <a 
@@ -646,7 +646,7 @@ export default function NFADocsPage() {
           {/* Footer */}
           <div className="pt-10 border-t border-white/[0.04] text-center">
             <p className="text-white/30 text-sm">
-              Built with 💚 by SynthLaunch · BNB Agents Army 2026
+              Built with 💚 by SynthLaunch · X Layer + BSC · 2026
             </p>
           </div>
         </main>

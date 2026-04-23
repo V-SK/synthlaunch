@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { Token } from '@/lib/api';
-import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel } from '@/lib/api';
+import { formatPrice, formatMarketCap, formatTimeAgo, statusLabel, chainLabelOf } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
 function TokenPageInner({ params }: { params: { address: string } }) {
@@ -279,7 +279,7 @@ function TokenPageInner({ params }: { params: { address: string } }) {
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">{t('token.chain')}</span>
-              <span className="text-synth-text">BSC</span>
+              <span className="text-synth-text">{chainLabelOf(token.chain_id).name}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">{t('token.protocol')}</span>
@@ -321,30 +321,37 @@ function TokenPageInner({ params }: { params: { address: string } }) {
           {t('token.explore')}
         </h2>
         <div className="grid grid-cols-3 gap-4">
-          <a
-            href={`https://flap.sh/token/${params.address}?chain=bsc`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary py-3 text-center"
-          >
-            {t('token.tradeOnFlap')}
-          </a>
-          <a
-            href={`https://bscscan.com/token/${params.address}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary py-3 text-center"
-          >
-            {t('token.viewOnBscScan')}
-          </a>
-          <a
-            href={`https://dexscreener.com/bsc/${params.address}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary py-3 text-center"
-          >
-            DexScreener
-          </a>
+          {(() => {
+            const cl = chainLabelOf(token.chain_id);
+            return (
+              <>
+                <a
+                  href={cl.flap(params.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary py-3 text-center"
+                >
+                  {t('token.tradeOnFlap')}
+                </a>
+                <a
+                  href={`${cl.explorer}/token/${params.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary py-3 text-center"
+                >
+                  {`View on ${cl.explorerName}`}
+                </a>
+                <a
+                  href={`${cl.dex}/${params.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary py-3 text-center"
+                >
+                  DexScreener
+                </a>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>

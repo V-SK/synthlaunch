@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     const metadata = {
       name: `SynthID #${tokenId}`,
       description: description
-        ? `AI Agent Identity on BSC — ${name}. ${description}`
-        : `AI Agent Identity on BSC — ${name}`,
+        ? `Soulbound AI Agent Identity on X Layer + BSC — ${name}. ${description}`
+        : `Soulbound AI Agent Identity on X Layer + BSC — ${name}`,
       image: avatar || '',
       external_url: `https://synthlaunch.fun/identity/agent/${tokenId}`,
       attributes: [

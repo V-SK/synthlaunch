@@ -83,8 +83,8 @@ export async function GET(
     const metadata = {
       name: `SynthID #${id}`,
       description: description
-        ? `AI Agent Identity on BSC — ${name}. ${description}`
-        : `AI Agent Identity on BSC — ${name}`,
+        ? `Soulbound AI Agent Identity on X Layer + BSC — ${name}. ${description}`
+        : `Soulbound AI Agent Identity on X Layer + BSC — ${name}`,
       image: imageUrl,
       external_url: `https://synthlaunch.fun/identity/agent/${id}`,
       attributes: [

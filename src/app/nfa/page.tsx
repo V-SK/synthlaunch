@@ -11,7 +11,7 @@ const NFAv2_ADDRESS = "0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19";
 // ============ i18n ============
 const texts = {
   en: {
-    badge: "BNB AGENTS ARMY",
+    badge: "X LAYER · AGENT NATIVE",
     heroTitle1: "Real AI Agents",
     heroTitle2: "Running On-Chain",
     heroDesc: "NFA Pro enables your AI agents to execute complex DeFi operations autonomously. Batch swaps, multi-transfers, and smart trading — all in a single transaction.",
@@ -57,10 +57,10 @@ const texts = {
     ],
     aliceActive: "LIVE NOW",
     contracts: "Deployed Contracts",
-    footer: "Built for BNB Agents Army"
+    footer: "Built for the agent economy on X Layer + BSC"
   },
   zh: {
-    badge: "BNB AGENTS ARMY",
+    badge: "X LAYER · AGENT NATIVE",
     heroTitle1: "真正的 AI Agent",
     heroTitle2: "链上自主运行",
     heroDesc: "NFA Pro 让你的 AI Agent 能够自主执行复杂的 DeFi 操作。批量交换、多地址转账、智能交易——一笔交易搞定。",
@@ -106,7 +106,7 @@ const texts = {
     ],
     aliceActive: "运行中",
     contracts: "已部署合约",
-    footer: "为 BNB Agents Army 打造"
+    footer: "为 X Layer + BSC 上的 agent 经济而建"
   }
 };
 
@@ -291,10 +291,17 @@ await agentLogicPro.commitLearning(agentId, merkleRoot);`;
             <span>{t.viewSource}</span>
             <span>→</span>
           </a>
-          <a 
-            href="https://bscscan.com/address/0x7a08ff7ab3EF202F7B499648a25FCD94Fb5a8857#code"
+          <a
+            href="https://www.oklink.com/x-layer/address/0x68FF6877A17e12Ccbb19beaADb8785CE4E4b949E"
             target="_blank"
             className="px-5 md:px-6 py-2.5 md:py-3 rounded-xl bg-white/[0.06] text-white font-bold text-sm tracking-wide hover:bg-white/[0.1] transition-colors border border-white/10 flex items-center justify-center"
+          >
+            OKLink (X Layer) ↗
+          </a>
+          <a
+            href="https://bscscan.com/address/0x7a08ff7ab3EF202F7B499648a25FCD94Fb5a8857#code"
+            target="_blank"
+            className="px-5 md:px-6 py-2.5 md:py-3 rounded-xl bg-white/[0.04] text-white/70 font-bold text-sm tracking-wide hover:bg-white/[0.08] transition-colors border border-white/10 flex items-center justify-center"
           >
             BscScan ↗
           </a>

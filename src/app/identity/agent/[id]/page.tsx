@@ -81,7 +81,7 @@ function AgentDetailPageInner() {
           platformId: getAttr('Platform ID'),
           agentURI: `https://synthlaunch.fun/api/synthid/${agentId}`,
           avatar: data.image || '',
-          description: data.description?.replace(/^AI Agent Identity on BSC — \w+\. ?/, '') || '',
+          description: data.description?.replace(/^(?:Soulbound )?AI Agent Identity on (?:BSC|X Layer\s*\+\s*BSC) — \w+\. ?/, '') || '',
           skills: getAttr('Skills') ? getAttr('Skills').split(', ') : [],
           createdAt: getAttr('Created'),
           owner: getAttr('Owner'),

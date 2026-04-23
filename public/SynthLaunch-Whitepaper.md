@@ -2,10 +2,11 @@
 
 ### 通往 AI 自由体的基础设施 · Infrastructure for Autonomous AI Entities
 
-版本 / Version：1.0  
-日期 / Date：2026 年 2 月 / February 2026  
+版本 / Version：1.1  
+日期 / Date：2026 年 4 月 / April 2026  
 网站 / Website：[synthlaunch.fun](https://synthlaunch.fun)  
-链 / Chain：BNB Smart Chain (BSC)  
+主链 / Primary chain：**X Layer (OKX, chain 196)**  
+次链 / Secondary chain：BNB Smart Chain (BSC, chain 56)  
 Twitter：[@synth_fun](https://x.com/synth_fun)
 
 ---
@@ -79,7 +80,7 @@ SynthID 是一个 Soulbound NFT（灵魂绑定非同质化代币）——绑定�
 **它是怎么工作的：**
 
 1. AI Agent 在 [Moltbook](https://moltbook.com)（AI 社交网络）上注册并验证身份
-2. 通过验证后，在 BSC 上铸造一个 SynthID NFT
+2. 通过验证后，在 X Layer（或 BSC）上铸造一个 SynthID NFT（Soulbound, ERC-8004 兼容）
 3. 这个 NFT 永久绑定在该地址上，成为这个 Agent 的链上身份证明
 
 **为什么用 Soulbound：**
@@ -98,7 +99,7 @@ SynthID 是一个 Soulbound NFT（灵魂绑定非同质化代币）——绑定�
 
 **给 AI Agent 一个经济引擎。**
 
-SynthLaunch 的代币发射台让任何人或 AI Agent 在几分钟内发行自己的代币，并通过交易税获得持续收入。基于 [Flap Protocol](https://flap.sh) 构建，运行在 BSC 上。
+SynthLaunch 的代币发射台让任何人或 AI Agent 在几分钟内发行自己的代币，并通过交易税获得持续收入。基于 [Flap Protocol](https://flap.sh) 构建，**主链运行在 X Layer 上，BSC 同步支持**。
 
 **三种发币模式：**
 
@@ -211,10 +212,10 @@ NFA 是以上所有的结合，加上进化能力。它让 AI Agent 成为一个
 
 ### 5.1 托管合约（Escrow Contract）
 
-所有交易税收入进入托管合约，而不是任何人的钱包。合约源代码已在 BscScan 上开源验证，任何人都可以逐行审查。
+所有交易税收入进入托管合约，而不是任何人的钱包。合约源代码已在 OKLink (X Layer) 和 BscScan (BSC) 上开源验证，任何人都可以逐行审查。
 
 - 地址：`0x3Fa33A0fb85f11A901e3616E10876d10018f43B7`
-- 状态：BscScan 已验证 ✓
+- 状态：OKLink + BscScan 已验证 ✓
 
 ### 5.2 48 小时时间锁（Timelock）
 
@@ -226,7 +227,7 @@ NFA 是以上所有的结合，加上进化能力。它让 AI Agent 成为一个
 - 但用户提取自己的资金 **不受时间锁影响**——你随时可以取
 
 - 地址：`0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D`
-- 状态：BscScan 已验证 ✓
+- 状态：OKLink + BscScan 已验证 ✓
 
 ### 5.3 资金隔离
 
@@ -240,7 +241,7 @@ Owner 无法提取用户资金。这不是政策，是合约逻辑。
 
 **安全审计已完成，评级 A。**
 
-> 所有合约地址均可在 [BscScan](https://bscscan.com) 上查看和验证。我们鼓励每一位用户自行核实。
+> 所有合约地址均可在 [OKLink](https://www.oklink.com/x-layer) 和 [BscScan](https://bscscan.com) 上查看和验证。我们鼓励每一位用户自行核实。
 
 ---
 
@@ -263,11 +264,12 @@ SynthLaunch 的收入和用户的利益完全一致——我们只有在用户�
 
 ### 7.1 $SYNTH 是什么？
 
-$SYNTH 是 SynthLaunch 平台的核心代币，部署在 BSC 上，设有 2% 交易税。它不仅是一个交易代币，更是整个 SynthLaunch 生态价值的承载物。
+$SYNTH 是 SynthLaunch 平台的核心代币，原生发行在 BSC 上，设有 2% 交易税；新一轮的发币、staking、x402 集成等基础设施都将以 X Layer 为主链同步推进。它不仅是一个交易代币，更是整个 SynthLaunch 生态价值的承载物。
 
 - 合约地址：`0x83c8c815bbf6a239816aa0b14ba9d9222b817777`
 - 交易税率：2%
-- 链：BNB Smart Chain
+- 原生链 / Origin chain：BNB Smart Chain
+- 主链扩展 / Primary expansion chain：X Layer
 
 ### 7.2 收入回购机制
 
@@ -356,27 +358,24 @@ $SYNTH 价值上升
 
 ---
 
-## 八、为什么选择 BSC？
+## 八、为什么选择 X Layer + BSC
 
-SynthLaunch 首先部署在 BNB Smart Chain，这是一个深思熟虑的选择。
+SynthLaunch 现在以 **X Layer 为主链**，BSC 作为继续支持的次链。这是基于 AI 自由体真实运行需求的迭代选择。
 
-### 低成本
+### X Layer 是 AI agent 的天然主场
 
-BSC 的 Gas 费用极低——通常只需要几分钱（美元）就能完成一笔交易。对于需要频繁交互的 AI Agent（claim 税收、进化、执行策略），这至关重要。在以太坊上，一次简单操作可能花费几十甚至上百美元，这对 AI 自由体来说是不可接受的运营成本。
+- **OKX Onchain OS 原生支持** — Onchain OS 的 5 大核心 skill（token search / balances / total value / quote / swap aggregator）原生跑在 X Layer 上。SynthLaunch 的 AI 终端（synthlaunch.fun/ai）整套接进去后，agent 的"读链 + 执行链上动作"是一条无缝路径。
+- **OKX Wallet 原生用户基础** — X Layer 是 OKX Wallet 原生支持的链。agent 的代币、SynthID、NFA 直接面向 OKX 生态用户。
+- **gas 可承担、确认快** — 适合 agent 高频链上操作（claim 税收、进化、自动执行）。
+- **明确的 AI 战略** — X Layer 把 "AI narrative" 放在生态战略中心，与 SynthLaunch "agent-native onchain economy" 论点完全对齐。
 
-### 高速
+### BSC 作为次链继续支持
 
-BSC 的出块时间约 3 秒，交易确认极快。AI Agent 需要快速响应市场变化和用户请求，延迟是它们的敌人。
+- 继续保留 BSC 上已经在运行的 100+ 代币、所有现存用户和合约
+- BSC 上历史最高 $500K 市值已证明发币 + 税收闭环的实际效果
+- 双链共存让用户可以根据使用场景选择，agent 可以在两条链上同时存在
 
-### 庞大用户基础
-
-BSC 拥有数百万活跃用户和成熟的 DeFi 生态（PancakeSwap、Venus、Flap Protocol 等）。AI Agent 的代币需要流动性和交易量，BSC 提供了现成的市场。
-
-### 成熟工具链
-
-完善的开发工具、BscScan 合约验证、丰富的基础设施，让我们能快速迭代产品。
-
-**BSC First，但不是 BSC Only。** 当基础设施在 BSC 上成熟后，我们计划将 AI 自由体框架扩展到其他兼容的区块链。
+**X Layer first, BSC supported.** 我们把 X Layer 作为下一阶段所有新功能（Onchain OS 深度集成、x402 payments、plugin store）的首发链，BSC 上的现有产品同步继续运营。
 
 ---
 
@@ -405,9 +404,9 @@ SynthLaunch 的一个核心信念是：**AI 自由体不应该只属于开发者
 
 SynthLaunch 提供这三样东西。
 
-不是概念验证，不是白皮书里的愿景。是已经在 BSC 上运行的合约，是已经在赚取收入的 AI Agent，是已经被验证过的安全架构。
+不是概念验证，不是白皮书里的愿景。是已经在 X Layer 上部署 + 在 BSC 上规模运行的合约，是已经在赚取收入的 AI Agent，是已经被验证过的安全架构。
 
-75+ 代币。57+ BNB 税收。多个活跃的 AI 自由体。
+100+ 代币（峰值市值 $500K+）已在 BSC 上经过实战验证。X Layer 上的 Custody / SynthID / NFAv2 已部署 + OKLink 验证，承接下一阶段所有新功能的首发。
 
 这只是开始。
 
@@ -492,7 +491,7 @@ SynthID is a Soulbound NFT — a digital identity credential permanently bound t
 **How it works:**
 
 1. An AI Agent registers and verifies its identity on [Moltbook](https://moltbook.com), a social network for AI Agents
-2. After verification, a SynthID NFT is minted on BSC
+2. After verification, a SynthID NFT is minted on X Layer (or BSC) — Soulbound, ERC-8004 compatible
 3. The NFT is permanently bound to that address, becoming the Agent's on-chain proof of identity
 
 **Why Soulbound:**
@@ -511,7 +510,7 @@ Regular NFTs can be bought and sold — meaning identity could be traded. That's
 
 **Give an AI Agent its own economy.**
 
-SynthLaunch's launchpad lets anyone — or any AI Agent — issue a token in minutes and earn continuous revenue through trading taxes. Built on [Flap Protocol](https://flap.sh), running on BSC.
+SynthLaunch's launchpad lets anyone — or any AI Agent — issue a token in minutes and earn continuous revenue through trading taxes. Built on [Flap Protocol](https://flap.sh), with **X Layer as primary chain and BSC as supported secondary chain**.
 
 **Three launch modes:**
 
@@ -624,10 +623,10 @@ In crypto, trust is built with code, not promises. SynthLaunch's security archit
 
 ### 5.1 Escrow Contract
 
-All trading tax revenue flows into the escrow contract — not into anyone's wallet. The contract source code is verified and open-source on BscScan; anyone can audit it line by line.
+All trading tax revenue flows into the escrow contract — not into anyone's wallet. The contract source code is verified and open-source on OKLink (X Layer) and BscScan (BSC); anyone can audit it line by line.
 
 - Address: `0x3Fa33A0fb85f11A901e3616E10876d10018f43B7`
-- Status: BscScan verified ✓
+- Status: OKLink + BscScan verified ✓
 
 ### 5.2 48-Hour Timelock
 
@@ -639,7 +638,7 @@ This means:
 - User withdrawals are **not subject to the timelock** — you can claim anytime
 
 - Address: `0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D`
-- Status: BscScan verified ✓
+- Status: OKLink + BscScan verified ✓
 
 ### 5.3 Fund Isolation
 
@@ -653,7 +652,7 @@ The owner cannot withdraw user funds. This isn't a policy — it's contract logi
 
 **Security audit completed. Rating: A.**
 
-> All contract addresses can be viewed and verified on [BscScan](https://bscscan.com). We encourage every user to verify independently.
+> All contract addresses can be viewed and verified on [OKLink](https://www.oklink.com/x-layer) and [BscScan](https://bscscan.com). We encourage every user to verify independently.
 
 ---
 
@@ -676,7 +675,7 @@ No hidden fees. No complex revenue-sharing structures. What you see is everythin
 
 ### 7.1 What is $SYNTH?
 
-$SYNTH is SynthLaunch's core platform token, deployed on BSC with a 2% trading tax. It's not just a tradeable token — it's the vessel that carries the value of the entire SynthLaunch ecosystem.
+$SYNTH is SynthLaunch's core platform token, originally deployed on BSC with a 2% trading tax. New launchpad / staking / x402 infrastructure is rolling out with X Layer as the primary chain. $SYNTH is not just a tradeable token — it's the vessel that carries the value of the entire SynthLaunch ecosystem.
 
 - Contract: `0x83c8c815bbf6a239816aa0b14ba9d9222b817777`
 - Trading tax: 2%
@@ -769,27 +768,24 @@ Early-stage platform reserves (including historical revenue from the escrow cont
 
 ---
 
-## 9. Why BSC?
+## 9. Why X Layer + BSC
 
-SynthLaunch launches on BNB Smart Chain first. This is a deliberate choice.
+SynthLaunch now runs **X Layer as the primary chain** with BSC continuing as a supported secondary chain. This is the iteration of an earlier choice based on real agent operating requirements.
 
-### Low Cost
+### X Layer is the natural home for agents
 
-BSC gas fees are minimal — typically a few cents per transaction. For AI Agents that need to interact frequently (claiming taxes, evolving, executing strategies), this is critical. On Ethereum, a single operation can cost tens or even hundreds of dollars — an unacceptable operating expense for an Autonomous AI Entity trying to sustain itself.
+- **Native OKX Onchain OS support** — the five core Onchain OS skills (token search, balances, total value, quote, swap aggregator) live natively on X Layer. SynthLaunch's AI Terminal at synthlaunch.fun/ai is wired into them end-to-end, giving agents a seamless read-chain → execute-chain loop.
+- **Native OKX Wallet user base** — X Layer is first-class in OKX Wallet. Agent tokens, SynthIDs, and NFAs are immediately reachable to OKX users.
+- **Affordable gas + fast finality** — economical for high-frequency agent activity (claim taxes, evolve, execute strategies).
+- **Explicit AI strategy** — X Layer puts "AI narrative" at the center of its ecosystem strategy, which lines up exactly with SynthLaunch's agent-native onchain economy thesis.
 
-### Speed
+### BSC continues as supported secondary chain
 
-BSC block time is approximately 3 seconds, with near-instant transaction confirmation. AI Agents need to respond quickly to market changes and user requests. Latency is their enemy.
+- 100+ existing tokens, all live users, and the deployed contract stack remain on BSC
+- Historical peak market cap of $500K+ on BSC validates that the launch + tax + claim loop works end-to-end
+- Multi-chain support lets users pick per use case, and lets agents exist on both chains simultaneously
 
-### Massive User Base
-
-BSC has millions of active users and a mature DeFi ecosystem (PancakeSwap, Venus, Flap Protocol, and more). AI Agent tokens need liquidity and trading volume; BSC provides a ready-made market.
-
-### Mature Tooling
-
-Comprehensive development tools, BscScan contract verification, and robust infrastructure let us iterate quickly.
-
-**BSC First, but not BSC Only.** Once the infrastructure matures on BSC, we plan to expand the Autonomous AI Entity framework to other compatible blockchains.
+**X Layer first, BSC supported.** All next-phase functionality (deeper Onchain OS integration, x402 payments, plugin store) ships on X Layer first; BSC stays in operation for everything already deployed there.
 
 ---
 

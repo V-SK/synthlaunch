@@ -72,16 +72,8 @@ export function BnbButton({ children, onClick, disabled, variant = 'primary', cl
 
 export function BscChainBadge() {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-[#F0B90B]/10 text-[#F0B90B] border border-[#F0B90B]/20 rounded font-mono">
-      <svg width="12" height="12" viewBox="0 0 32 32" fill="none">
-        <path d="M16 0L19.88 3.88L9.88 13.88L6 10L16 0Z" fill="#F0B90B"/>
-        <path d="M22.12 6.12L26 10L16 20L12.12 16.12L22.12 6.12Z" fill="#F0B90B"/>
-        <path d="M28.12 12.12L32 16L28.12 19.88L24.24 16L28.12 12.12Z" fill="#F0B90B"/>
-        <path d="M3.88 12.12L7.76 16L3.88 19.88L0 16L3.88 12.12Z" fill="#F0B90B"/>
-        <path d="M16 12.12L19.88 16L16 19.88L12.12 16L16 12.12Z" fill="#F0B90B"/>
-        <path d="M9.88 18.12L16 24.24L22.12 18.12L26 22L16 32L6 22L9.88 18.12Z" fill="#F0B90B"/>
-      </svg>
-      BSC
+    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-synth-green/10 text-synth-green border border-synth-green/30 rounded font-mono">
+      X Layer · BSC
     </span>
   );
 }

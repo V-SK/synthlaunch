@@ -382,7 +382,7 @@ function FairMintDetailInner({ address }: { address: Address }) {
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">Chain</span>
-              <span className="text-synth-text">BSC</span>
+              <span className="text-synth-text">X Layer / BSC</span>
             </div>
           </div>
         </div>

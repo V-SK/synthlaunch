@@ -378,7 +378,7 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
             <span>30%</span>
           </div>
           <p className="text-[10px] text-synth-muted">
-            {form.lpRatio}% of raised BNB goes to permanent LP. Remaining {100 - form.lpRatio}% allocated to public mint pool.
+            {form.lpRatio}% of raised native gas (OKB on X Layer / BNB on BSC) goes to permanent LP. Remaining {100 - form.lpRatio}% allocated to public mint pool.
           </p>
         </div>
       </div>

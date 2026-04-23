@@ -22,7 +22,8 @@ interface TopEarner {
 
 export function TokensHome() {
   const { t } = useI18n();
-  const [selectedChain, setSelectedChain] = useState<56 | 196>(56);
+  // X Layer is the primary chain. BSC is supported but secondary.
+  const [selectedChain, setSelectedChain] = useState<56 | 196>(196);
   const [sort, setSort] = useState<SortTab>('new');
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,9 +85,10 @@ export function TokensHome() {
   ];
 
   const chainOptions = useMemo(
+    // X Layer first (primary chain). BSC second (supported).
     () => [
-      { id: 56 as const, label: 'BSC', badge: t('home.liveOnBsc'), nativeSymbol: CHAIN_CONFIG[56].nativeSymbol },
       { id: 196 as const, label: 'X Layer', badge: t('home.liveOnXLayer'), nativeSymbol: CHAIN_CONFIG[196].nativeSymbol },
+      { id: 56 as const, label: 'BSC', badge: t('home.liveOnBsc'), nativeSymbol: CHAIN_CONFIG[56].nativeSymbol },
     ],
     [t]
   );
