@@ -170,7 +170,7 @@ function TokenPageInner({ params }: { params: { address: string } }) {
             />
           </div>
           <div className="flex justify-between text-[10px] text-synth-muted mt-2">
-            <span>{t('token.reserve')}: {token.reserve?.toFixed(4)} BNB</span>
+            <span>{t('token.reserve')}: {token.reserve?.toFixed(4)} {chainLabelOf(token.chain_id).nativeSymbol}</span>
             <span>{t('token.supply')}: {(token.circulatingSupply / 1e6).toFixed(1)}M / 1B</span>
           </div>
         </div>
@@ -215,21 +215,21 @@ function TokenPageInner({ params }: { params: { address: string } }) {
               <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
                 {t('token.totalRevenue')}
               </span>
-              <span className="text-lg font-bold text-synth-green">{taxRevenue.totalFeesBnb.toFixed(4)} BNB</span>
+              <span className="text-lg font-bold text-synth-green">{taxRevenue.totalFeesBnb.toFixed(4)} {chainLabelOf(token.chain_id).nativeSymbol}</span>
               <span className="text-xs text-synth-muted block">${taxRevenue.totalFeesUsd.toFixed(2)}</span>
             </div>
             <div className="text-center">
               <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
                 {t('token.claimed')}
               </span>
-              <span className="text-lg font-bold text-synth-cyan">{taxRevenue.claimedBnb.toFixed(4)} BNB</span>
+              <span className="text-lg font-bold text-synth-cyan">{taxRevenue.claimedBnb.toFixed(4)} {chainLabelOf(token.chain_id).nativeSymbol}</span>
               <span className="text-xs text-synth-muted block">${taxRevenue.claimedUsd.toFixed(2)}</span>
             </div>
             <div className="text-center">
               <span className="text-[10px] text-synth-muted uppercase tracking-wider block mb-1">
                 {t('token.pendingClaim')}
               </span>
-              <span className="text-lg font-bold text-synth-green">{taxRevenue.pendingBnb.toFixed(4)} BNB</span>
+              <span className="text-lg font-bold text-synth-green">{taxRevenue.pendingBnb.toFixed(4)} {chainLabelOf(token.chain_id).nativeSymbol}</span>
               <span className="text-xs text-synth-muted block">${taxRevenue.pendingUsd.toFixed(2)}</span>
             </div>
           </div>

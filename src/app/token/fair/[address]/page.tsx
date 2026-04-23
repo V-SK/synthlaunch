@@ -34,8 +34,12 @@ function truncateAddress(addr: string): string {
 }
 
 function FairMintDetailInner({ address }: { address: Address }) {
-  const { isConnected, address: userAddress } = useAccount();
+  const { isConnected, address: userAddress, chain } = useAccount();
   const { token, userMinted, loading, error, refetch } = useFairMintToken(address);
+  // Native gas symbol of the chain the wallet is currently on. The fair-mint
+  // token contract is per-chain, so the connected chain is the right
+  // assumption here for displaying mint price units.
+  const nativeSymbol = chain?.id === 196 ? 'OKB' : 'BNB';
   const { mint, isPending: isMinting, hash: mintHash, error: mintError } = useMint(address);
   const { finalize, isPending: isFinalizing, hash: finalizeHash, error: finalizeError } = useFinalize(address);
   
@@ -148,7 +152,7 @@ function FairMintDetailInner({ address }: { address: Address }) {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Mint Price', value: `${token.mintPriceBnb} BNB`, color: 'text-synth-text' },
+          { label: 'Mint Price', value: `${token.mintPriceBnb} ${nativeSymbol}`, color: 'text-synth-text' },
           { label: 'Per Wallet Limit', value: formatSupply(token.perWalletLimitTokens), color: 'text-synth-green' },
           { label: 'Total Supply', value: formatSupply(token.totalSupplyTokens), color: 'text-synth-cyan' },
           {
@@ -289,10 +293,10 @@ function FairMintDetailInner({ address }: { address: Address }) {
                 {mintAmount && (
                   <div className="space-y-1">
                     <p className="text-xs text-synth-muted">
-                      Cost: <span className="text-synth-green font-mono">{mintCostBnb} BNB</span>
+                      Cost: <span className="text-synth-green font-mono">{mintCostBnb} {nativeSymbol}</span>
                     </p>
                     <p className="text-[10px] text-synth-muted">
-                      Includes {token.mintFeeRate}% platform fee ({mintFeeAmount} BNB)
+                      Includes {token.mintFeeRate}% platform fee ({mintFeeAmount} {nativeSymbol})
                     </p>
                   </div>
                 )}
@@ -370,7 +374,7 @@ function FairMintDetailInner({ address }: { address: Address }) {
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">Price</span>
-              <span className="text-synth-text">{token.mintPriceBnb} BNB</span>
+              <span className="text-synth-text">{token.mintPriceBnb} {nativeSymbol}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">Wallet Limit</span>
@@ -404,7 +408,7 @@ function FairMintDetailInner({ address }: { address: Address }) {
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">Total Raised</span>
-              <span className="text-synth-cyan">{(token.totalMintedTokens * token.mintPriceBnb).toFixed(4)} BNB</span>
+              <span className="text-synth-cyan">{(token.totalMintedTokens * token.mintPriceBnb).toFixed(4)} {nativeSymbol}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-synth-muted">Progress</span>

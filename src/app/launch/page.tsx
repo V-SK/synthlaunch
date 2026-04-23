@@ -60,29 +60,33 @@ function LaunchModeSelector({ mode, onModeChange, hasSynthID }: { mode: LaunchMo
   );
 }
 
-function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
+function FairMintForm({ mode, chainId }: { mode: 'fairMint' | 'agentOnly'; chainId: 56 | 196 }) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { create, isPending, hash, tokenAddress, error: createError, reset } = useCreateFairMint();
   const fileRef = useRef<HTMLInputElement>(null);
+  // `bnbPrice` keeps its variable name for diff readability, but holds the
+  // chain's native gas price (BNB on chain 56, OKB on chain 196).
   const [bnbPrice, setBnbPrice] = useState<number | null>(null); // null until client loads
   const [isClient, setIsClient] = useState(false);
 
-  // Mark as client-side after hydration
+  const nativeSymbol = CHAIN_CONFIG[chainId]?.nativeSymbol ?? 'BNB';
+
+  // Mark as client-side after hydration + fetch native price for the
+  // selected chain (BNB for BSC, OKB for X Layer). Re-runs on chain switch.
   useEffect(() => {
     setIsClient(true);
-    // Fetch real-time BNB price
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd')
+    const cgId = chainId === 196 ? 'okb' : 'binancecoin';
+    const fallback = chainId === 196 ? 40 : 650;
+    setBnbPrice(null);
+    fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd`)
       .then(res => res.json())
       .then(data => {
-        if (data?.binancecoin?.usd) {
-          setBnbPrice(data.binancecoin.usd);
-        } else {
-          setBnbPrice(650); // fallback
-        }
+        const px = data?.[cgId]?.usd;
+        setBnbPrice(typeof px === 'number' && px > 0 ? px : fallback);
       })
-      .catch(() => setBnbPrice(650)); // fallback
-  }, []);
+      .catch(() => setBnbPrice(fallback));
+  }, [chainId]);
 
   const [form, setForm] = useState({
     name: '',
@@ -309,7 +313,7 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm text-synth-muted">Mint Price (BNB) <span className="text-synth-cyan text-[10px]">auto</span></label>
+            <label className="text-sm text-synth-muted">Mint Price ({nativeSymbol}) <span className="text-synth-cyan text-[10px]">auto</span></label>
             <input
               type="text"
               value={calculatedMintPrice}
@@ -323,7 +327,7 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
         <div className="flex items-center justify-between px-3 py-2 bg-synth-green/5 border border-synth-green/20 rounded">
           <span className="text-sm text-synth-muted">Estimated FDV</span>
           <span className="text-sm font-mono text-synth-green">
-            {calculatedMintPrice === '---' ? '...' : `${(parseFloat(form.totalSupply) * parseFloat(calculatedMintPrice)).toFixed(2)} BNB`}
+            {calculatedMintPrice === '---' ? '...' : `${(parseFloat(form.totalSupply) * parseFloat(calculatedMintPrice)).toFixed(2)} ${nativeSymbol}`}
             <span className="text-synth-muted ml-1">
               (~${form.targetMcap.toLocaleString()})
             </span>
@@ -474,7 +478,7 @@ function FairMintForm({ mode }: { mode: 'fairMint' | 'agentOnly' }) {
               </>
             ) : (
               <>
-                {isAgentOnly ? '🦞' : '⚡'} Launch {isAgentOnly ? 'Agent-Only' : 'Fair'} Mint (0.02 BNB)
+                {isAgentOnly ? '🦞' : '⚡'} Launch {isAgentOnly ? 'Agent-Only' : 'Fair'} Mint (0.02 {nativeSymbol})
               </>
             )}
           </button>
@@ -713,7 +717,7 @@ function LaunchPageInner() {
 
       {/* Fair Mint or Agent-Only form */}
       {(launchMode === 'fairMint' || launchMode === 'agentOnly') && (
-        <FairMintForm key={launchMode} mode={launchMode} />
+        <FairMintForm key={`${launchMode}-${chainId}`} mode={launchMode} chainId={chainId} />
       )}
 
       {/* Bonding Curve form (existing) */}

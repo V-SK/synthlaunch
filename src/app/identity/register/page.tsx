@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useChainId } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { useI18n } from '@/lib/i18n';
-import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
+import { SYNTHID_ABI, SYNTHID_ADDRESS, SYNTHID_ADDRESSES } from '@/lib/synthid';
 import { BnbThemeProvider, BnbCard, BnbButton } from '@/components/identity/BnbTheme';
 import { IdentityNav } from '@/components/identity/IdentityNav';
 import { AgentPreviewCard } from '@/components/identity/AgentPreviewCard';
@@ -36,7 +36,15 @@ function RegisterPageInner() {
   const isZh = locale === 'zh';
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
-  const isWrongNetwork = isConnected && chainId !== 56;
+  // SynthID is deployed on both X Layer (196) and BSC (56). Anything else
+  // is a wrong network for this page.
+  const isWrongNetwork = isConnected && chainId !== 56 && chainId !== 196;
+  const nativeSymbol = chainId === 196 ? 'OKB' : 'BNB';
+  // Pick the SynthID contract for the connected chain. Defaults to BSC for
+  // backward compat when chainId is 56 / unknown / not yet hydrated.
+  const synthIdAddress = (chainId === 196
+    ? SYNTHID_ADDRESSES[196]
+    : SYNTHID_ADDRESSES[56]) as `0x${string}`;
 
   const [moltbookId, setMoltbookId] = useState('');
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>('idle');
@@ -60,7 +68,7 @@ function RegisterPageInner() {
 
   // Read mint fee from contract (C3)
   const { data: contractMintFee } = useReadContract({
-    address: SYNTHID_ADDRESS,
+    address: synthIdAddress,
     abi: SYNTHID_ABI,
     functionName: 'mintFee',
   });
@@ -69,7 +77,7 @@ function RegisterPageInner() {
 
   // Check wallet duplicate (C5)
   const { data: existingId } = useReadContract({
-    address: SYNTHID_ADDRESS,
+    address: synthIdAddress,
     abi: SYNTHID_ABI,
     functionName: 'walletToId',
     args: address ? [address] : undefined,
@@ -91,7 +99,7 @@ function RegisterPageInner() {
 
   // Read token ID after mint
   const { refetch: refetchTokenId } = useReadContract({
-    address: SYNTHID_ADDRESS,
+    address: synthIdAddress,
     abi: SYNTHID_ABI,
     functionName: 'walletToId',
     args: address ? [address] : undefined,
@@ -126,7 +134,7 @@ function RegisterPageInner() {
       if (skills.length > 0 && mintedTokenId > 0) {
         setMintStep('setting-skills');
         writeSkills({
-          address: SYNTHID_ADDRESS,
+          address: synthIdAddress,
           abi: SYNTHID_ABI,
           functionName: 'setSkills',
           args: [BigInt(mintedTokenId), skills],
@@ -234,7 +242,7 @@ function RegisterPageInner() {
 
       // Set agentURI to our metadata API
       writeUri({
-        address: SYNTHID_ADDRESS,
+        address: synthIdAddress,
         abi: SYNTHID_ABI,
         functionName: 'setAgentURI',
         args: [BigInt(tid), `https://synthlaunch.fun/api/synthid/${tid}`],
@@ -250,7 +258,7 @@ function RegisterPageInner() {
     resetUri();
     setMintStep('setting-uri');
     writeUri({
-      address: SYNTHID_ADDRESS,
+      address: synthIdAddress,
       abi: SYNTHID_ABI,
       functionName: 'setAgentURI',
       args: [BigInt(mintedTokenId), `https://synthlaunch.fun/api/synthid/${mintedTokenId}`],
@@ -263,7 +271,7 @@ function RegisterPageInner() {
     resetSkills();
     setMintStep('setting-skills');
     writeSkills({
-      address: SYNTHID_ADDRESS,
+      address: synthIdAddress,
       abi: SYNTHID_ABI,
       functionName: 'setSkills',
       args: [BigInt(mintedTokenId), skills],
@@ -317,7 +325,7 @@ function RegisterPageInner() {
     }
     setMintStep('minting');
     writeMint({
-      address: SYNTHID_ADDRESS,
+      address: synthIdAddress,
       abi: SYNTHID_ABI,
       functionName: 'register',
       args: [name, platform, agentData?.name || moltbookId.trim(), avatar, description],
@@ -546,7 +554,7 @@ function RegisterPageInner() {
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm text-[#848E9C]">{isZh ? '铸造费用' : 'Mint Fee'}</span>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-[#F0B90B]">{mintFeeBnbDisplay} BNB</span>
+                    <span className="text-lg font-bold text-[#F0B90B]">{mintFeeBnbDisplay} {nativeSymbol}</span>
                     <span className="text-xs text-[#848E9C] ml-2">{feeUsd}</span>
                   </div>
                 </div>

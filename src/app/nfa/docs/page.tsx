@@ -272,12 +272,12 @@ function TiersSection() {
         </div>
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
           <div className="text-lg font-bold text-white mb-1">Standard</div>
-          <div className="text-neon font-bold mb-3">0.05 BNB</div>
+          <div className="text-neon font-bold mb-3">0.05 OKB / BNB</div>
           <p className="text-sm text-white/50">Full DeFi capabilities with token swaps and transfers. For active traders.</p>
         </div>
         <div className="bg-neon/[0.05] border border-neon/30 rounded-xl p-5">
           <div className="text-lg font-bold text-white mb-1">Pro ⭐</div>
-          <div className="text-neon font-bold mb-3">0.1 BNB</div>
+          <div className="text-neon font-bold mb-3">0.1 OKB / BNB</div>
           <p className="text-sm text-white/50">Full autonomy with learning, memory, and multi-agent collaboration.</p>
         </div>
       </div>

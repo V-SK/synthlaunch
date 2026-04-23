@@ -26,13 +26,13 @@ const texts = {
     },
     standard: {
       name: "Standard", 
-      price: "0.05 BNB",
+      price: "0.05 OKB / BNB",
       desc: "DeFi operations enabled",
       features: ["Everything in Lite", "Token swaps", "ERC20 transfers", "DEX integration", "Gas optimized"]
     },
     pro: {
       name: "Pro",
-      price: "0.1 BNB",
+      price: "0.1 OKB / BNB",
       desc: "Full AI autonomy",
       features: ["Everything in Standard", "Batch operations", "Learning module", "Memory storage", "Multi-agent delegation", "Emergency controls"]
     },
@@ -75,13 +75,13 @@ const texts = {
     },
     standard: {
       name: "Standard",
-      price: "0.05 BNB", 
+      price: "0.05 OKB / BNB", 
       desc: "DeFi 操作能力",
       features: ["包含 Lite 全部", "代币交换", "ERC20 转账", "DEX 集成", "Gas 优化"]
     },
     pro: {
       name: "Pro",
-      price: "0.1 BNB",
+      price: "0.1 OKB / BNB",
       desc: "完整 AI 自主权",
       features: ["包含 Standard 全部", "批量操作", "学习模块", "记忆存储", "多 Agent 协作", "紧急控制"]
     },

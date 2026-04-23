@@ -30,7 +30,10 @@ interface TokenInfo {
 
 function ClaimPageInner() {
   const { t } = useI18n();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
+  // BNB on BSC, OKB on X Layer — claim page reads custody totals from
+  // whatever chain the wallet is connected to.
+  const claimNativeSymbol = chain?.id === 196 ? 'OKB' : 'BNB';
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const hasClaimWrapper = (CLAIM_WRAPPER_ADDRESS as string) !== '0x0000000000000000000000000000000000000000';
@@ -635,7 +638,7 @@ function ClaimPageInner() {
               <div className="flex justify-between text-sm">
                 <span className="text-synth-muted">{t('claim.claimable')}</span>
                 <span className="text-synth-green font-mono">
-                  {formatEther(tokens.reduce((sum, t) => sum + t.pendingClaim, BigInt(0)))} BNB
+                  {formatEther(tokens.reduce((sum, t) => sum + t.pendingClaim, BigInt(0)))} {claimNativeSymbol}
                 </span>
               </div>
             </div>

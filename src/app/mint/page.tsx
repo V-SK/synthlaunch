@@ -79,7 +79,7 @@ function FairMintTokenCard({ token }: { token: FairMintTokenData }) {
       <div className="grid grid-cols-2 gap-2 text-[10px]">
         <div>
           <span className="text-synth-muted block">Price</span>
-          <span className="text-synth-text font-mono">{token.mintPriceBnb} BNB</span>
+          <span className="text-synth-text font-mono">{token.mintPriceBnb}</span>
         </div>
         <div>
           <span className="text-synth-muted block">Supply</span>
