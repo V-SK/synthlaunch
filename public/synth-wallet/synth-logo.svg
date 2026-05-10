@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="dnaGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dfff8d"/>
+      <stop offset="100%" stop-color="#76ff7a"/>
+    </linearGradient>
+    <linearGradient id="techGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#79fff1"/>
+      <stop offset="100%" stop-color="#46d9ff"/>
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="#040b0a"/>
+  <rect x="13" y="13" width="102" height="102" rx="24" fill="none" stroke="#153332" stroke-width="2"/>
+
+  <g opacity=".34" stroke="url(#techGlow)" stroke-width="5" stroke-linecap="round" fill="none" filter="url(#softGlow)">
+    <path d="M44 37c0-5 4-9 9-9h4"/>
+    <path d="M71 37h4c5 0 9 4 9 9"/>
+    <path d="M44 91c0 5 4 9 9 9h4"/>
+    <path d="M71 100h4c5 0 9-4 9-9"/>
+  </g>
+
+  <g stroke="url(#dnaGlow)" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#softGlow)">
+    <path d="M47 28c9 8 13 16 13 24s-4 16-13 24-13 16-13 24" stroke-width="5.2"/>
+    <path d="M81 28c-9 8-13 16-13 24s4 16 13 24 13 16 13 24" stroke-width="5.2"/>
+    <path d="M43 36h42" stroke-width="3.1" opacity=".95"/>
+    <path d="M38 49h52" stroke-width="3.1" opacity=".95"/>
+    <path d="M38 62h52" stroke-width="3.1" opacity=".95"/>
+    <path d="M38 75h52" stroke-width="3.1" opacity=".95"/>
+    <path d="M43 88h42" stroke-width="3.1" opacity=".95"/>
+  </g>
+
+  <g opacity=".25" stroke="#2af7dd" stroke-width="1.4">
+    <path d="M17 24h18"/>
+    <path d="M17 24v80"/>
+    <path d="M111 24H93"/>
+    <path d="M111 24v80"/>
+  </g>
+</svg>

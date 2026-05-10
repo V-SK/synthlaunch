@@ -1,8 +1,72 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  skipTrailingSlashRedirect: true,
   images: {
     domains: ['localhost'],
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/synth-wallet',
+          destination: '/synth-wallet/index.html',
+        },
+        {
+          source: '/synth-wallet/',
+          destination: '/synth-wallet/index.html',
+        },
+      ],
+    };
+  },
+  async headers() {
+    return [
+      {
+        source: '/synth-wallet',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/synth-wallet/',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/synth-wallet/index.html',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/synth-wallet/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache',
+          },
+        ],
+      },
+      {
+        source: '/synth-wallet/assets/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
   },
   typescript: {
     // Type checking done separately; skip during build to avoid OOM on Vercel
