@@ -23,6 +23,13 @@ function getSupabase() {
   });
 }
 
+function hasSupabaseConfig(): boolean {
+  return Boolean(
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)
+  );
+}
+
 async function fetchPoolBalance(): Promise<string> {
   if (balanceCache && Date.now() - balanceCache.ts < 5 * 60 * 1000) {
     return balanceCache.value;
@@ -74,6 +81,23 @@ export async function GET() {
   }
 
   try {
+    if (!hasSupabaseConfig()) {
+      const balanceRaw = await fetchPoolBalance().catch((e) => {
+        console.error('pool balance error:', e);
+        return '0';
+      });
+      const result = {
+        poolAddress: DISTRIBUTION_WALLET,
+        poolBalance: balanceRaw,
+        poolBalanceReadable: formatAlice(BigInt(balanceRaw)),
+        recentRounds: [],
+        perAddressTotals: {},
+      };
+
+      statsCache = { data: result, ts: Date.now() };
+      return NextResponse.json(result);
+    }
+
     const supabase = getSupabase();
     const [balanceResult, roundsRes, totalsRes] = await Promise.all([
       fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),

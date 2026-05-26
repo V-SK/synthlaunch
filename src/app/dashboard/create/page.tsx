@@ -357,7 +357,7 @@ function CreateAgentPageInner() {
                     : 'border-synth-border bg-synth-surface hover:border-synth-green/50'
                 }`}
               >
-                {plan.popular && (
+                {'popular' in plan && plan.popular && (
                   <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-synth-green text-synth-bg text-[9px] px-2 py-0.5 rounded font-bold whitespace-nowrap">
                     推荐
                   </div>
@@ -455,7 +455,7 @@ function CreateAgentPageInner() {
                 type="button"
                 className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2"
                 onClick={handlePayment}
-                disabled={!isFormValid || isPaying || isSigning || isCreating || flowStep === 'success'}
+                disabled={!isFormValid || isPaying || isSigning || isCreating}
               >
                 {isPaying ? (
                   <>
@@ -494,11 +494,11 @@ function CreateAgentPageInner() {
                   <div className={isTxSuccess ? 'text-synth-green' : isPaying ? 'text-synth-cyan' : ''}>
                     {isTxSuccess ? '✅ 付款完成' : isPaying ? '⏳ 付款中' : '• 等待付款'}
                   </div>
-                  <div className={flowStep === 'signing' ? 'text-synth-cyan' : flowStep === 'creating' || flowStep === 'success' ? 'text-synth-green' : ''}>
-                    {flowStep === 'signing' ? '⏳ 钱包签名中' : flowStep === 'creating' || flowStep === 'success' ? '✅ 已签名' : '• 签名'}
+                  <div className={flowStep === 'signing' ? 'text-synth-cyan' : flowStep === 'creating' ? 'text-synth-green' : ''}>
+                    {flowStep === 'signing' ? '⏳ 钱包签名中' : flowStep === 'creating' ? '✅ 已签名' : '• 签名'}
                   </div>
-                  <div className={flowStep === 'creating' ? 'text-synth-cyan' : flowStep === 'success' ? 'text-synth-green' : ''}>
-                    {flowStep === 'creating' ? '⏳ 创建中' : flowStep === 'success' ? '✅ 创建完成' : '• 创建'}
+                  <div className={flowStep === 'creating' ? 'text-synth-cyan' : ''}>
+                    {flowStep === 'creating' ? '⏳ 创建中' : '• 创建'}
                   </div>
                 </div>
               )}

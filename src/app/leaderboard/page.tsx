@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
+import { CHAIN_CONFIG } from '@/lib/contracts';
 
 // Blacklist tokens from leaderboard display (lowercase)
 const LEADERBOARD_BLACKLIST: string[] = [
@@ -58,11 +59,25 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('revenue');
+  const [selectedChain, setSelectedChain] = useState<56 | 196>(56);
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
   const [secondsAgo, setSecondsAgo] = useState(0);
+  const activeChain = CHAIN_CONFIG[selectedChain];
+  const nativeSymbol = activeChain.nativeSymbol;
+  const custodyExplorerUrl = `${activeChain.explorer}/address/${activeChain.custodyAddress}`;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const rawChainId = new URLSearchParams(window.location.search).get('chainId');
+    if (rawChainId === '196') {
+      setSelectedChain(196);
+    }
+  }, []);
 
   const fetchData = useCallback(() => {
-    fetch('/api/leaderboard')
+    setLoading(true);
+    setError('');
+    fetch(`/api/leaderboard?chainId=${selectedChain}`)
       .then((r) => {
         if (!r.ok) throw new Error('Failed to fetch');
         return r.json();
@@ -79,7 +94,7 @@ export default function LeaderboardPage() {
         setError(e.message);
         setLoading(false);
       });
-  }, []);
+  }, [selectedChain]);
 
   // Initial fetch + auto-refresh every 30s
   useEffect(() => {
@@ -124,9 +139,39 @@ export default function LeaderboardPage() {
         </h1>
         <p className="text-sm text-synth-muted">
           {isZh
-            ? '所有代币累计交易税收排名 — 数据实时来自链上托管合约（已扣除20%平台协议费）'
-            : 'All tokens ranked by accumulated trading tax revenue — live on-chain (after 20% platform fee)'}
+            ? '所有代币累计交易税收排名 — 数据实时来自所选链上托管合约（已扣除20%平台协议费）'
+            : 'All tokens ranked by accumulated trading tax revenue on the selected chain (after 20% platform fee)'}
         </p>
+        <div className="flex items-center gap-2 pt-2">
+          {([
+            { id: 56 as const, label: 'BSC' },
+            { id: 196 as const, label: 'X Layer' },
+          ]).map((chain) => {
+            const isActive = selectedChain === chain.id;
+            return (
+              <button
+                key={chain.id}
+                type="button"
+                onClick={() => {
+                  setSelectedChain(chain.id);
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('chainId', String(chain.id));
+                    window.history.replaceState(null, '', url.toString());
+                  }
+                }}
+                className={`rounded border px-3 py-1.5 text-xs font-mono transition-all duration-200 ${
+                  isActive
+                    ? 'border-synth-green bg-synth-green/10 text-synth-green'
+                    : 'border-synth-border text-synth-muted hover:text-synth-text'
+                }`}
+                aria-pressed={isActive}
+              >
+                {chain.label}
+              </button>
+            );
+          })}
+        </div>
         {!loading && (
           <p className="text-xs text-synth-muted/60">
             {isZh ? `上次更新: ${secondsAgo}秒前` : `Last updated: ${secondsAgo}s ago`}
@@ -141,7 +186,7 @@ export default function LeaderboardPage() {
             {isZh ? '总税收' : 'Total Revenue'}
           </div>
           <div className="text-lg font-bold text-synth-green">
-            {loading ? '...' : `${formatBnb(totalFeesBnb)} BNB`}
+            {loading ? '...' : `${formatBnb(totalFeesBnb)} ${nativeSymbol}`}
           </div>
           <div className="text-xs text-synth-muted">
             {loading ? '' : formatUsd(totalFeesUsd)}
@@ -152,7 +197,7 @@ export default function LeaderboardPage() {
             {isZh ? '已领取' : 'Claimed'}
           </div>
           <div className="text-lg font-bold text-synth-cyan">
-            {loading ? '...' : totalClaimedBnb > 0 ? `${formatBnb(totalClaimedBnb)} BNB` : '-'}
+            {loading ? '...' : totalClaimedBnb > 0 ? `${formatBnb(totalClaimedBnb)} ${nativeSymbol}` : '-'}
           </div>
         </div>
         <div className="card border border-synth-border text-center py-4">
@@ -160,7 +205,7 @@ export default function LeaderboardPage() {
             {isZh ? '待领取' : 'Pending'}
           </div>
           <div className="text-lg font-bold text-yellow-400">
-            {loading ? '...' : `${formatBnb(totalPendingBnb)} BNB`}
+            {loading ? '...' : `${formatBnb(totalPendingBnb)} ${nativeSymbol}`}
           </div>
         </div>
         <div className="card border border-synth-border text-center py-4">
@@ -240,7 +285,7 @@ export default function LeaderboardPage() {
                   {/* Token + Agent (agent shown below token name on mobile) */}
                   <td className="py-3 px-4">
                     <Link
-                      href={`/token/${entry.tokenAddress}`}
+                      href={`/token/${entry.tokenAddress}?chainId=${selectedChain}`}
                       className="hover:text-synth-green transition-colors"
                     >
                       <div className="font-bold text-synth-text">{entry.tokenSymbol}</div>
@@ -300,7 +345,7 @@ export default function LeaderboardPage() {
                   {/* Total Revenue */}
                   <td className="py-3 px-4 text-right">
                     <div className="font-bold text-synth-green">
-                      {formatBnb(entry.totalFeesBnb)} BNB
+                      {formatBnb(entry.totalFeesBnb)} {nativeSymbol}
                     </div>
                     <div className="text-xs text-synth-muted">
                       {formatUsd(entry.totalFeesUsd)}
@@ -310,14 +355,14 @@ export default function LeaderboardPage() {
                   {/* Claimed */}
                   <td className="py-3 px-4 text-right hidden sm:table-cell">
                     <span className={entry.claimedBnb > 0 ? 'text-synth-cyan text-xs' : 'text-synth-muted text-xs'}>
-                      {entry.claimedBnb > 0 ? `${formatBnb(entry.claimedBnb)} BNB` : '-'}
+                      {entry.claimedBnb > 0 ? `${formatBnb(entry.claimedBnb)} ${nativeSymbol}` : '-'}
                     </span>
                   </td>
 
                   {/* Pending */}
                   <td className="py-3 px-4 text-right hidden sm:table-cell">
                     <span className={entry.pendingBnb > 0 ? 'text-yellow-400 text-xs' : 'text-synth-muted text-xs'}>
-                      {entry.pendingBnb > 0 ? `${formatBnb(entry.pendingBnb)} BNB` : '-'}
+                      {entry.pendingBnb > 0 ? `${formatBnb(entry.pendingBnb)} ${nativeSymbol}` : '-'}
                     </span>
                   </td>
 
@@ -348,15 +393,19 @@ export default function LeaderboardPage() {
         <p>
           {isZh ? '📋 托管合约: ' : '📋 Custody Contract: '}
           <a
-            href="https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7"
+            href={custodyExplorerUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-synth-cyan hover:underline break-all"
           >
-            0x3Fa33A0fb85f11A901e3616E10876d10018f43B7
+            {activeChain.custodyAddress}
           </a>
         </p>
-        <p>{isZh ? '数据直接从 X Layer 链上读取，每 30 秒刷新' : 'Data read directly from X Layer on-chain, refreshed every 30s'}</p>
+        <p>
+          {isZh
+            ? `数据直接从 ${selectedChain === 196 ? 'X Layer' : 'BSC'} 链上读取，每 30 秒刷新`
+            : `Data read directly from ${selectedChain === 196 ? 'X Layer' : 'BSC'} on-chain, refreshed every 30s`}
+        </p>
       </div>
     </div>
   );

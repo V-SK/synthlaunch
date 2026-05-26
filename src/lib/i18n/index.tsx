@@ -77,10 +77,12 @@ export function LanguageToggle() {
   return (
     <button
       onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
-      className="px-2 py-1 text-xs font-mono text-synth-muted hover:text-synth-text border border-synth-border rounded transition-colors"
-      title={locale === 'en' ? '切换中文' : 'Switch to English'}
+      className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-synth-muted hover:text-synth-text border border-synth-border rounded transition-colors"
+      title={locale === 'en' ? '切换到中文' : 'Switch to English'}
     >
-      {locale === 'en' ? '中文' : 'EN'}
+      <span className={locale === 'en' ? 'text-synth-text' : 'text-synth-muted'}>EN</span>
+      <span className="text-synth-muted">/</span>
+      <span className={locale === 'zh' ? 'text-synth-text' : 'text-synth-muted'}>中文</span>
     </button>
   );
 }

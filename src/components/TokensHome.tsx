@@ -18,6 +18,7 @@ interface TopEarner {
   rank: number;
   tokenSymbol: string;
   totalFeesBnb: number;
+  nativeSymbol: string;
 }
 
 export function TokensHome() {
@@ -45,22 +46,24 @@ export function TokensHome() {
   }, [selectedChain]);
 
   useEffect(() => {
-    fetch('/api/leaderboard')
+    fetch(`/api/leaderboard?chainId=${selectedChain}`)
       .then((r) => r.json())
       .then((data) => {
         const top3 = (data.entries || []).slice(0, 3).map((entry: any) => ({
           rank: entry.rank,
           tokenSymbol: entry.tokenSymbol,
           totalFeesBnb: entry.totalFeesBnb,
+          nativeSymbol: entry.nativeSymbol || CHAIN_CONFIG[selectedChain].nativeSymbol,
         }));
         setTopEarners(top3);
       })
       .catch(() => {});
-  }, []);
+  }, [selectedChain]);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/tokens?sort=${sort}`)
+    setError('');
+    fetch(`/api/tokens?sort=${sort}&chainId=${selectedChain}`)
       .then((r) => {
         if (!r.ok) throw new Error('Failed to fetch');
         return r.json();
@@ -74,7 +77,7 @@ export function TokensHome() {
         setError(fetchError.message);
         setLoading(false);
       });
-  }, [sort]);
+  }, [sort, selectedChain]);
 
   const tabs: { key: SortTab; label: string; icon: string }[] = [
     { key: 'hot', label: t('home.sortHot'), icon: '🔥' },
@@ -213,7 +216,9 @@ export function TokensHome() {
                     <span className="text-xl">{rankEmoji}</span>
                     <div>
                       <span className="text-sm font-bold text-synth-green">${earner.tokenSymbol}</span>
-                      <span className="text-xs text-synth-muted block">{earner.totalFeesBnb.toFixed(4)} BNB</span>
+                      <span className="text-xs text-synth-muted block">
+                        {earner.totalFeesBnb.toFixed(4)} {earner.nativeSymbol}
+                      </span>
                     </div>
                   </div>
                 </Link>

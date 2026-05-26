@@ -159,7 +159,7 @@ async function sendAliceTransfers(
   const results = new Map<number, { hash: string } | { error: string }>();
 
   // Use storage query for nonce (accountNextIndex fails with SS58 prefix 300)
-  const accountInfo = await api.query.system.account(sender.publicKey);
+  const accountInfo = await api.query.system.account(sender.publicKey) as unknown as { nonce: { toNumber: () => number } };
   let nonce = accountInfo.nonce.toNumber();
 
   for (let i = 0; i < distributions.length; i++) {

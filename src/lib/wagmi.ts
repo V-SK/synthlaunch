@@ -14,9 +14,15 @@ export const xlayer = {
   blockExplorers: {
     default: { name: 'OKLink', url: 'https://www.oklink.com/x-layer' },
   },
+  contracts: {
+    multicall3: {
+      address: '0xcA11bde05977b3631167028862bE2a173976CA11',
+    },
+  },
 } as const;
 
 export const config = createConfig({
+  ssr: true,
   chains: [bsc, xlayer],
   connectors: [
     injected(),

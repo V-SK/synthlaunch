@@ -41,7 +41,8 @@ export function useLaunchToken(defaultChainId: SupportedChainId = DEFAULT_CHAIN_
 
   // Register token to Supabase after tx confirms
   const registerToken = useCallback(async (txHash: string, params: LaunchTokenParams, creator: string) => {
-    const chainConfig = CHAIN_CONFIG[params.chainId ?? defaultChainId] ?? CHAIN_CONFIG[DEFAULT_CHAIN_ID];
+    const resolvedChainId = params.chainId ?? defaultChainId;
+    const chainConfig = CHAIN_CONFIG[resolvedChainId] ?? CHAIN_CONFIG[DEFAULT_CHAIN_ID];
     const taxBps = Math.round(params.taxRate * 100);
     const hasTax = taxBps > 0;
     const selfMode = !params.agentId || params.launchType === 'client';
@@ -62,6 +63,7 @@ export function useLaunchToken(defaultChainId: SupportedChainId = DEFAULT_CHAIN_
           beneficiary: (hasTax && !selfMode) ? chainConfig.custodyAddress : creator,
           tx_hash: txHash,
           launch_type: params.launchType || 'client',
+          chainId: resolvedChainId,
           _rk: process.env.NEXT_PUBLIC_REGISTER_KEY || '',
         }),
       });
@@ -69,7 +71,7 @@ export function useLaunchToken(defaultChainId: SupportedChainId = DEFAULT_CHAIN_
       console.log('[register] Success:', data);
       setRegistered(true);
       // Bust token cache so homepage shows new token immediately
-      fetch('/api/tokens?refresh=1').catch(() => {});
+      fetch(`/api/tokens?chainId=${resolvedChainId}&refresh=1`).catch(() => {});
     } catch (err) {
       console.error('[register] Failed:', err);
     }

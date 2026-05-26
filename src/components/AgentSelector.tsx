@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAccount } from 'wagmi';
 import { useI18n } from '@/lib/i18n';
 
 type AgentMode = 'moltbook' | 'twitter' | 'self';
@@ -66,6 +67,7 @@ export function AgentSelector({ value, onChange, mode, onModeChange }: AgentSele
 /* ── Moltbook Selector (original logic preserved) ── */
 function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { t } = useI18n();
+  const { address } = useAccount();
   const [isOpen, setIsOpen] = useState(false);
   const [agents, setAgents] = useState<MoltBoardAgent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,18 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/agents')
+    if (!address) {
+      setAgents([]);
+      setError(true);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
+    setError(false);
+    fetch(`/api/agents?user_address=${encodeURIComponent(address)}`)
       .then((res) => {
         if (!res.ok) throw new Error('API error');
         return res.json();
@@ -96,7 +109,7 @@ function MoltbookSelector({ value, onChange }: { value: string; onChange: (v: st
         }
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [address]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

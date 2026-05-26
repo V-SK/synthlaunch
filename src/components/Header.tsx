@@ -13,14 +13,17 @@ const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
 export function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { t } = useI18n();
+  const [isMounted, setIsMounted] = useState(false);
+  const { locale, t } = useI18n();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { address } = useAccount();
 
-  const isAdmin = address?.toLowerCase() === ADMIN_ADDRESS;
+  const isAdmin = isMounted && address?.toLowerCase() === ADMIN_ADDRESS;
 
   const MENU_ITEMS = [
     { label: t('nav.ai'), href: '/ai' },
+    { label: locale === 'zh' ? 'FanFi 竞技场' : 'FanFi Arena', href: '/fanfi/xcup' },
+    { label: locale === 'zh' ? 'FanFi 审计' : 'FanFi Audit', href: '/fanfi/xcup/audit' },
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.tokens'), href: '/tokens' },
     { label: t('nav.claim'), href: '/claim' },
@@ -41,6 +44,10 @@ export function Header() {
     isMenuActive || isOpen
       ? 'text-synth-green bg-synth-green/10'
       : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface';
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
