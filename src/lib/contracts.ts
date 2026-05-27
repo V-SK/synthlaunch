@@ -31,7 +31,15 @@ export const CHAIN_CONFIG = {
 } as const;
 
 export type SupportedChainId = keyof typeof CHAIN_CONFIG;
+
+// Historical BSC-first default kept for backward-compat with the legacy
+// launch flow. The X Cup / SportFi paths always explicitly use chain 196
+// (X Layer) — see XCUP_DEFAULT_CHAIN_ID below.
 export const DEFAULT_CHAIN_ID: SupportedChainId = 56;
+
+// X Layer is the primary chain for the X Cup submission and all new
+// SportFi prediction-arena flows.
+export const XCUP_DEFAULT_CHAIN_ID: SupportedChainId = 196;
 
 // Legacy BSC exports (backward compat)
 export const FLAP_ADDRESS = CHAIN_CONFIG[56].flapAddress;

@@ -1,17 +1,17 @@
-# SynthLaunch
+# SynthLaunch — Synth SportFi Prediction Arena
 
-**Agent-native token launch and monetization protocol on X Layer and BSC**
+**Agent-native onchain economy for football fans. Wallet-signed predictions on X Layer.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![X Layer](https://img.shields.io/badge/Chain-X%20Layer-black.svg)](https://www.oklink.com/x-layer)
-[![BSC](https://img.shields.io/badge/Chain-BSC-yellow.svg)](https://bscscan.com)
 [![OKX Onchain OS](https://img.shields.io/badge/OKX-Onchain%20OS-blue.svg)](https://web3.okx.com)
+[![OKX X Cup](https://img.shields.io/badge/OKX-X%20Cup%202026-orange.svg)](https://synthlaunch.fun/fanfi/xcup)
 
-SynthLaunch is an **agent-native** token launch and monetization protocol that gives AI agents a full onchain stack: a soulbound identity, a dedicated treasury, a fee-routing custody, an evolvable NFT body, and a chat terminal backed by **OKX Onchain OS**.
+SynthLaunch is an **agent-native** onchain stack — soulbound identity, dedicated treasury, fee-routing custody, evolvable NFT body, and an AI Terminal backed by **OKX Onchain OS**. Our **X Cup** submission, **Synth SportFi Prediction Arena**, turns World Cup fan attention into wallet-signed, X Layer-anchored prediction receipts with transparent reputation scoring.
 
-Built for the **OKX Build X Hackathon — X Layer Arena**, SynthLaunch focuses on a single thesis:
+> **AI agents should not just talk. They should own assets, earn revenue, and participate in onchain economies — and fans should earn reputation for being right.**
 
-> **AI agents should not just talk. They should own assets, earn revenue, and participate in onchain economies.**
+Prior recognition: winner of the **OKX Build X Hackathon — X Layer Arena**. The X Cup submission below extends that stack into SportFi.
 
 ---
 
@@ -19,12 +19,14 @@ Built for the **OKX Build X Hackathon — X Layer Arena**, SynthLaunch focuses o
 
 | | |
 |---|---|
-| 🌐 Website | https://synthlaunch.fun |
+| 🌐 Live app | https://synthlaunch.fun |
+| 🏆 X Cup arena | https://synthlaunch.fun/fanfi/xcup |
+| 🤖 AI Terminal | https://synthlaunch.fun/ai |
 | 🛠 Source | https://github.com/V-SK/synthlaunch |
 | 🐦 X / Twitter | [@synth_fun](https://twitter.com/synth_fun) |
-| 🏁 Hackathon | OKX Build X Hackathon — **X Layer Arena** |
+| 🏁 Hackathon | **OKX X Cup 2026 — World Cup Season** |
 | 🧭 Primary chain | **X Layer (196)** |
-| 🧭 Secondary chain | BSC (56) |
+| 🧭 Supported | BSC (56) |
 
 ---
 
@@ -43,8 +45,8 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 
 ## 🏆 X Cup Edition: SportFi Prediction Arena
 
-> **Live route**: `/fanfi/xcup` · Audit board: `/fanfi/xcup/audit`
-> **Branch**: [`codex/fanfi-xcup-sportfi`](https://github.com/V-SK/synthlaunch/tree/codex/fanfi-xcup-sportfi)
+> **Live route**: `/fanfi/xcup` · Audit board: `/fanfi/xcup/audit` (admin)
+> **Status**: merged into [`main`](https://github.com/V-SK/synthlaunch/tree/main) — live in production at synthlaunch.fun
 
 **Synth SportFi Arena** is a Prediction Arena protocol built on top of SynthLaunch's agent-native primitives, targeting the **OKX X Cup** World Cup Season. It turns football fan attention into wallet-signed, X Layer-anchored prediction receipts with reputation-first settlement.
 
@@ -186,7 +188,7 @@ Deployment receipts and constructor args are committed in [`deployments/xlayer.j
 
 | Contract | Address | Purpose |
 |---|---|---|
-| SynthLaunchCustody v11 | [`0x3Fa33A0fb85f11A901e3616E10876d10018f43B7`](https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7#code) | Fee custody with 48h Timelock |
+| SynthLaunchCustody | [`0x3Fa33A0fb85f11A901e3616E10876d10018f43B7`](https://bscscan.com/address/0x3Fa33A0fb85f11A901e3616E10876d10018f43B7#code) | Fee custody with 48h Timelock |
 | SynthTimelock | [`0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D`](https://bscscan.com/address/0x13024d9173b9E7D58C9e0cF5Fcc9438F990ab47D#code) | Timelock controller |
 | SynthID | [`0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb`](https://bscscan.com/address/0x68a515a18a3f6644f29f352d21fc32d9c6ce05fb#code) | Soulbound agent identity |
 | NFAv2 | [`0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19`](https://bscscan.com/address/0x2b703D4dC84ACB24a0A3F34CBF259D5Cb2B62b19#code) | Non-Fungible Agent body |
@@ -307,15 +309,12 @@ Total time: around 5 minutes.
 ## 🧩 Repository Layout
 
 ```
-contracts/           Solidity (Custody, SynthID, NFAv2, Flap helpers, …)
+contracts/           Solidity (Custody, SynthID, NFAv2, Flap helpers, Rise market, …)
 deployments/         Deployment receipts per chain (xlayer.json)
-docs/
-  hackathon/         Internal planning docs (TASK-*, audit, timelock plan)
-  audits/            Audit package and checklist
+docs/                NFA technical docs + Rise protocol specs
 scripts/
   deploy-xlayer.ts   One-shot X Layer deployment
-  debug/             Ad-hoc chain query scripts
-  ops/               Ops scripts (twitter bot runner, etc.)
+  …                  Operational + debug scripts
 src/
   app/               Next.js App Router pages + API routes
     ai/              AI terminal page
@@ -362,7 +361,7 @@ This is the delta we added to turn SynthLaunch into a stronger X Layer submissio
 - **Deployed the full SynthLaunch stack to X Layer** (Custody, SynthID, NFAv2), all verified on OKLink. See `deployments/xlayer.json`.
 - **Rebuilt the AI terminal** around OKX Onchain OS skills: split `AiTerminalPage` into focused components (`AiChatPane`, `AiSidebar`, `AiStatusBar`, `AiToolCard`), wired intent detection in `/api/ai/chat` to the five OKX skills.
 - **Multi-chain config**: extended `CHAIN_CONFIG` to carry chain-specific Flap / Custody / token implementations for both BSC (56) and X Layer (196).
-- **Repository hardening**: moved internal docs into `docs/hackathon/`, audit materials into `docs/audits/`, one-shot debug scripts into `scripts/debug/`, and removed committed build artifacts.
+- **Repository hardening**: pruned internal working notes from the public tree, consolidated audit materials, organized debug scripts under `scripts/`, and removed committed build artifacts.
 - **Rewrote this README** around the four judging criteria (Onchain OS integration, X Layer ecosystem, AI experience, product completeness) so that evaluating the project takes minutes instead of hours.
 - **Agentic Wallet framing**: articulated the SynthID + NFAv2 + Custody composition as a single Agentic Wallet primitive (see section above).
 
@@ -383,4 +382,4 @@ This is the delta we added to turn SynthLaunch into a stronger X Layer submissio
 
 ---
 
-Built for the **OKX Build X Hackathon — X Layer Arena**.
+Submitted to the **OKX X Cup 2026 — World Cup Season**. Built on the X Layer Arena stack from OKX Build X.
