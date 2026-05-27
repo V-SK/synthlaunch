@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const fanId = normalizeFanId(new URL(request.url).searchParams.get('fanId'));
+    // Same fix as /api/fanfi/market-proofs — only filter when fanId is provided.
+    const rawFanId = new URL(request.url).searchParams.get('fanId');
+    const fanId = rawFanId ? normalizeFanId(rawFanId) : undefined;
     const launches = await getFanFiMarketProofs(fanId);
     return NextResponse.json({ launches });
   } catch (error) {

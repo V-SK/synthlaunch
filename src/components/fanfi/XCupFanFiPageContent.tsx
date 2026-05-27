@@ -223,83 +223,91 @@ export function XCupFanFiPageContent() {
         },
       ];
 
-  const arenaBoard = isZh
-    ? [
-        {
-          rank: '01',
-          title: 'Brazil vs France',
-          category: 'Match Result',
-          heat: '94',
-          receipts: '1.2K',
-          settlement: '官方最终比分',
-          okx: 'OKB quote handoff',
-        },
-        {
-          rank: '02',
-          title: 'Argentina Bracket Path',
-          category: 'Bracket Path',
-          heat: '88',
-          receipts: '860',
-          settlement: '晋级轮次',
-          okx: 'Watchlist handoff',
-        },
-        {
-          rank: '03',
-          title: 'Golden Boot Race',
-          category: 'Player Props',
-          heat: '81',
-          receipts: '640',
-          settlement: '射手榜数据',
-          okx: 'Target asset review',
-        },
-        {
-          rank: '04',
-          title: 'VAR Heat Index',
-          category: 'Sentiment Market',
-          heat: '77',
-          receipts: '520',
-          settlement: '非现金舆情积分',
-          okx: 'Momentum scout',
-        },
-      ]
-    : [
-        {
-          rank: '01',
-          title: 'Brazil vs France',
-          category: 'Match Result',
-          heat: '94',
-          receipts: '1.2K',
-          settlement: 'Official final score',
-          okx: 'OKB quote handoff',
-        },
-        {
-          rank: '02',
-          title: 'Argentina Bracket Path',
-          category: 'Bracket Path',
-          heat: '88',
-          receipts: '860',
-          settlement: 'Qualification round',
-          okx: 'Watchlist handoff',
-        },
-        {
-          rank: '03',
-          title: 'Golden Boot Race',
-          category: 'Player Props',
-          heat: '81',
-          receipts: '640',
-          settlement: 'Scorer table data',
-          okx: 'Target asset review',
-        },
-        {
-          rank: '04',
-          title: 'VAR Heat Index',
-          category: 'Sentiment Market',
-          heat: '77',
-          receipts: '520',
-          settlement: 'Non-cash sentiment points',
-          okx: 'Momentum scout',
-        },
-      ];
+  // Live Arena Board — pulls real receipts from /api/fanfi/market-proofs.
+  // Renders the same visual layout as before but driven by actual signed
+  // submissions, with a graceful empty state when no arenas exist yet.
+  type LiveLaunch = {
+    id: string;
+    templateId: string;
+    name: string;
+    symbol: string;
+    targetMatch: string;
+    predictionDirection: string | null;
+    predictionProbability: number | null;
+    settlementSource?: string;
+    createdAt: string;
+  };
+  type ArenaBoardItem = {
+    rank: string;
+    title: string;
+    category: string;
+    heat: string;
+    receipts: string;
+    settlement: string;
+    okx: string;
+  };
+  const [liveLaunches, setLiveLaunches] = useState<LiveLaunch[]>([]);
+  const [liveLoaded, setLiveLoaded] = useState(false);
+
+  const TEMPLATE_DISPLAY: Record<string, { cat: string; okx: string }> = isZh
+    ? {
+        brazil: { cat: '球队走势预测', okx: 'OKB quote handoff' },
+        final: { cat: '比赛结果预测', okx: 'Watchlist handoff' },
+        player: { cat: '球员数据预测', okx: 'Target asset review' },
+        var: { cat: '舆情与 Meme 预测', okx: 'Momentum scout' },
+        scout: { cat: '交易侦察', okx: 'Trade route' },
+      }
+    : {
+        brazil: { cat: 'Team Path Market', okx: 'OKB quote handoff' },
+        final: { cat: 'Match Result Market', okx: 'Watchlist handoff' },
+        player: { cat: 'Player Prop Market', okx: 'Target asset review' },
+        var: { cat: 'Sentiment Market', okx: 'Momentum scout' },
+        scout: { cat: 'Trading Scout', okx: 'Trade route' },
+      };
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/fanfi/market-proofs', { cache: 'no-store' });
+        if (!res.ok) throw new Error('not-ok');
+        const data = await res.json();
+        if (!cancelled) {
+          setLiveLaunches(Array.isArray(data.launches) ? (data.launches as LiveLaunch[]) : []);
+        }
+      } catch {
+        if (!cancelled) setLiveLaunches([]);
+      } finally {
+        if (!cancelled) setLiveLoaded(true);
+      }
+    };
+    void load();
+    const handleCreated = () => void load();
+    window.addEventListener('fanfi-market-proof-created', handleCreated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('fanfi-market-proof-created', handleCreated);
+    };
+  }, []);
+
+  // Count receipts per template (used for the "Receipts" stat on each card).
+  const templateCounts = liveLaunches.reduce<Record<string, number>>((acc, L) => {
+    acc[L.templateId] = (acc[L.templateId] || 0) + 1;
+    return acc;
+  }, {});
+
+  const arenaBoard: ArenaBoardItem[] = liveLaunches.slice(0, 4).map((L, i) => {
+    const display = TEMPLATE_DISPLAY[L.templateId] || { cat: L.templateId, okx: 'OKX handoff' };
+    return {
+      rank: String(i + 1).padStart(2, '0'),
+      title: L.targetMatch || L.name,
+      category: display.cat,
+      heat: L.predictionProbability != null ? String(L.predictionProbability) : '—',
+      receipts: String(templateCounts[L.templateId] || 1),
+      settlement: L.settlementSource || (isZh ? '官方比赛数据' : 'Official match data'),
+      okx: display.okx,
+    };
+  });
 
   const countdownTiles = [
     [countdownParts?.days || '--', isZh ? '天' : 'Days'],
@@ -558,62 +566,84 @@ export function XCupFanFiPageContent() {
                 <span className="text-[10px] uppercase tracking-[0.28em] text-synth-green">
                   {isZh ? 'Arena Board' : 'Arena Board'}
                 </span>
-                <span className="rounded border border-yellow-400/30 bg-yellow-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-yellow-300">
-                  {isZh ? '示例预览' : 'Sample preview'}
-                </span>
+                {liveLoaded && liveLaunches.length > 0 && (
+                  <span className="rounded border border-synth-green/30 bg-synth-green/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-synth-green">
+                    {isZh ? 'Live' : 'Live'}
+                  </span>
+                )}
               </div>
               <h2 className="mt-3 text-2xl font-bold text-synth-text">
                 {isZh ? '像国家队榜一样清楚，但排行对象是预测 Arena' : 'Country-Board Clarity, But Ranked By Prediction Arenas'}
               </h2>
               <p className="mt-2 max-w-2xl text-xs leading-5 text-synth-muted">
                 {isZh
-                  ? '示例数据展示排行格式。正式榜单接入 receipts、X Layer proof 和 OKX handoff 后会从 /api/fanfi/market-proofs 拉取。'
-                  : 'Sample data demonstrating the board format. The production board pulls live receipts from /api/fanfi/market-proofs once arenas are settled.'}
+                  ? '排行榜数据从 /api/fanfi/market-proofs 实时拉取——每张卡片对应一条签名 receipt。'
+                  : 'Live board pulled from /api/fanfi/market-proofs — each card is a wallet-signed receipt.'}
               </p>
             </div>
             <div className="text-xs uppercase tracking-[0.18em] text-synth-muted">
               {isZh ? 'Arena heat · X Layer proof · OKX handoff' : 'Arena heat · X Layer proof · OKX handoff'}
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            {arenaBoard.map((arena) => (
-              <article key={arena.title} className="card min-h-[230px]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-[0.22em] text-synth-cyan">
-                      {arena.category}
+          {!liveLoaded ? (
+            <div className="card text-center text-sm text-synth-muted">
+              {isZh ? '加载中...' : 'Loading arena board...'}
+            </div>
+          ) : arenaBoard.length === 0 ? (
+            <div className="card border-synth-green/20 bg-synth-green/5 text-center">
+              <h3 className="text-sm font-bold text-synth-green">
+                {isZh ? '还没有 Arena — 你来开第一个' : 'No arenas yet — be the first'}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-synth-muted">
+                {isZh
+                  ? '选一个 X Cup 模板，填写预测方向，签名提交 → Arena Board 立刻显示你的 receipt。'
+                  : 'Pick an X Cup template, fill in your prediction, sign-and-submit — your receipt appears here instantly.'}
+              </p>
+              <a href="#fanfi-campaign-studio" className="btn-primary mt-4 inline-block">
+                {isZh ? '创建第一个 Arena' : 'Create First Arena'}
+              </a>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              {arenaBoard.map((arena) => (
+                <article key={`${arena.rank}-${arena.title}`} className="card min-h-[230px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.22em] text-synth-cyan">
+                        {arena.category}
+                      </div>
+                      <h3 className="mt-3 text-base font-bold text-synth-text">{arena.title}</h3>
                     </div>
-                    <h3 className="mt-3 text-base font-bold text-synth-text">{arena.title}</h3>
+                    <span className="rounded border border-synth-green/30 bg-synth-green/10 px-2 py-1 text-xs text-synth-green">
+                      #{arena.rank}
+                    </span>
                   </div>
-                  <span className="rounded border border-synth-green/30 bg-synth-green/10 px-2 py-1 text-xs text-synth-green">
-                    #{arena.rank}
-                  </span>
-                </div>
-                <div className="mt-5 grid grid-cols-2 gap-2">
-                  <div className="rounded border border-synth-border bg-synth-bg px-3 py-3">
-                    <div className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
-                      {isZh ? '热度' : 'Heat'}
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <div className="rounded border border-synth-border bg-synth-bg px-3 py-3">
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
+                        {isZh ? '热度' : 'Heat'}
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-synth-green">{arena.heat}</div>
                     </div>
-                    <div className="mt-1 text-lg font-bold text-synth-green">{arena.heat}</div>
-                  </div>
-                  <div className="rounded border border-synth-border bg-synth-bg px-3 py-3">
-                    <div className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
-                      Receipts
+                    <div className="rounded border border-synth-border bg-synth-bg px-3 py-3">
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
+                        Receipts
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-synth-text">{arena.receipts}</div>
                     </div>
-                    <div className="mt-1 text-lg font-bold text-synth-text">{arena.receipts}</div>
                   </div>
-                </div>
-                <div className="mt-4 space-y-3 text-xs leading-5 text-synth-muted">
-                  <div>
-                    <span className="text-synth-cyan">{isZh ? '结算' : 'Settlement'}:</span> {arena.settlement}
+                  <div className="mt-4 space-y-3 text-xs leading-5 text-synth-muted">
+                    <div>
+                      <span className="text-synth-cyan">{isZh ? '结算' : 'Settlement'}:</span> {arena.settlement}
+                    </div>
+                    <div>
+                      <span className="text-synth-cyan">OKX:</span> {arena.okx}
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-synth-cyan">OKX:</span> {arena.okx}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

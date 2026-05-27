@@ -7,7 +7,12 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const fanId = normalizeFanId(new URL(request.url).searchParams.get('fanId'));
+    // Only normalize+filter when a fanId is actually provided. Previously
+    // this normalized null → 'fanfi-captain', silently filtering the global
+    // feed to the default fanId. The Arena Board and Settlement Engine
+    // stats need the unfiltered list; pass undefined when absent.
+    const rawFanId = new URL(request.url).searchParams.get('fanId');
+    const fanId = rawFanId ? normalizeFanId(rawFanId) : undefined;
     const launches = await getFanFiMarketProofs(fanId);
     return NextResponse.json({ launches });
   } catch (error) {
