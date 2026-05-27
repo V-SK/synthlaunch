@@ -166,6 +166,12 @@ export function StakingHome() {
           {t('staking.heroDesc')}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+          <Link href="/fanfi/xcup" className="btn-primary min-w-[160px]">
+            {locale === 'zh' ? 'X Cup 竞技场' : 'X Cup Arena'}
+          </Link>
+          <Link href="/build-x-hook" className="btn-secondary min-w-[160px]">
+            {locale === 'zh' ? 'Hook 控制台' : 'Build X Hook'}
+          </Link>
           <Link href="/ai" className="btn-primary min-w-[180px]">
             Open AI Terminal
           </Link>

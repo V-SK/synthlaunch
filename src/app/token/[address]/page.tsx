@@ -401,9 +401,6 @@ function TokenPageInner({ params }: { params: { address: string } }) {
               <Link href="/fanfi/xcup" className="btn-secondary text-xs">
                 {isZh ? '竞技场' : 'Arena'}
               </Link>
-              <Link href="/fanfi/xcup/audit" className="btn-secondary text-xs">
-                {isZh ? '审计' : 'Audit'}
-              </Link>
             </div>
           </div>
 

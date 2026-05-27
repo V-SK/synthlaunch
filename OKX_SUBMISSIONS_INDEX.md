@@ -9,7 +9,6 @@ This repository contains **two separate OKX hackathon submissions**. They share 
 | Project name | Synth SportFi Prediction Arena |
 | Competition | OKX X Cup 2026 — World Cup Season |
 | Primary live route | `https://synthlaunch.fun/fanfi/xcup` |
-| Audit route | `https://synthlaunch.fun/fanfi/xcup/audit` |
 | Submission document | [`docs/OKX_XCUP_SUBMISSION.md`](docs/OKX_XCUP_SUBMISSION.md) |
 | Final form copy | [`docs/OKX_XCUP_FINAL_SUBMISSION.md`](docs/OKX_XCUP_FINAL_SUBMISSION.md) |
 | Core code | `src/app/fanfi/xcup`, `src/components/fanfi`, `src/lib/fanfi*`, `src/app/api/fanfi`, `src/app/api/admin/fanfi-settle` |

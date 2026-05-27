@@ -14,7 +14,6 @@ This file assigns repository code to the two OKX submissions so automated and hu
 |---|---|
 | `src/app/fanfi/page.tsx` | Redirect to X Cup arena |
 | `src/app/fanfi/xcup/page.tsx` | Main X Cup arena route |
-| `src/app/fanfi/xcup/audit/page.tsx` | Final checklist / readiness board |
 | `src/components/fanfi/*` | X Cup UI, arena studio, proof panel, settlement panel, missions, leaderboard |
 | `src/lib/fanfi*.ts` | Campaigns, signatures, auth, settlement, copilot, missions |
 | `src/app/api/fanfi/*` | X Cup campaign/proof/progress APIs |

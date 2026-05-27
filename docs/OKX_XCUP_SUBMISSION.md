@@ -16,7 +16,6 @@ OKX X Cup 2026 — World Cup Season.
 |---|---|
 | Production app | `https://synthlaunch.fun` |
 | X Cup arena | `https://synthlaunch.fun/fanfi/xcup` |
-| Audit/readiness board | `https://synthlaunch.fun/fanfi/xcup/audit` |
 | AI Terminal | `https://synthlaunch.fun/ai` |
 | Source repository | `https://github.com/V-SK/synthlaunch` |
 
@@ -34,7 +33,7 @@ OKX X Cup 2026 — World Cup Season.
 
 | Area | Files |
 |---|---|
-| Routes | `src/app/fanfi/page.tsx`, `src/app/fanfi/xcup/page.tsx`, `src/app/fanfi/xcup/audit/page.tsx` |
+| Routes | `src/app/fanfi/page.tsx`, `src/app/fanfi/xcup/page.tsx` |
 | UI | `src/components/fanfi/*` |
 | Receipt signatures | `src/lib/fanfiProofSignature.ts`, `src/lib/fanfiProofAuth.ts` |
 | Settlement | `src/lib/fanfiSettle.ts`, `src/lib/fanfiSettleSignature.ts`, `src/app/api/admin/fanfi-settle/route.ts` |
@@ -46,8 +45,8 @@ OKX X Cup 2026 — World Cup Season.
 
 - **Innovation**: Prediction receipts are signed, replay-guarded, and optionally anchored to X Layer transaction evidence.
 - **Market potential**: World Cup attention is large, recurring, and social; the arena converts fan participation into reputation and OKX trading handoff.
-- **Completion**: The product has live routes, UI flow, APIs, persistence, settlement, audit board, and bilingual UI.
-- **Verifiability**: Every receipt has a canonical signed message; settlement uses deterministic scoring; audit/readiness state is exposed on `/fanfi/xcup/audit`.
+- **Completion**: The product has a live route, UI flow, APIs, persistence, settlement, leaderboard, and bilingual UI.
+- **Verifiability**: Every receipt has a canonical signed message; settlement uses deterministic scoring; code and submission evidence are separated for review.
 
 ### Honest boundaries
 
@@ -71,7 +70,6 @@ OKX X Cup 2026 — World Cup Season。
 |---|---|
 | 生产站点 | `https://synthlaunch.fun` |
 | X Cup Arena | `https://synthlaunch.fun/fanfi/xcup` |
-| 审计/准备看板 | `https://synthlaunch.fun/fanfi/xcup/audit` |
 | AI Terminal | `https://synthlaunch.fun/ai` |
 | 源码仓库 | `https://github.com/V-SK/synthlaunch` |
 
@@ -93,5 +91,5 @@ X Cup 项目的核心代码在 `src/app/fanfi/xcup`、`src/components/fanfi`、`
 
 - **创新性**：预测 receipt 有签名、有 replay guard，并可绑定 X Layer 交易证据。
 - **市场价值**：世界杯是全球注意力场景，Arena 把 fan participation 转化为 reputation 和 OKX 交易承接。
-- **完成度**：已有线上路由、产品 UI、API、持久化、结算、审计面板和双语 UI。
-- **可验证性**：每条 receipt 都有规范签名消息；结算是确定性评分；准备状态在 `/fanfi/xcup/audit` 可见。
+- **完成度**：已有线上路由、产品 UI、API、持久化、结算、排行榜和双语 UI。
+- **可验证性**：每条 receipt 都有规范签名消息；结算是确定性评分；代码和提交证据已经按项目分离。

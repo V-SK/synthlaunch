@@ -23,16 +23,13 @@ export function Header() {
   const MENU_ITEMS = [
     { label: t('nav.ai'), href: '/ai' },
     { label: locale === 'zh' ? 'FanFi 竞技场' : 'FanFi Arena', href: '/fanfi/xcup' },
+    { label: locale === 'zh' ? 'Hook 控制台' : 'Build X Hook', href: '/build-x-hook' },
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.tokens'), href: '/tokens' },
     { label: t('nav.claim'), href: '/claim' },
     { label: 'Alice Wallet', href: '/alice-wallet' },
     { label: t('nav.docs'), href: '/docs' },
-    // Admin-only: FanFi readiness board exposes internal status. The page
-    // itself is still accessible by direct URL, but we don't surface it in
-    // the public menu to keep external readers focused on the polished UI.
     ...(isAdmin ? [
-      { label: locale === 'zh' ? 'FanFi 审计' : 'FanFi Audit', href: '/fanfi/xcup/audit' },
       { label: 'Admin', href: '/admin/alice' },
     ] : []),
   ];

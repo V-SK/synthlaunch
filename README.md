@@ -49,7 +49,7 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 
 ## 🏆 X Cup Edition: SportFi Prediction Arena
 
-> **Live route**: `/fanfi/xcup` · Audit board: `/fanfi/xcup/audit` (admin)
+> **Live route**: `/fanfi/xcup`
 > **Status**: merged into [`main`](https://github.com/V-SK/synthlaunch/tree/main) — live in production at synthlaunch.fun
 
 **Synth SportFi Arena** is a Prediction Arena protocol built on top of SynthLaunch's agent-native primitives, targeting the **OKX X Cup** World Cup Season. It turns football fan attention into wallet-signed, X Layer-anchored prediction receipts with reputation-first settlement.
@@ -78,9 +78,8 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 
 1. Visit **`/fanfi/xcup`** — see the World Cup countdown, 5 prediction templates, settlement explainer with live stats, OKX Trading Proof panel.
 2. Open the **AI Terminal** (`/ai`) — run a real OKX Onchain OS quote query.
-3. Visit **`/fanfi/xcup/audit`** — see the explicit ready/wired/next state for every component.
-4. Read **[ARCHITECTURE.md](ARCHITECTURE.md)** for the dataflow.
-5. Read **[SECURITY.md](SECURITY.md)** for the threat model.
+3. Read **[ARCHITECTURE.md](ARCHITECTURE.md)** for the dataflow.
+4. Read **[SECURITY.md](SECURITY.md)** for the threat model.
 
 ### Setup
 
