@@ -5,6 +5,15 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
   },
+  async redirects() {
+    return [
+      {
+        source: '/fanfi/xcup/audit',
+        destination: '/fanfi/xcup',
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     return {
       beforeFiles: [
