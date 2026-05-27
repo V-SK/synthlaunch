@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { WalletConnect } from '@/components/WalletConnect';
-
-const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
+import { ADMIN_ADDRESS } from '@/lib/admin';
 const ALICE_DECIMALS = 12;
 
 function formatAlice(raw: string): string {

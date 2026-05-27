@@ -223,6 +223,21 @@ export function AiTerminalPage() {
   }
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const prompt = params.get('prompt');
+    const context = params.get('context');
+    if (prompt?.trim()) {
+      setInput((current) => current || prompt.trim());
+    } else if (context === 'fanfi-xcup') {
+      setInput((current) =>
+        current ||
+        'Act as the OKX Agent for Synth SportFi Arena. Check my X Layer OKB balance, build a World Cup arena watchlist, search market assets, generate an OKB quote, and return the wallet-confirmed swap handoff.',
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     void loadMarketCards(quickSymbols);
   }, [quickSymbols.join('|')]);
 

@@ -94,7 +94,7 @@ export function useLeaderboard() {
             abi: STAKING_ABI,
             functionName: 'getStakeInfo' as const,
             args: [addr] as [Address],
-            chainId: STAKING_CHAIN_ID,
+            chainId: STAKING_CHAIN_ID as 56 | 196,
           }))
         : [],
     [addresses],

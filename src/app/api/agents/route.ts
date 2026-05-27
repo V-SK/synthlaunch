@@ -148,6 +148,14 @@ export async function GET(request: NextRequest) {
       return jsonError('Missing user_address', 400);
     }
 
+    const hasSupabase =
+      Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY);
+
+    if (!hasSupabase) {
+      return NextResponse.json([]);
+    }
+
     const supabase = createClient();
     const encodedAddress = encodeURIComponent(userAddress);
     const data = await supabase.request<any[]>(

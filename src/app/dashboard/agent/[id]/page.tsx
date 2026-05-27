@@ -536,7 +536,7 @@ function AgentDetailPageInner() {
                           : 'border-synth-border bg-synth-surface hover:border-synth-green/50'
                       }`}
                     >
-                      {plan.popular && (
+                      {'popular' in plan && plan.popular && (
                         <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-synth-green text-synth-bg text-[9px] px-2 py-0.5 rounded font-bold whitespace-nowrap">
                           推荐
                         </div>
@@ -626,7 +626,7 @@ function AgentDetailPageInner() {
                       type="button"
                       className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2"
                       onClick={handleRenewPayment}
-                      disabled={isRenewPaying || isRenewSigning || isRenewing || renewFlowStep === 'success'}
+                      disabled={isRenewPaying || isRenewSigning || isRenewing}
                     >
                       {isRenewPaying ? (
                         <>
@@ -665,11 +665,11 @@ function AgentDetailPageInner() {
                         <div className={isRenewTxSuccess ? 'text-synth-green' : isRenewPaying ? 'text-synth-cyan' : ''}>
                           {isRenewTxSuccess ? '✅ Payment complete' : isRenewPaying ? '⏳ Paying' : '• Awaiting payment'}
                         </div>
-                        <div className={isRenewSigning ? 'text-synth-cyan' : isRenewing || renewFlowStep === 'success' ? 'text-synth-green' : ''}>
-                          {isRenewSigning ? '⏳ Signing' : isRenewing || renewFlowStep === 'success' ? '✅ Signed' : '• Signature'}
+                        <div className={isRenewSigning ? 'text-synth-cyan' : isRenewing ? 'text-synth-green' : ''}>
+                          {isRenewSigning ? '⏳ Signing' : isRenewing ? '✅ Signed' : '• Signature'}
                         </div>
-                        <div className={isRenewing ? 'text-synth-cyan' : renewFlowStep === 'success' ? 'text-synth-green' : ''}>
-                          {isRenewing ? '⏳ Renewing' : renewFlowStep === 'success' ? '✅ Renewed' : '• Renew'}
+                        <div className={isRenewing ? 'text-synth-cyan' : ''}>
+                          {isRenewing ? '⏳ Renewing' : '• Renew'}
                         </div>
                       </div>
                     )}

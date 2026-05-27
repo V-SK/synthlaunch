@@ -41,6 +41,56 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 
 ---
 
+## 🏆 X Cup Edition: SportFi Prediction Arena
+
+> **Live route**: `/fanfi/xcup` · Audit board: `/fanfi/xcup/audit`
+> **Branch**: [`codex/fanfi-xcup-sportfi`](https://github.com/V-SK/synthlaunch/tree/codex/fanfi-xcup-sportfi)
+
+**Synth SportFi Arena** is a Prediction Arena protocol built on top of SynthLaunch's agent-native primitives, targeting the **OKX X Cup** World Cup Season. It turns football fan attention into wallet-signed, X Layer-anchored prediction receipts with reputation-first settlement.
+
+### What this branch ships
+
+| Capability | Status | Where |
+|---|---|---|
+| AI-generated Prediction Arena Studio (5 templates) | ✅ live | `/fanfi/xcup` + [`src/components/fanfi/XCupCampaignStudio.tsx`](src/components/fanfi/XCupCampaignStudio.tsx) |
+| Wallet-signed prediction receipts (EIP-191, 30 min replay window) | ✅ live | [`src/lib/fanfiProofAuth.ts`](src/lib/fanfiProofAuth.ts) |
+| Real X Layer tx hash verification via RPC | ✅ live | [`src/lib/localFanfiMarketProofStore.ts`](src/lib/localFanfiMarketProofStore.ts#L74-L154) `verifyXLayerTxHash` |
+| Production persistence (Supabase) | ✅ live | [`supabase/migrations/009_fanfi_tables.sql`](supabase/migrations/009_fanfi_tables.sql) |
+| Settlement Engine (admin-signed resolve + REP scoring) | ✅ live | [`src/lib/fanfiSettle.ts`](src/lib/fanfiSettle.ts) + [`src/app/api/admin/fanfi-settle/route.ts`](src/app/api/admin/fanfi-settle/route.ts) |
+| 5 OKX Onchain OS skills wired into arena | ✅ live | [`src/components/fanfi/XCupTradingProofPanel.tsx`](src/components/fanfi/XCupTradingProofPanel.tsx) |
+| LLM-graded reason quality | 🔄 next phase | v1 uses transparent length heuristic |
+
+### Why this fits X Cup judging
+
+- **Innovation** — First wallet-signed prediction receipt protocol on X Layer with both EIP-191 message-binding **and** optional X Layer transaction anchoring.
+- **X Layer Native** — Every receipt is anchored to chain 196: tx hashes are verified against X Layer RPC (`getTransactionReceipt`), and the receipt hash is required to appear in tx calldata OR the tx must target a known Synth X Layer contract (Custody / SynthID / NFAv2 / Token impls).
+- **Market Value** — World Cup is the largest recurring global attention event. Predictions are the universal language of fans, and SportFi turns that into auditable onchain activity.
+- **Completion** — Create → Sign → Settle → Score → Rank runs end-to-end. The five OKX Onchain OS skills are wired into the same surface so users go from prediction to swap in one tab.
+- **Verifiability** — Every prediction is a signed EIP-191 message stored alongside its signature. The settle endpoint is also admin-signed (matches the existing `alice-distribute` admin pattern). Every state transition has an on-chain or off-chain audit trail.
+
+### Quick judge eval path (5 minutes)
+
+1. Visit **`/fanfi/xcup`** — see the World Cup countdown, 5 prediction templates, settlement explainer with live stats, OKX Trading Proof panel.
+2. Open the **AI Terminal** (`/ai`) — run a real OKX Onchain OS quote query.
+3. Visit **`/fanfi/xcup/audit`** — see the explicit ready/wired/next state for every component.
+4. Read **[ARCHITECTURE.md](ARCHITECTURE.md)** for the dataflow.
+5. Read **[SECURITY.md](SECURITY.md)** for the threat model.
+
+### Setup
+
+1. Apply Supabase migration 009 — paste the contents of [`supabase/migrations/009_fanfi_tables.sql`](supabase/migrations/009_fanfi_tables.sql) into the Supabase dashboard SQL editor. Creates 4 tables (`fanfi_campaigns`, `fanfi_market_proofs`, `fanfi_profiles`, `fanfi_completions`), all `IF NOT EXISTS` and idempotent.
+2. Existing env vars (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OKX_*`) are sufficient. No new secrets required.
+3. Settle is triggered by the SynthLaunch deployer wallet via wallet-signed `POST /api/admin/fanfi-settle` (no shared secret).
+
+### Honest caveats
+
+- **Reason quality scoring** is a v1 length heuristic (transparent thresholds 10/50/100 chars). LLM grading is next-phase work, clearly labeled in the UI.
+- **Early-receipt bonus** awards full +20 REP for any receipt submitted before `settlement_cutoff`; per-edit and per-second granularity is next-phase.
+- **Arena Board** on the landing page is **sample preview data**, labeled as such in the UI. The production board (`XCupLivePanel`) pulls live receipts from `/api/fanfi/market-proofs`.
+- **Prediction receipts are not tradeable ERC-20s.** The `tokenAddress` field on a receipt is a deterministic receipt-identity hash (SHA-256 of the signature + signed message), used to anchor cross-references. Receipts surface on `/tokens` for visibility, but financial fields (`marketCap`, `price`) are explicitly zero — they are signed proofs, not assets.
+
+---
+
 ## 🤖 Agentic Wallet — how it works
 
 The hackathon requires an "Agentic Wallet as the project's main onchain identity". In SynthLaunch this is not a single contract — it's a composition designed so that identity, treasury, body, and execution are separated but linked:

@@ -8,26 +8,33 @@ import { useAccount } from 'wagmi';
 import { WalletConnect } from './WalletConnect';
 import { WalletDownload } from './WalletDownload';
 import { useI18n, LanguageToggle } from '@/lib/i18n';
-
-const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
+import { isAdminAddress } from '@/lib/admin';
 
 export function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { t } = useI18n();
+  const [isMounted, setIsMounted] = useState(false);
+  const { locale, t } = useI18n();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { address } = useAccount();
 
-  const isAdmin = address?.toLowerCase() === ADMIN_ADDRESS;
+  const isAdmin = isMounted && isAdminAddress(address);
 
   const MENU_ITEMS = [
     { label: t('nav.ai'), href: '/ai' },
+    { label: locale === 'zh' ? 'FanFi 竞技场' : 'FanFi Arena', href: '/fanfi/xcup' },
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.tokens'), href: '/tokens' },
     { label: t('nav.claim'), href: '/claim' },
     { label: 'Alice Wallet', href: '/alice-wallet' },
     { label: t('nav.docs'), href: '/docs' },
-    ...(isAdmin ? [{ label: 'Admin', href: '/admin/alice' }] : []),
+    // Admin-only: FanFi readiness board exposes internal status. The page
+    // itself is still accessible by direct URL, but we don't surface it in
+    // the public menu to keep external readers focused on the polished UI.
+    ...(isAdmin ? [
+      { label: locale === 'zh' ? 'FanFi 审计' : 'FanFi Audit', href: '/fanfi/xcup/audit' },
+      { label: 'Admin', href: '/admin/alice' },
+    ] : []),
   ];
 
   const getNavItemClasses = (item: { href: string }) => {
@@ -42,6 +49,10 @@ export function Header() {
     isMenuActive || isOpen
       ? 'text-synth-green bg-synth-green/10'
       : 'text-synth-muted hover:text-synth-text hover:bg-synth-surface';
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);

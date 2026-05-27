@@ -3,6 +3,7 @@ import { createPublicClient, createWalletClient, http, defineChain, decodeEventL
 import { getDeployerAccount } from '@/lib/kms-signer';
 import { CUSTODY_ABI } from '@/lib/custody';
 import { CHAIN_CONFIG, type SupportedChainId } from '@/lib/contracts';
+import { isLocalTokenStoreEnabled, upsertLocalToken } from '@/lib/localTokenStore';
 
 const bsc = defineChain({
   id: 56,
@@ -60,6 +61,30 @@ async function getTokenAddressFromTx(txHash: string, chainId: SupportedChainId =
   } catch (e) {
     console.error('[register] Failed to get token from tx:', (e as Error).message?.substring(0, 100));
     return null;
+  }
+}
+
+async function registerTokenOnCustody(parsedChainId: SupportedChainId, address: string, agentName: string) {
+  if (!agentName || !address) return;
+
+  const chainConfig = CHAIN_CONFIG[parsedChainId];
+  try {
+    const account = await getDeployerAccount();
+    const walletClient = createWalletClient({
+      account,
+      chain: getChain(parsedChainId),
+      transport: http(chainConfig.rpc),
+    });
+    await walletClient.writeContract({
+      address: chainConfig.custodyAddress as `0x${string}`,
+      abi: CUSTODY_ABI,
+      functionName: 'registerToken',
+      args: [address.toLowerCase() as `0x${string}`, agentName],
+    });
+    console.log(`[register] registerToken tx sent on chain ${parsedChainId} for ${address} / ${agentName}`);
+  } catch (contractErr: unknown) {
+    const errMsg = contractErr instanceof Error ? contractErr.message : String(contractErr);
+    console.error(`[register] registerToken failed (non-fatal): ${errMsg}`);
   }
 }
 
@@ -122,10 +147,29 @@ export async function POST(request: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
+      if (!isLocalTokenStoreEnabled()) {
+        return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
+      }
+
+      const token = await upsertLocalToken({
+        address: address.toLowerCase(),
+        name: name || '',
+        symbol: symbol || '',
+        meta: meta || '',
+        creator: creator || '',
+        agent_name: agent_name || '',
+        tax_rate: tax_rate || 0,
+        beneficiary: beneficiary || '',
+        tx_hash: tx_hash || '',
+        launch_type: launch_type || 'manual',
+        chain_id: parsedChainId,
+      });
+
+      await registerTokenOnCustody(parsedChainId, address, agent_name || '');
+      return NextResponse.json({ success: true, local: true, token });
     }
 
     const res = await fetch(`${supabaseUrl}/rest/v1/tokens`, {
@@ -160,26 +204,7 @@ export async function POST(request: Request) {
     const data = await res.json();
 
     // Best-effort: register token on SynthLaunchCustody contract for this chain
-    if (agent_name && address) {
-      try {
-          const account = await getDeployerAccount();
-          const walletClient = createWalletClient({
-            account,
-            chain: getChain(parsedChainId),
-            transport: http(chainConfig.rpc),
-          });
-          await walletClient.writeContract({
-            address: chainConfig.custodyAddress as `0x${string}`,
-            abi: CUSTODY_ABI,
-            functionName: 'registerToken',
-            args: [address.toLowerCase() as `0x${string}`, agent_name],
-          });
-          console.log(`[register] registerToken tx sent on chain ${parsedChainId} for ${address} / ${agent_name}`);
-      } catch (contractErr: unknown) {
-        const errMsg = contractErr instanceof Error ? contractErr.message : String(contractErr);
-        console.error(`[register] registerToken failed (non-fatal): ${errMsg}`);
-      }
-    }
+    await registerTokenOnCustody(parsedChainId, address, agent_name || '');
 
     return NextResponse.json({ success: true, token: data });
   } catch (err: unknown) {

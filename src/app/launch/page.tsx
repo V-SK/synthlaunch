@@ -12,10 +12,113 @@ import { useCreateFairMint } from '@/hooks/useFairMint';
 import { useHasSynthID } from '@/hooks/useSynthID';
 import { uploadToFlap } from '@/lib/ipfs';
 import { useI18n } from '@/lib/i18n';
-import { CHAIN_CONFIG } from '@/lib/contracts';
+import { CHAIN_CONFIG, type SupportedChainId } from '@/lib/contracts';
 
 type LaunchStep = 'idle' | 'uploading' | 'mining-salt' | 'sending-tx' | 'confirming' | 'success' | 'error';
 type LaunchMode = 'curve' | 'fairMint' | 'agentOnly';
+
+type XCupPreset = {
+  id: string;
+  team: string;
+  agentType: string;
+  name: string;
+  symbol: string;
+  description: string;
+  mission: string;
+  launchTweet: string;
+  twitterHandle: string;
+  website: string;
+  telegram: string;
+  taxRate: number;
+};
+
+const XCUP_PRESETS: XCupPreset[] = [
+  {
+    id: 'brazil',
+    team: 'Brazil',
+    agentType: 'Team Agent',
+    name: 'Brazil Fan Agent',
+    symbol: 'BRZAI',
+    description:
+      'An AI-powered Brazil fan community token for match-day chants, memes, predictions, and World Cup fan missions on X Layer.',
+    mission:
+      'Rally Brazil supporters into one X Layer-native fan economy with AI-generated campaigns and public leaderboard proof.',
+    launchTweet:
+      'Brazil Fan Agent is launching on X Layer. AI-generated chants, match missions, and fan token momentum for the X Cup.',
+    twitterHandle: 'SynthFanFi',
+    website: 'https://synthlaunch.fun/fanfi/xcup',
+    telegram: 'https://t.me/synthlaunch',
+    taxRate: 2,
+  },
+  {
+    id: 'final',
+    team: 'Final Match',
+    agentType: 'Match Agent',
+    name: 'Final Match Oracle',
+    symbol: 'FINALX',
+    description:
+      'A match-day AI agent for the World Cup final, turning live narratives into fan token missions, watchlists, and leaderboard activity.',
+    mission:
+      'Convert final-match attention into verifiable X Layer actions: launch, trade, track, and rank fan communities.',
+    launchTweet:
+      'Final Match Oracle is coming to X Layer for X Cup. One match, many fan narratives, all tracked onchain.',
+    twitterHandle: 'SynthFanFi',
+    website: 'https://synthlaunch.fun/fanfi/xcup',
+    telegram: 'https://t.me/synthlaunch',
+    taxRate: 2.5,
+  },
+  {
+    id: 'player',
+    team: 'Golden Boot',
+    agentType: 'Player Agent',
+    name: 'Top Scorer Agent',
+    symbol: 'SCORER',
+    description:
+      'An AI-powered player fan token for Golden Boot races, goalkeeper cults, highlight moments, and player-led World Cup missions on X Layer.',
+    mission:
+      'Convert player attention into FanFi token missions, X account content, trading watchlists, and public leaderboard momentum.',
+    launchTweet:
+      'Top Scorer Agent is entering Synth FanFi Arena. Player moments, fan missions, and X Layer token proof for X Cup.',
+    twitterHandle: 'SynthFanFi',
+    website: 'https://synthlaunch.fun/fanfi/xcup',
+    telegram: 'https://t.me/synthlaunch',
+    taxRate: 2,
+  },
+  {
+    id: 'var',
+    team: 'VAR',
+    agentType: 'Meme Club',
+    name: 'VAR Meme Club',
+    symbol: 'VARDAO',
+    description:
+      'A World Cup meme club for VAR drama, penalty debates, and viral fan campaigns, launched as a FanFi token on X Layer.',
+    mission:
+      'Turn match controversy into a playful onchain community with AI-generated memes, posts, and ranking hooks.',
+    launchTweet:
+      'VAR Meme Club is live for X Cup builders. Football drama, AI memes, and FanFi leaderboard energy on X Layer.',
+    twitterHandle: 'SynthFanFi',
+    website: 'https://synthlaunch.fun/fanfi/xcup',
+    telegram: 'https://t.me/synthlaunch',
+    taxRate: 1.5,
+  },
+  {
+    id: 'scout',
+    team: 'Top Scorer',
+    agentType: 'Trading Scout',
+    name: 'Top Scorer Scout',
+    symbol: 'GOALAI',
+    description:
+      'An AI trading scout for World Cup fan token watchlists, OKX/X Layer token search, quote checks, and community momentum tracking.',
+    mission:
+      'Show the OKX/X Layer trading flow through a fan-token scout that can explain watchlists, balances, and swap routes.',
+    launchTweet:
+      'Top Scorer Scout brings FanFi watchlists to X Layer. AI agent, fan token launch, OKX flow, public leaderboard.',
+    twitterHandle: 'SynthFanFi',
+    website: 'https://synthlaunch.fun/fanfi/xcup',
+    telegram: 'https://t.me/synthlaunch',
+    taxRate: 2,
+  },
+];
 
 function LaunchModeSelector({ mode, onModeChange, hasSynthID }: { mode: LaunchMode; onModeChange: (m: LaunchMode) => void; hasSynthID: boolean }) {
   const modes: { key: LaunchMode; icon: string; label: string; desc: string; requiresSynthID?: boolean }[] = [
@@ -487,7 +590,7 @@ function FairMintForm({ mode, chainId }: { mode: 'fairMint' | 'agentOnly'; chain
           )}
           {hash && !tokenAddress && (
             <p className="text-synth-cyan text-xs text-center mt-2">
-              Tx submitted: <a href={`${CHAIN_CONFIG[chainId].explorer}/tx/${hash}`} target="_blank" className="underline">{hash.slice(0, 10)}...</a>
+              Tx submitted: <a href={`${CHAIN_CONFIG[56].explorer}/tx/${hash}`} target="_blank" className="underline">{hash.slice(0, 10)}...</a>
             </p>
           )}
         </>
@@ -497,7 +600,7 @@ function FairMintForm({ mode, chainId }: { mode: 'fairMint' | 'agentOnly'; chain
 }
 
 function LaunchPageInner() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { isConnected, address, chain: walletChain } = useAccount();
   const { switchChain } = useSwitchChain();
   const searchParams = useSearchParams();
@@ -506,7 +609,7 @@ function LaunchPageInner() {
   // hackathon), not BSC. This prevents a wallet-on-X-Layer user from
   // accidentally submitting a transaction to BSC because the page picker
   // silently reset to 56.
-  const [chainId, setChainId] = useState<56 | 196>(() => {
+  const [chainId, setChainId] = useState<SupportedChainId>(() => {
     if (walletChain?.id === 196) return 196;
     if (walletChain?.id === 56) return 56;
     return 196;
@@ -534,6 +637,12 @@ function LaunchPageInner() {
   const [step, setStep] = useState<LaunchStep>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [tokenAddress, setTokenAddress] = useState('');
+  const [selectedXcupPreset, setSelectedXcupPreset] = useState('');
+
+  const activeXcupPreset = useMemo(
+    () => XCUP_PRESETS.find((preset) => preset.id === selectedXcupPreset) ?? null,
+    [selectedXcupPreset]
+  );
 
   useEffect(() => {
     const raw = searchParams.get('chainId');
@@ -548,7 +657,7 @@ function LaunchPageInner() {
   // wallet on X Layer while the form picker silently says BSC.
   useEffect(() => {
     if (walletChain?.id === 196 || walletChain?.id === 56) {
-      setChainId(walletChain.id as 56 | 196);
+      setChainId(walletChain.id as SupportedChainId);
     }
   }, [walletChain?.id]);
 
@@ -566,6 +675,69 @@ function LaunchPageInner() {
   );
 
   const activeChain = chainOptions[chainId] ?? chainOptions[56];
+
+  const applyXcupPreset = (preset: XCupPreset) => {
+    setSelectedXcupPreset(preset.id);
+    setChainId(196);
+    setLaunchMode('curve');
+    setAgentMode('twitter');
+    setForm((prev) => ({
+      ...prev,
+      name: preset.name,
+      symbol: preset.symbol,
+      description: preset.description,
+      website: preset.website,
+      twitter: `@${preset.twitterHandle}`,
+      telegram: preset.telegram,
+      taxRate: preset.taxRate,
+      agentId: `tw:${preset.twitterHandle}`,
+    }));
+
+    if (isConnected && walletChain?.id !== 196) {
+      try {
+        switchChain({ chainId: 196 });
+      } catch {
+        /* user can switch manually in wallet */
+      }
+    }
+  };
+
+  useEffect(() => {
+    const presetId = searchParams.get('xcupPreset');
+    if (!presetId || presetId === selectedXcupPreset) return;
+
+    const preset = XCUP_PRESETS.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    setSelectedXcupPreset(preset.id);
+    setChainId(196);
+    setLaunchMode('curve');
+    setAgentMode('twitter');
+    setForm((prev) => ({
+      ...prev,
+      name: preset.name,
+      symbol: preset.symbol,
+      description: preset.description,
+      website: preset.website,
+      twitter: `@${preset.twitterHandle}`,
+      telegram: preset.telegram,
+      taxRate: preset.taxRate,
+      agentId: `tw:${preset.twitterHandle}`,
+    }));
+  }, [searchParams, selectedXcupPreset]);
+
+  const copyXcupPrompt = () => {
+    if (!activeXcupPreset) return;
+    const prompt = [
+      `Create a ${activeXcupPreset.name} for Synth FanFi Arena on X Layer.`,
+      `Agent type: ${activeXcupPreset.agentType}. Team/campaign: ${activeXcupPreset.team}.`,
+      `Ticker: ${activeXcupPreset.symbol}.`,
+      `Mission: ${activeXcupPreset.mission}`,
+      `Launch tweet: ${activeXcupPreset.launchTweet}`,
+      'Generate persona, token description, launch tweet, campaign mission, and leaderboard hook for an OKX / X Layer X Cup demo.',
+    ].join('\n');
+    navigator.clipboard?.writeText(prompt).catch(() => undefined);
+  };
 
   const handleImageChange = (file: File | null) => {
     if (!file) return;
@@ -705,6 +877,84 @@ function LaunchPageInner() {
         <p className="text-sm text-synth-muted">
           {chainId === 196 ? t('launch.subtitleXLayer') : t('launch.subtitle')}
         </p>
+      </div>
+
+      {/* X Cup Presets */}
+      <div className="card space-y-4 border border-synth-green/20 bg-synth-green/5">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+          <div>
+            <div className="text-[10px] text-synth-green font-mono uppercase tracking-[0.2em]">
+              Synth FanFi Arena
+            </div>
+            <h2 className="text-lg font-bold text-synth-text mt-1">
+              X Cup launch presets
+            </h2>
+            <p className="text-xs text-synth-muted leading-relaxed mt-1 max-w-xl">
+              {locale === 'zh'
+                ? '选择一个世界杯 Fan Agent 模板，自动填入名称、ticker、描述、社交链接、Twitter agent 绑定，并把目标链切到 X Layer。'
+                : 'Pick a World Cup Fan Agent template to prefill name, ticker, description, social links, Twitter agent binding, and target X Layer.'}
+            </p>
+          </div>
+          <div className="text-[10px] font-mono text-synth-cyan border border-synth-cyan/20 bg-synth-cyan/10 rounded px-2 py-1 w-fit">
+            X Layer · OKB · chain 196
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {XCUP_PRESETS.map((preset) => {
+            const isSelected = selectedXcupPreset === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyXcupPreset(preset)}
+                className={`text-left rounded-lg border p-3 transition-all duration-200 ${
+                  isSelected
+                    ? 'border-synth-green bg-synth-green/10'
+                    : 'border-synth-border bg-synth-bg/40 hover:border-synth-green/40'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-bold text-synth-text">{preset.name}</div>
+                    <div className="text-[10px] text-synth-muted font-mono mt-1">
+                      {preset.team} · {preset.agentType}
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono text-synth-cyan border border-synth-cyan/20 rounded px-2 py-1">
+                    ${preset.symbol}
+                  </span>
+                </div>
+                <p className="text-xs text-synth-muted leading-relaxed mt-3">
+                  {preset.mission}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeXcupPreset && (
+          <div className="rounded-lg border border-synth-cyan/20 bg-synth-cyan/5 p-3 space-y-2">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div>
+                <div className="text-xs font-bold text-synth-cyan">Campaign mission</div>
+                <p className="text-xs text-synth-muted leading-relaxed mt-1">
+                  {activeXcupPreset.mission}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={copyXcupPrompt}
+                className="btn-secondary text-xs px-3 py-2 w-fit"
+              >
+                Copy AI prompt
+              </button>
+            </div>
+            <div className="text-[11px] text-synth-muted font-mono leading-relaxed">
+              Launch tweet: {activeXcupPreset.launchTweet}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mode Selector */}

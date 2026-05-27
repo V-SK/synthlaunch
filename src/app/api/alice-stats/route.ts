@@ -23,6 +23,13 @@ function getSupabase() {
   });
 }
 
+function hasSupabaseConfig(): boolean {
+  return Boolean(
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)
+  );
+}
+
 async function fetchPoolBalance(): Promise<string> {
   if (balanceCache && Date.now() - balanceCache.ts < 5 * 60 * 1000) {
     return balanceCache.value;
@@ -66,6 +73,38 @@ function formatAlice(raw: bigint): string {
   return `${whole}.${frac}`;
 }
 
+/**
+ * Paginate through alice_distributions success rows. PostgREST caps at 1000
+ * rows per request by default; without this loop, per-address totals
+ * silently truncate once the table grows. Restores the explicit fix that
+ * was removed in an earlier refactor — regression flagged by audit (H-3).
+ */
+async function fetchAllSuccessDistributions(
+  supabase: ReturnType<typeof getSupabase>,
+): Promise<Array<{ bsc_address: string; alice_amount: string }>> {
+  const PAGE_SIZE = 1000;
+  const out: Array<{ bsc_address: string; alice_amount: string }> = [];
+  let from = 0;
+  // Safety: cap pagination at 1M rows so a runaway query can't loop forever.
+  const MAX_ROWS = 1_000_000;
+
+  while (out.length < MAX_ROWS) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('alice_distributions')
+      .select('bsc_address, alice_amount')
+      .eq('status', 'success')
+      .range(from, to);
+    if (error) throw new Error(`alice_distributions paginate: ${error.message}`);
+    const rows = (data || []) as Array<{ bsc_address: string; alice_amount: string }>;
+    out.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return out;
+}
+
 // GET /api/alice-stats
 // Public: returns pool balance, recent rounds, per-address totals
 export async function GET() {
@@ -74,43 +113,36 @@ export async function GET() {
   }
 
   try {
-    const supabase = getSupabase();
+    if (!hasSupabaseConfig()) {
+      const balanceRaw = await fetchPoolBalance().catch((e) => {
+        console.error('pool balance error:', e);
+        return '0';
+      });
+      const result = {
+        poolAddress: DISTRIBUTION_WALLET,
+        poolBalance: balanceRaw,
+        poolBalanceReadable: formatAlice(BigInt(balanceRaw)),
+        recentRounds: [],
+        perAddressTotals: {},
+      };
 
-    // Page through alice_distributions so we get every success row.
-    // PostgREST defaults to max 1000 rows per request; relying on that
-    // default silently stopped the leaderboard updating once the table
-    // grew past 1000 rows — the aggregate was always computed from the
-    // oldest 1000 inserts. Explicitly page with .range() and keep going
-    // until a page comes back short.
-    async function fetchAllSuccessDistributions() {
-      const pageSize = 1000;
-      const rows: Array<{ bsc_address: string; alice_amount: string }> = [];
-      for (let from = 0; ; from += pageSize) {
-        const to = from + pageSize - 1;
-        const { data, error } = await supabase
-          .from('alice_distributions')
-          .select('bsc_address, alice_amount')
-          .eq('status', 'success')
-          .order('id', { ascending: true })
-          .range(from, to);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        rows.push(...data);
-        if (data.length < pageSize) break;
-      }
-      return rows;
+      statsCache = { data: result, ts: Date.now() };
+      return NextResponse.json(result);
     }
 
-    const [balanceResult, roundsRes, allDistRows] = await Promise.all([
+    const supabase = getSupabase();
+    const [balanceResult, roundsRes, allDistributions] = await Promise.all([
       fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),
       supabase.from('alice_distribution_rounds').select('*').order('created_at', { ascending: false }).limit(10),
-      fetchAllSuccessDistributions().catch((e) => { console.error('distributions paginate error:', e); return []; }),
+      fetchAllSuccessDistributions(supabase),
     ]);
     const balanceRaw = balanceResult;
 
-    // Aggregate per-address across ALL success rows
+    // Aggregate per-address across ALL success pages (uses the module-level
+    // paginator defined above — both main and codex/fanfi-xcup-sportfi
+    // shipped the same fix; this merge keeps the module-level version).
     const addressTotals = new Map<string, bigint>();
-    for (const row of allDistRows) {
+    for (const row of allDistributions) {
       const prev = addressTotals.get(row.bsc_address) ?? 0n;
       addressTotals.set(row.bsc_address, prev + BigInt(row.alice_amount));
     }
