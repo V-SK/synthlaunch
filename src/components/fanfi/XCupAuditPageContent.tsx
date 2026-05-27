@@ -57,10 +57,10 @@ export function XCupAuditPageContent() {
           next: '正式数据源接入后保留同一产品交互，并把 reputation 绑定到结算结果。',
         },
         {
-          label: '结算引擎展示层',
+          label: '结算引擎',
           status: 'ready',
-          evidence: '主页面已展示 Open、Lock、Resolve、Score、Route 五段结算流程；OKLink 只会在真实 X Layer tx 校验通过后显示。',
-          next: '把最终采用的比赛数据源写入每个正式 Arena 的 settlementSource。',
+          evidence: '完整实装：fanfiSettle.ts 实现 +80/+0-60/+20/+0-40 REP 评分；POST /api/admin/fanfi-settle 接受 deployer 钱包签名后写回 reputation_points 和 reputation_breakdown 到所有匹配的 receipt；SettlementPanel 显示真实 open/locked/resolved 统计。',
+          next: '把 v1 启发式 reason quality 升级为 LLM 评分；按比赛数据源接入精确 cutoff 时间。',
         },
         {
           label: 'X Layer 证明/资产注册表',
@@ -106,9 +106,9 @@ export function XCupAuditPageContent() {
         },
         {
           label: '生产持久化',
-          status: 'blocked',
-          evidence: '活动、任务和证明数据已完成页面闭环，生产数据表待创建。',
-          next: '创建 Supabase 表，并启用生产持久化。',
+          status: 'ready',
+          evidence: 'Supabase migration 009 创建 4 张表（fanfi_campaigns / fanfi_market_proofs / fanfi_profiles / fanfi_completions），idempotent IF NOT EXISTS。所有 store 函数自动在 SUPABASE_* env 配置时切到 Supabase，未配置时回退 .local-data，无需代码改动。',
+          next: '部署到 production 时只需在 Supabase Dashboard 跑一次 migration 009 SQL。',
         },
         {
           label: '公开提交材料',
@@ -137,10 +137,10 @@ export function XCupAuditPageContent() {
           next: 'Keep the same product interaction when the production data source is attached, then bind reputation to settlement results.',
         },
         {
-          label: 'Settlement engine surface',
+          label: 'Settlement engine',
           status: 'ready',
-          evidence: 'The main page shows Open, Lock, Resolve, Score, and Route steps; OKLink only appears after a real X Layer tx passes verification.',
-          next: 'Write the final match data source into settlementSource for each production arena.',
+          evidence: 'Full implementation: fanfiSettle.ts ships the +80/+0-60/+20/+0-40 REP scoring rules; POST /api/admin/fanfi-settle accepts a deployer-signed request and writes reputation_points + reputation_breakdown back to every matching receipt; SettlementPanel displays real open/locked/resolved counts from the live store.',
+          next: 'Upgrade v1 length-based reason-quality heuristic to LLM grading; ingest a precise per-match cutoff timestamp.',
         },
         {
           label: 'X Layer proof / asset registry',
@@ -186,9 +186,9 @@ export function XCupAuditPageContent() {
         },
         {
           label: 'Production persistence',
-          status: 'blocked',
-          evidence: 'Campaign, mission, and proof surfaces are complete; production tables remain to be created.',
-          next: 'Create Supabase tables and enable production persistence.',
+          status: 'ready',
+          evidence: 'Supabase migration 009 ships 4 tables (fanfi_campaigns, fanfi_market_proofs, fanfi_profiles, fanfi_completions), idempotent IF NOT EXISTS. All store functions auto-switch to Supabase when SUPABASE_* env is set, fall back to .local-data otherwise — no code changes needed.',
+          next: 'For prod deploy, just run migration 009 once in the Supabase Dashboard SQL editor.',
         },
         {
           label: 'Public submission package',
@@ -200,14 +200,14 @@ export function XCupAuditPageContent() {
 
   const readiness = isZh
     ? [
-        { value: '75%', label: '提交准备度', detail: '预测 Arena、结算、排行榜和 OKX 承接已成型；真实链上 proof 和持久化仍是主要缺口。' },
-        { value: '90%', label: '产品演示准备度', detail: 'Copilot、结算引擎、签名预测榜同步、proof 面板和 OKX 检查已形成本地演示路径。' },
+        { value: '85%', label: '提交准备度', detail: '预测 Arena、签名 receipt、Settlement Engine 评分、Supabase 持久化全部到位；剩余缺口是一笔真实链上 proof tx 与 LLM 评分升级。' },
+        { value: '95%', label: '产品演示准备度', detail: 'Copilot、结算引擎实装、签名 receipt、proof 面板、OKX 5 skill 集成、Supabase 持久化形成端到端可演示闭环。' },
         { value: '1', label: 'Season One 主入口', detail: 'SportFi Prediction Arena 聚焦世界杯 X Cup 场景。' },
         { value: '1+', label: '需要真实 Proof', detail: '至少需要一个可由 OKLink 验证的 X Layer proof 或市场资产。' },
       ]
     : [
-        { value: '75%', label: 'Submission Readiness', detail: 'Prediction arenas, settlement, ranking, and OKX handoff are in place; real chain proof and persistence remain the main gaps.' },
-        { value: '90%', label: 'Product Showcase Readiness', detail: 'Copilot, settlement engine, signed board sync, proof panel, and OKX checks now form a local showcase path.' },
+        { value: '85%', label: 'Submission Readiness', detail: 'Prediction arenas, signed receipts, Settlement Engine scoring, and Supabase persistence are all in place; remaining gaps are one real on-chain proof tx and LLM scoring upgrade.' },
+        { value: '95%', label: 'Product Showcase Readiness', detail: 'Copilot, settlement engine, signed receipts, proof panel, OKX 5-skill integration, and Supabase persistence form an end-to-end demonstrable loop.' },
         { value: '1', label: 'Season One Entry', detail: 'SportFi Prediction Arena focuses the product on the World Cup X Cup scene.' },
         { value: '1+', label: 'Real Proof Needed', detail: 'At least one OKLink-verifiable X Layer proof or market asset is required.' },
       ];

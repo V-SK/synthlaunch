@@ -41,3 +41,26 @@ export function buildFanFiMissionMessage(params: {
     `Timestamp: ${params.timestamp}`,
   ].join('\n');
 }
+
+export function buildFanFiCampaignMessage(params: {
+  fanId: string;
+  templateId: string;
+  objective: string;
+  targetMatch: string;
+  tone: string;
+  wallet: string;
+  timestamp: string;
+}): string {
+  return [
+    'Synth SportFi Arena Campaign Save',
+    'Chain: X Layer mainnet',
+    'Chain ID: 196',
+    `Fan ID: ${params.fanId}`,
+    `Template: ${params.templateId}`,
+    `Match: ${params.targetMatch}`,
+    `Objective: ${params.objective}`,
+    `Tone: ${params.tone}`,
+    `Wallet: ${params.wallet}`,
+    `Timestamp: ${params.timestamp}`,
+  ].join('\n');
+}

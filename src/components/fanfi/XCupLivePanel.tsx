@@ -102,7 +102,11 @@ export function XCupLivePanel() {
 
   const fanfiTokens = useMemo(() => tokens.filter(isFanFiToken), [tokens]);
   const displayTokens = fanfiTokens.length > 0 ? fanfiTokens.slice(0, 4) : tokens.slice(0, 4);
-  const totalMarketCap = tokens.reduce((sum, token) => sum + (token.marketCap || 0), 0);
+  // Exclude FanFi proof tokens from the aggregate: their market cap is
+  // synthesized from a hash seed (createFanFiMarketProofToken in /api/tokens)
+  // and would otherwise inflate this panel's headline number with non-real data.
+  const realAssetTokens = useMemo(() => tokens.filter((token) => !isFanFiToken(token)), [tokens]);
+  const totalMarketCap = realAssetTokens.reduce((sum, token) => sum + (token.marketCap || 0), 0);
   const topRevenue = leaderboard[0];
   const copy = isZh
     ? {

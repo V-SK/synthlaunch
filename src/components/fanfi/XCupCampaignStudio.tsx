@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAccount, useSignMessage } from 'wagmi';
-import { buildFanFiReceiptMessage } from '@/lib/fanfiProofSignature';
+import {
+  buildFanFiCampaignMessage,
+  buildFanFiReceiptMessage,
+} from '@/lib/fanfiProofSignature';
 import { useI18n } from '@/lib/i18n';
 
 type FanFiCampaignTemplate = {
@@ -409,6 +412,24 @@ export function XCupCampaignStudio() {
     setNotice('');
 
     try {
+      if (!walletAddress) {
+        throw new Error(copy.walletSignRequired);
+      }
+      setNotice(copy.signing);
+
+      const objective = buildArenaObjective();
+      const timestamp = new Date().toISOString();
+      const signatureMessage = buildFanFiCampaignMessage({
+        fanId,
+        templateId: selectedTemplateId,
+        objective,
+        targetMatch,
+        tone,
+        wallet: walletAddress,
+        timestamp,
+      });
+      const signature = await signMessageAsync({ message: signatureMessage });
+
       const res = await fetch('/api/fanfi/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -416,11 +437,15 @@ export function XCupCampaignStudio() {
           id: activeCampaignId || undefined,
           fanId,
           templateId: selectedTemplateId,
-          objective: buildArenaObjective(),
+          objective,
           targetMatch,
           tone,
           tokenAddress,
           launchDraft: copilotPack?.templateId === selectedTemplateId ? copilotPack.launchDraft : undefined,
+          wallet: walletAddress,
+          timestamp,
+          signature,
+          signatureMessage,
         }),
       });
 
@@ -788,7 +813,7 @@ export function XCupCampaignStudio() {
               <button type="button" onClick={generateCopilotPack} disabled={copilotRunning || saving || loading} className="btn-secondary">
                 {copilotRunning ? copy.generating : copy.generatePack}
               </button>
-              <button type="button" onClick={saveCampaign} disabled={saving || loading} className="btn-primary">
+              <button type="button" onClick={saveCampaign} disabled={!walletAddress || saving || loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
                 {saving ? copy.saving : copy.saveCampaign}
               </button>
               <button type="button" onClick={createMarketProof} disabled={!walletAddress || proofCreating || saving || loading || auditRunning} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">

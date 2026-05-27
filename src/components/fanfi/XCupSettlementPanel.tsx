@@ -1,10 +1,94 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/lib/i18n';
+
+type SettlementStatus = 'open' | 'locked' | 'resolved';
+
+type FanFiMarketProofRecord = {
+  id: string;
+  fanId: string;
+  templateId: string;
+  name: string;
+  symbol: string;
+  predictionDirection: string | null;
+  predictionProbability: number | null;
+  settlementStatus: SettlementStatus;
+  resolvedOutcome: string | null;
+  reputationPoints: number;
+  createdAt: string;
+};
+
+const REFRESH_EVENT = 'fanfi-market-proof-created';
 
 export function XCupSettlementPanel() {
   const { locale } = useI18n();
   const isZh = locale === 'zh';
+  const [proofs, setProofs] = useState<FanFiMarketProofRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch('/api/fanfi/market-proofs', { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(
+            isZh ? '加载 Settlement 数据失败' : 'Failed to load settlement data',
+          );
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setProofs(Array.isArray(data.launches) ? data.launches : []);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : isZh
+                ? '加载 Settlement 数据失败'
+                : 'Failed to load settlement data',
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+
+    const handle = () => void load();
+    window.addEventListener(REFRESH_EVENT, handle);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(REFRESH_EVENT, handle);
+    };
+  }, [isZh]);
+
+  const stats = useMemo(() => {
+    const totals = {
+      total: proofs.length,
+      open: 0,
+      locked: 0,
+      resolved: 0,
+      totalReputation: 0,
+    };
+    for (const proof of proofs) {
+      if (proof.settlementStatus === 'open') totals.open += 1;
+      else if (proof.settlementStatus === 'locked') totals.locked += 1;
+      else if (proof.settlementStatus === 'resolved') totals.resolved += 1;
+      totals.totalReputation += proof.reputationPoints || 0;
+    }
+    return totals;
+  }, [proofs]);
+
+  const latestResolved = useMemo(() => {
+    return proofs.find((proof) => proof.settlementStatus === 'resolved') || null;
+  }, [proofs]);
 
   const settlementFlow = isZh
     ? [
@@ -22,58 +106,46 @@ export function XCupSettlementPanel() {
         ['Route', 'High-heat arenas move into OKX Agent watchlists, quotes, and swap handoff.'],
       ];
 
-  const featuredArena = isZh
-    ? [
-        ['Arena', 'Brazil vs France · Match Result'],
-        ['预测题', '巴西能否在 90 分钟内击败法国？'],
-        ['结算源', 'FIFA Official Match Centre 最终比分 + 赛后 match report'],
-        ['锁定时间', 'Kickoff 前 30 分钟 · UTC 时间戳写入 receipt'],
-        ['胜出规则', '方向正确得基础分；概率越接近最终共识，reputation 越高。'],
-        ['链上证明', '真实 X Layer txHash 接入后显示 OKLink；receipt hash 单独展示'],
-      ]
-    : [
-        ['Arena', 'Brazil vs France · Match Result'],
-        ['Question', 'Can Brazil beat France within 90 minutes?'],
-        ['Settlement Source', 'FIFA Official Match Centre final score plus post-match report'],
-        ['Lock Time', '30 minutes before kickoff · UTC timestamp written into receipt'],
-        ['Winning Rule', 'Correct direction earns base score; closer probability earns higher reputation.'],
-        ['Onchain Proof', 'OKLink appears after a real X Layer tx hash is attached; receipt hash is displayed separately'],
-      ];
-
   const scoringRows = isZh
     ? [
         ['方向正确', '+80 REP', '胜负、晋级、比分区间或球员数据方向命中。'],
-        ['概率接近', '+0-60 REP', '预测概率越接近结算后共识权重，得分越高。'],
-        ['早期提交', '+20 REP', '锁盘前越早提交且未反复修改，权重越好。'],
-        ['理由质量', '+0-40 REP', 'AI Agent 标注逻辑、数据引用和赛前假设。'],
+        ['概率接近', '+0-60 REP', '预测概率越自信且方向正确，得分越高（线性 50→0、100→60）。'],
+        ['早期提交', '+20 REP', '在 settlement_cutoff 之前提交即可获得（v1：所有 cutoff 前提交均奖励）。'],
+        ['理由质量', '+0-40 REP', 'v1 启发式：100+ 字符 +40、50+ 字符 +25、10+ 字符 +10。下个阶段接 LLM 评分。'],
       ]
     : [
         ['Correct Direction', '+80 REP', 'Winner, qualification, score band, or player prop direction is correct.'],
-        ['Probability Distance', '+0-60 REP', 'Closer probability to the resolved consensus earns higher score.'],
-        ['Early Receipt', '+20 REP', 'Earlier locked receipt with fewer edits gets stronger weighting.'],
-        ['Reason Quality', '+0-40 REP', 'AI Agent grades logic, data reference, and pre-match assumptions.'],
+        ['Probability Distance', '+0-60 REP', 'Higher confidence on correct direction scores more (linear 50→0, 100→60).'],
+        ['Early Receipt', '+20 REP', 'Awarded for any receipt submitted before settlement_cutoff (v1).'],
+        ['Reason Quality', '+0-40 REP', 'v1 heuristic: 100+ chars +40, 50+ +25, 10+ +10. LLM grading is next-phase work.'],
       ];
 
   const proofFields = isZh
     ? [
-        ['wallet', '提交钱包'],
-        ['arenaId', 'Arena / 比赛 ID'],
-        ['direction', '预测方向'],
-        ['probability', '概率'],
-        ['reason', '理由摘要'],
+        ['wallet', '签名钱包地址'],
+        ['fanId', 'Fan ID（用户标识）'],
+        ['templateId', 'Arena 模板 ID'],
+        ['targetMatch', '目标比赛'],
+        ['predictionDirection', '预测方向（自由文本）'],
+        ['predictionProbability', '预测概率（0-100）'],
+        ['predictionReason', '理由摘要'],
+        ['receiptHash', 'EIP-191 receipt hash'],
         ['settlementRule', '结算规则'],
-        ['receiptHash', '钱包签名 receipt hash'],
-        ['txHash', '真实 X Layer 交易哈希'],
+        ['settlementSource', '结算数据源'],
+        ['txHash', 'X Layer tx（可选，RPC 校验）'],
       ]
     : [
-        ['wallet', 'Submitting wallet'],
-        ['arenaId', 'Arena / match ID'],
-        ['direction', 'Prediction direction'],
-        ['probability', 'Probability'],
-        ['reason', 'Reasoning summary'],
+        ['wallet', 'Signing wallet address'],
+        ['fanId', 'Fan ID (user identifier)'],
+        ['templateId', 'Arena template ID'],
+        ['targetMatch', 'Target match'],
+        ['predictionDirection', 'Prediction direction (free text)'],
+        ['predictionProbability', 'Prediction probability (0-100)'],
+        ['predictionReason', 'Reasoning summary'],
+        ['receiptHash', 'EIP-191 receipt hash'],
         ['settlementRule', 'Settlement rule'],
-        ['receiptHash', 'Wallet-signed receipt hash'],
-        ['txHash', 'Real X Layer transaction hash'],
+        ['settlementSource', 'Settlement data source'],
+        ['txHash', 'X Layer tx (optional, RPC-verified)'],
       ];
 
   return (
@@ -85,18 +157,63 @@ export function XCupSettlementPanel() {
               {isZh ? 'Settlement Engine' : 'Settlement Engine'}
             </div>
             <h2 className="mt-3 text-2xl font-bold text-synth-text">
-              {isZh ? '预测 Arena 的创建、锁盘、结算和排行规则' : 'Create, Lock, Resolve, And Rank Each Prediction Arena'}
+              {isZh
+                ? '预测 Arena 的创建、锁盘、结算和排行规则'
+                : 'Create, Lock, Resolve, And Rank Each Prediction Arena'}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-synth-muted">
               {isZh
-                ? '每个 Arena 在创建时写入预测题、结算源、锁盘时间和得分规则；用户提交的 receipt 会变成 proof，比赛结束后进入 reputation 和排行榜。'
-                : 'Every arena writes the question, settlement source, lock time, and scoring rule at creation. User receipts become proof, then resolve into reputation and leaderboard state after the match.'}
+                ? '每个 Arena 在创建时写入预测题、结算源、锁盘时间和得分规则；用户提交的 receipt 会变成 proof，比赛结束后由 admin settle endpoint 写回 reputation。'
+                : 'Every arena writes the question, settlement source, lock time, and scoring rule at creation. User receipts become proof; after the match the admin settle endpoint writes reputation back to each receipt.'}
             </p>
           </div>
           <div className="rounded border border-synth-cyan/30 bg-synth-cyan/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-synth-cyan">
             X Layer · Chain 196 · OKB
           </div>
         </div>
+
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className="card">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-synth-muted">
+              {isZh ? '总 Receipt' : 'Total Receipts'}
+            </div>
+            <div className="mt-3 text-2xl font-bold text-synth-text">
+              {loading ? '...' : stats.total}
+            </div>
+          </div>
+          <div className="card">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-synth-muted">Open</div>
+            <div className="mt-3 text-2xl font-bold text-synth-green">
+              {loading ? '...' : stats.open}
+            </div>
+          </div>
+          <div className="card">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-synth-muted">Locked</div>
+            <div className="mt-3 text-2xl font-bold text-yellow-300">
+              {loading ? '...' : stats.locked}
+            </div>
+          </div>
+          <div className="card">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-synth-muted">Resolved</div>
+            <div className="mt-3 text-2xl font-bold text-synth-cyan">
+              {loading ? '...' : stats.resolved}
+            </div>
+          </div>
+          <div className="card">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-synth-muted">
+              {isZh ? '已发放 REP' : 'REP Issued'}
+            </div>
+            <div className="mt-3 text-2xl font-bold text-synth-green">
+              {loading ? '...' : stats.totalReputation}
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-5 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {error}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
           {settlementFlow.map(([label, body], index) => (
@@ -112,15 +229,52 @@ export function XCupSettlementPanel() {
 
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="overflow-hidden rounded-lg border border-synth-green/25 bg-synth-green/5">
-            {featuredArena.map(([label, value]) => (
-              <div
-                key={label}
-                className="grid grid-cols-1 gap-2 border-b border-synth-border px-4 py-3 last:border-b-0 md:grid-cols-[0.35fr_1fr]"
-              >
-                <div className="text-[10px] uppercase tracking-[0.18em] text-synth-green">{label}</div>
-                <div className="break-all text-sm leading-6 text-synth-text">{value}</div>
+            <div className="border-b border-synth-border bg-synth-surface/30 px-4 py-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-synth-green">
+                {isZh ? '最新 Resolved Arena' : 'Latest Resolved Arena'}
               </div>
-            ))}
+            </div>
+            {latestResolved ? (
+              <div className="space-y-2 p-4 text-sm">
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
+                    {isZh ? 'Arena' : 'Arena'}
+                  </span>
+                  <div className="mt-1 text-synth-text">
+                    {latestResolved.name} (${latestResolved.symbol})
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
+                    {isZh ? '预测方向' : 'Predicted'}
+                  </span>
+                  <div className="mt-1 text-synth-text">
+                    {latestResolved.predictionDirection || '—'}
+                    {latestResolved.predictionProbability != null
+                      ? ` · ${latestResolved.predictionProbability}%`
+                      : ''}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
+                    {isZh ? '结算结果' : 'Outcome'}
+                  </span>
+                  <div className="mt-1 text-synth-text">{latestResolved.resolvedOutcome || '—'}</div>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-synth-muted">
+                    {isZh ? '获得 REP' : 'REP earned'}
+                  </span>
+                  <div className="mt-1 font-mono text-synth-green">{latestResolved.reputationPoints}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-sm leading-6 text-synth-muted">
+                {isZh
+                  ? '还没有 resolved Arena。在比赛结束后，admin 调用 /api/admin/fanfi-settle 即可把 reputation 写回所有 open receipts。'
+                  : 'No resolved arenas yet. After a match concludes, admin calls /api/admin/fanfi-settle to write reputation back to all open receipts.'}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -130,7 +284,10 @@ export function XCupSettlementPanel() {
               </div>
               <div className="mt-4 grid grid-cols-1 gap-2">
                 {proofFields.map(([field, label]) => (
-                  <div key={field} className="flex items-center justify-between gap-3 border-b border-synth-border pb-2 last:border-b-0 last:pb-0">
+                  <div
+                    key={field}
+                    className="flex items-center justify-between gap-3 border-b border-synth-border pb-2 last:border-b-0 last:pb-0"
+                  >
                     <span className="font-mono text-[10px] text-synth-muted">{field}</span>
                     <span className="text-right text-xs text-synth-text">{label}</span>
                   </div>

@@ -166,36 +166,34 @@ function isFanFiMarketProofTokenInfo(info: SupabaseToken): boolean {
   );
 }
 
-function createFanFiMarketProofToken(info: SupabaseToken, nativePriceUsd: number): CachedToken | null {
+function createFanFiMarketProofToken(info: SupabaseToken, _nativePriceUsd: number): CachedToken | null {
   if (!isFanFiMarketProofTokenInfo(info)) return null;
 
-  const seed = Number.parseInt(info.address.slice(2, 10), 16) || 0;
-  const marketCapUsd = 25000 + (seed % 75000);
-  const priceUsd = marketCapUsd / BILLION;
-  const nativePrice = nativePriceUsd > 0 ? nativePriceUsd : 45;
-  const priceNative = priceUsd / nativePrice;
-  const marketCapNative = marketCapUsd / nativePrice;
-  const reserve = marketCapNative * 0.018;
-
+  // SportFi prediction receipts are not tradeable assets. They surface in
+  // /tokens so users can see the X Layer prediction activity feed, but all
+  // financial fields stay zero — there is no bonding curve, no market price,
+  // no real market cap. The "address" is the receipt identity hash, not a
+  // deployed ERC-20 contract.
   return {
     address: info.address,
-    name: info.name || 'FanFi Market Proof',
+    name: info.name || 'FanFi Prediction Receipt',
     symbol: info.symbol || 'FANFI',
     meta: info.meta,
     image: '/fanfi-logo.png',
-    description: 'SportFi Arena market proof asset generated inside SynthLaunch.',
+    description:
+      'SportFi prediction receipt. Wallet-signed proof of a prediction submission; not a tradeable asset.',
     creator: info.creator || '',
     agent_name: info.agent_name || 'tw:SynthFanFi',
     taxRate: (info.tax_rate || 200) / 100,
-    price: priceNative,
-    priceUsd,
-    marketCap: marketCapUsd,
-    marketCapBnb: marketCapNative,
-    circulatingSupply: BILLION,
+    price: 0,
+    priceUsd: 0,
+    marketCap: 0,
+    marketCapBnb: 0,
+    circulatingSupply: 0,
     status: 1,
-    progress: 0.42 + (seed % 35) / 100,
+    progress: 0,
     createdAt: info.created_at ? Math.floor(new Date(info.created_at).getTime() / 1000) : 0,
-    reserve,
+    reserve: 0,
     r: 0,
     h: 0,
     k: 0,

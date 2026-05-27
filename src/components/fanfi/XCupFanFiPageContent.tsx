@@ -554,12 +554,22 @@ export function XCupFanFiPageContent() {
         <div className="mx-auto max-w-7xl px-4 py-12">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-synth-green">
-                {isZh ? 'Arena Board' : 'Arena Board'}
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] uppercase tracking-[0.28em] text-synth-green">
+                  {isZh ? 'Arena Board' : 'Arena Board'}
+                </span>
+                <span className="rounded border border-yellow-400/30 bg-yellow-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-yellow-300">
+                  {isZh ? '示例预览' : 'Sample preview'}
+                </span>
               </div>
               <h2 className="mt-3 text-2xl font-bold text-synth-text">
                 {isZh ? '像国家队榜一样清楚，但排行对象是预测 Arena' : 'Country-Board Clarity, But Ranked By Prediction Arenas'}
               </h2>
+              <p className="mt-2 max-w-2xl text-xs leading-5 text-synth-muted">
+                {isZh
+                  ? '示例数据展示排行格式。正式榜单接入 receipts、X Layer proof 和 OKX handoff 后会从 /api/fanfi/market-proofs 拉取。'
+                  : 'Sample data demonstrating the board format. The production board pulls live receipts from /api/fanfi/market-proofs once arenas are settled.'}
+              </p>
             </div>
             <div className="text-xs uppercase tracking-[0.18em] text-synth-muted">
               {isZh ? 'Arena heat · X Layer proof · OKX handoff' : 'Arena heat · X Layer proof · OKX handoff'}
