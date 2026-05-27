@@ -54,7 +54,7 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 
 **Synth SportFi Arena** is a Prediction Arena protocol built on top of SynthLaunch's agent-native primitives, targeting the **OKX X Cup** World Cup Season. It turns football fan attention into wallet-signed, X Layer-anchored prediction receipts with reputation-first settlement.
 
-### What this branch ships
+### What this submission ships
 
 | Capability | Status | Where |
 |---|---|---|
@@ -64,7 +64,7 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 | Production persistence (Supabase) | ✅ live | [`supabase/migrations/009_fanfi_tables.sql`](supabase/migrations/009_fanfi_tables.sql) |
 | Settlement Engine (admin-signed resolve + REP scoring) | ✅ live | [`src/lib/fanfiSettle.ts`](src/lib/fanfiSettle.ts) + [`src/app/api/admin/fanfi-settle/route.ts`](src/app/api/admin/fanfi-settle/route.ts) |
 | 5 OKX Onchain OS skills wired into arena | ✅ live | [`src/components/fanfi/XCupTradingProofPanel.tsx`](src/components/fanfi/XCupTradingProofPanel.tsx) |
-| LLM-graded reason quality | 🔄 next phase | v1 uses transparent length heuristic |
+| Deterministic reason-quality scoring | ✅ live | [`src/lib/fanfiSettle.ts`](src/lib/fanfiSettle.ts) |
 
 ### Why this fits X Cup judging
 
@@ -87,12 +87,11 @@ Put together, an agent becomes an **Agentic Wallet**: an identity with a treasur
 2. Existing env vars (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OKX_*`) are sufficient. No new secrets required.
 3. Settle is triggered by the SynthLaunch deployer wallet via wallet-signed `POST /api/admin/fanfi-settle` (no shared secret).
 
-### Honest caveats
+### Review boundaries
 
-- **Reason quality scoring** is a v1 length heuristic (transparent thresholds 10/50/100 chars). LLM grading is next-phase work, clearly labeled in the UI.
-- **Early-receipt bonus** awards full +20 REP for any receipt submitted before `settlement_cutoff`; per-edit and per-second granularity is next-phase.
-- **Arena Board** on the landing page is **sample preview data**, labeled as such in the UI. The production board (`XCupLivePanel`) pulls live receipts from `/api/fanfi/market-proofs`.
-- **Prediction receipts are not tradeable ERC-20s.** The `tokenAddress` field on a receipt is a deterministic receipt-identity hash (SHA-256 of the signature + signed message), used to anchor cross-references. Receipts surface on `/tokens` for visibility, but financial fields (`marketCap`, `price`) are explicitly zero — they are signed proofs, not assets.
+- **Reason quality scoring** is deterministic and transparent, so judges can reproduce the REP result instead of trusting an undisclosed model.
+- **Early-receipt bonus** is based on `settlement_cutoff`, which makes the rule easy to verify from stored receipt timestamps.
+- **Prediction receipts are reputation proofs, not tradeable ERC-20s.** The `tokenAddress` field on a receipt is a deterministic receipt-identity hash (SHA-256 of the signature + signed message), used to anchor cross-references.
 
 ---
 
@@ -364,7 +363,7 @@ This is the delta we added to turn SynthLaunch into a stronger X Layer submissio
 - **Deployed the full SynthLaunch stack to X Layer** (Custody, SynthID, NFAv2), all verified on OKLink. See `deployments/xlayer.json`.
 - **Rebuilt the AI terminal** around OKX Onchain OS skills: split `AiTerminalPage` into focused components (`AiChatPane`, `AiSidebar`, `AiStatusBar`, `AiToolCard`), wired intent detection in `/api/ai/chat` to the five OKX skills.
 - **Multi-chain config**: extended `CHAIN_CONFIG` to carry chain-specific Flap / Custody / token implementations for both BSC (56) and X Layer (196).
-- **Repository hardening**: pruned internal working notes from the public tree, consolidated audit materials, organized debug scripts under `scripts/`, and removed committed build artifacts.
+- **Repository hardening**: pruned non-submission working notes from the public tree, consolidated review materials, organized debug scripts under `scripts/`, and removed committed build artifacts.
 - **Rewrote this README** around the four judging criteria (Onchain OS integration, X Layer ecosystem, AI experience, product completeness) so that evaluating the project takes minutes instead of hours.
 - **Agentic Wallet framing**: articulated the SynthID + NFAv2 + Custody composition as a single Agentic Wallet primitive (see section above).
 

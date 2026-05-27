@@ -67,9 +67,9 @@
     "swapOne": "0x4be74609c3d1041766cbab04123016faa5d027001157420bdf16e16f4ed4ad22",
     "swapTwo": "0x979a7c50731bcfcafd240dbbbc011f90a4006c0569a44a6baf5ff291796ed5de"
   },
-  "postDeployState": {
-    "currentFeePips": 30000,
-    "launchActive": true,
+  "proofTimeState": {
+    "currentFeePipsAtProof": 30000,
+    "launchActiveAtProof": true,
     "volumeMetric": "15000000000000000",
     "swapCount": 2,
     "uniqueTraders": 1,
@@ -77,12 +77,19 @@
     "initialized": true,
     "hookCodeLengthBytes": 7027
   },
+  "currentVerificationState": {
+    "verifiedAtUtc": "2026-05-27T17:11:56Z",
+    "currentFeePips": 3000,
+    "launchActive": false,
+    "reason": "The launch window ended at 2026-05-27T09:41:24Z, so currentFee now returns normalFeePips while the proof-time swaps and XP state remain on-chain."
+  },
   "audit": {
-    "verifiedAtUtc": "2026-05-27T05:45:36Z",
+    "verifiedAtUtc": "2026-05-27T17:11:56Z",
     "checks": [
       "Hook runtime code exists on X Layer mainnet.",
       "Pool is registered against the deployed hook and dynamic-fee PoolKey.",
-      "currentFee returns 30000 pips while the launch window is active.",
+      "At proof time, currentFee returned 30000 pips while the launch window was active.",
+      "After the launch window ended, currentFee returns the normal fee of 3000 pips with launchActive false.",
       "Two on-chain swaps emitted AgentXPUpdated events and moved XP from 0 to 20.",
       "Foundry cache was removed after deployment; this artifact contains no private key."
     ]

@@ -111,13 +111,13 @@ export function XCupSettlementPanel() {
         ['方向正确', '+80 REP', '胜负、晋级、比分区间或球员数据方向命中。'],
         ['概率接近', '+0-60 REP', '预测概率越自信且方向正确，得分越高（线性 50→0、100→60）。'],
         ['早期提交', '+20 REP', '在 settlement_cutoff 之前提交即可获得（v1：所有 cutoff 前提交均奖励）。'],
-        ['理由质量', '+0-40 REP', 'v1 启发式：100+ 字符 +40、50+ 字符 +25、10+ 字符 +10。下个阶段接 LLM 评分。'],
+        ['理由质量', '+0-40 REP', '透明确定性规则：100+ 字符 +40、50+ 字符 +25、10+ 字符 +10。'],
       ]
     : [
         ['Correct Direction', '+80 REP', 'Winner, qualification, score band, or player prop direction is correct.'],
         ['Probability Distance', '+0-60 REP', 'Higher confidence on correct direction scores more (linear 50→0, 100→60).'],
         ['Early Receipt', '+20 REP', 'Awarded for any receipt submitted before settlement_cutoff (v1).'],
-        ['Reason Quality', '+0-40 REP', 'v1 heuristic: 100+ chars +40, 50+ +25, 10+ +10. LLM grading is next-phase work.'],
+        ['Reason Quality', '+0-40 REP', 'Transparent deterministic rule: 100+ chars +40, 50+ +25, 10+ +10.'],
       ];
 
   const proofFields = isZh

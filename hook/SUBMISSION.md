@@ -25,6 +25,9 @@ SynthAgent Hook turns an AI agent launch pool into an agent-aware Uniswap v4 mar
 | Demo tokens | `aUSD` / `SAGENT` |
 | Hook permission bits | `0x00c0` (`beforeSwap`, `afterSwap`) |
 | Proof block | `61091448` |
+| Proof-time launch fee | `30000` pips (`3.00%`) |
+| Current fee check | `3000` pips (`0.30%`) after launch window expiry |
+| Launch window ended | `2026-05-27T09:41:24Z` |
 | Post-proof state | `xp=20`, `swapCount=2`, `uniqueTraders=1` |
 | Production site | `https://synthlaunch.fun` |
 | Submission console | `https://synthlaunch.fun/build-x-hook` |
@@ -54,7 +57,7 @@ cast call 0x76B2e0e9000448161E4e1Ebc04c85840035C00C0 \
   --rpc-url https://xlayerrpc.okx.com
 ```
 
-Expected state: current fee `30000`, launch active `true`, `volumeMetric=15000000000000000`, `swapCount=2`, `uniqueTraders=1`, `xp=20`, initialized `true`.
+Expected state: `currentFee(...)` now returns fee `3000` and launch active `false` because the launch window ended at `2026-05-27T09:41:24Z`. `agentPools(...)` preserves the proof state: `launchFee=30000`, `normalFee=3000`, `volumeMetric=15000000000000000`, `swapCount=2`, `uniqueTraders=1`, `xp=20`, initialized `true`.
 
 ## 中文
 
@@ -81,6 +84,9 @@ SynthAgent Hook 把 AI Agent 发射池变成 X Layer 上的 Agent-aware Uniswap 
 | Demo tokens | `aUSD` / `SAGENT` |
 | Hook permission bits | `0x00c0` (`beforeSwap`, `afterSwap`) |
 | 证明区块 | `61091448` |
+| 证明时发射费率 | `30000` pips (`3.00%`) |
+| 当前费率复核 | 发射窗口结束后为 `3000` pips (`0.30%`) |
+| 发射窗口结束时间 | `2026-05-27T09:41:24Z` |
 | 证明后状态 | `xp=20`, `swapCount=2`, `uniqueTraders=1` |
 | 生产站点 | `https://synthlaunch.fun` |
 | 参赛控制台 | `https://synthlaunch.fun/build-x-hook` |

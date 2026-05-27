@@ -39,6 +39,9 @@ SynthAgent Hook is an agent-aware Uniswap v4 Hook deployed on X Layer mainnet. I
 | Pool ID | `0x208f16e69188418f5d0d53cd196bc0ceaa9dcc246e391483fdf92cb311fa7850` |
 | Hook permission bits | `0x00c0` (`beforeSwap`, `afterSwap`) |
 | Proof block | `61091448` |
+| Proof-time launch fee | `30000` pips (`3.00%`) |
+| Current fee check | `3000` pips (`0.30%`) after launch window expiry |
+| Launch window ended | `2026-05-27T09:41:24Z` |
 | Post-proof state | `xp=20`, `swapCount=2`, `uniqueTraders=1` |
 
 ### Key transactions
@@ -70,7 +73,7 @@ SynthAgent Hook is an agent-aware Uniswap v4 Hook deployed on X Layer mainnet. I
 - Verifiability: addresses, Pool ID, transactions, permission bits, and post-proof state are machine-readable.
 - Separation: this is the Build X Hook project; it should not be scored using X Cup SportFi receipt code.
 
-### Honest boundaries
+### Review boundaries
 
 - The demo tokens are purpose-built for the hackathon proof flow.
 - The Hook demonstrates launch protection and reputation accounting; production liquidity policy would need a separate risk review before public capital is routed through it.
@@ -115,6 +118,9 @@ SynthAgent Hook 是部署在 X Layer 主网上的 AI Agent 感知型 Uniswap v4 
 | Pool ID | `0x208f16e69188418f5d0d53cd196bc0ceaa9dcc246e391483fdf92cb311fa7850` |
 | Hook permission bits | `0x00c0` (`beforeSwap`, `afterSwap`) |
 | 证明区块 | `61091448` |
+| 证明时发射费率 | `30000` pips (`3.00%`) |
+| 当前费率复核 | 发射窗口结束后为 `3000` pips (`0.30%`) |
+| 发射窗口结束时间 | `2026-05-27T09:41:24Z` |
 | 证明后状态 | `xp=20`, `swapCount=2`, `uniqueTraders=1` |
 
 ### 关键交易
@@ -146,7 +152,7 @@ SynthAgent Hook 是部署在 X Layer 主网上的 AI Agent 感知型 Uniswap v4 
 - 可验证性：地址、Pool ID、交易、权限位和证明后状态都是机器可读的。
 - 项目边界：这是 Build X Hook 项目，不应使用 X Cup SportFi receipt 代码进行评分。
 
-### 真实边界
+### 评审边界
 
 - Demo token 是为 hackathon proof flow 准备的演示资产。
 - Hook 展示发射保护和声誉记账；如果接入公开资金，生产流动性策略需要单独风险审计。
