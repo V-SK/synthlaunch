@@ -6,14 +6,10 @@ import { completeFanFiMission, getFanFiProgress, normalizeFanId } from '@/lib/lo
 
 export const dynamic = 'force-dynamic';
 
-const SYNC_MISSION_IDS = [
-  'choose-campaign',
-  'write-launch-draft',
-  'submit-prediction',
-  'create-fan-content',
-  'launch-or-attach-token',
-  'review-trading-flow',
-];
+// Limited to a SINGLE mission credit (the receipt's own action). Other
+// missions require per-mission signatures via /api/fanfi/progress. Mirrors
+// the audit-demo fix.
+const SYNC_MISSION_IDS = ['submit-prediction'];
 
 function createMissionProof(params: {
   missionId: string;

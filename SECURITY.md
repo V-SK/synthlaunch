@@ -44,12 +44,12 @@ Canonical message includes:
 ```
 
 Verification ([`src/app/api/admin/fanfi-settle/route.ts`](src/app/api/admin/fanfi-settle/route.ts)):
-1. Header signature + message must be present.
-2. Message must reference the **same** `templateId` and `outcome` as the request body. (Prevents signing-one-settle, replaying-as-another.)
-3. Message timestamp must be within 5 minutes.
-4. `viem.verifyMessage` must recover the hard-coded deployer address.
+1. Header signature + message must be present and signature must be hex-formatted.
+2. Message timestamp must be within 5 minutes (replay window).
+3. **Server rebuilds the expected canonical message** from the request body via `buildAdminSettleMessage` ([`src/lib/fanfiSettleSignature.ts`](src/lib/fanfiSettleSignature.ts)) and rejects unless `decodeURIComponent(x-admin-message) === rebuilt`. This is **byte-equality binding**, not substring matching — closes the prior issue where a captured signature for `Outcome: Brazil wins 2-1` could be replayed with body `outcome: "Brazil"`.
+4. Only after equality binding does `viem.verifyMessage` recover the signer and compare with the hard-coded deployer address.
 
-The deployer wallet is the SynthLaunch operator (`0x0198b366978ff0ee67bf308b0367c9b6fced2725`). No shared secret is involved, so leaking server env vars does not grant settle authority.
+The deployer wallet is the SynthLaunch operator (see `src/lib/admin.ts`). No shared secret is involved, so leaking server env vars does not grant settle authority.
 
 A `dryRun: true` request body is allowed (still requires admin signature) and returns the would-be scoring without writing.
 
@@ -135,8 +135,9 @@ These are documented openly in the UI and audit board, not hidden:
 | Reason quality scoring is length-based (v1) | Next-phase | Long but low-quality reasons could over-score. Mitigation: documented limit, capped at +40. |
 | Early-receipt bonus is binary (full +20 or 0) | Next-phase | Cannot reward "submitted 1 hour earlier than another correct receipt". |
 | Arena Board on landing page is sample preview | Labeled in UI | Users see "Sample preview" badge; production board is in `XCupLivePanel`. |
-| Direction matching is heuristic substring/token-overlap | v1 design | Admin can preview via `dryRun: true` before settling. |
-| No rate limiting on FanFi GET endpoints | Inherited | Public read endpoints (proofs, missions, leaderboard) are open; DDoS risk is the Next.js / Vercel layer. |
+| Direction matching uses token-overlap heuristic | v1 design | Reject single-word predictions, require ≥2 shared informative tokens AND ≥half of predicted-tokens shared. Admin can preview via `dryRun: true` before settling. Test cases pinned in [`src/lib/__tests__/fanfiSettle.test.ts`](src/lib/__tests__/fanfiSettle.test.ts). |
+| No rate limiting on FanFi POST/GET endpoints | Inherited | Public endpoints are open; per-wallet rate limiting is next-phase. |
+| `fan_id` ownership enforced application-side | Active | First wallet to write a `fan_id` owns it (migration 010 adds `owner_wallet` column on `fanfi_profiles`). Subsequent writes from a different wallet are rejected with `FanIdOwnershipError`. |
 
 ---
 

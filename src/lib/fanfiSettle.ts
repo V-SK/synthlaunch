@@ -56,50 +56,69 @@ const PROBABILITY_MAX = 60;
 const EARLY_RECEIPT_MAX = 20;
 const REASON_QUALITY_MAX = 40;
 
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'to', 'in', 'on', 'at', 'of', 'and', 'or', 'is', 'be',
+  'will', 'with', 'by', 'for', 'as', 'are', 'was', 'were',
+]);
+
+function tokenize(s: string): string[] {
+  return s
+    .replace(/[^\w\s-]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t && !STOPWORDS.has(t));
+}
+
 /**
- * Heuristic direction match. Case-insensitive substring on both sides plus
- * token overlap as a fallback. Conservative: low false positives, accepts
- * some false negatives.
+ * Direction match — tight token-overlap heuristic.
  *
- * Examples that match:
- *   ("Brazil wins", "Brazil")           → true
- *   ("brazil wins 2-1", "Brazil wins")  → true
- *   ("Final 2-1", "2-1")                → true
- *   ("Draw", "Tie")                     → false (no overlap, conservative)
+ * Rules (tightened from the prior permissive substring rule that awarded
+ * +80 REP for trivial cases like `predicted: "wins"` vs `outcome: "Brazil
+ * wins"`):
+ *   1. Exact normalized equality → match.
+ *   2. Otherwise both predicted AND outcome must have at least 2
+ *      informative (non-stopword) tokens — guards against single-word
+ *      guesses like "Brazil" or "wins" matching anything.
+ *   3. Require at least 2 shared tokens AND shared >= ceil(predicted.length / 2)
+ *      — i.e. at least half of the predicted tokens (rounded up) must appear
+ *      in the outcome.
+ *
+ * Bilingual note: Chinese predictions tokenize per-character via
+ * `[^\w\s-]` retention, which is sub-ideal. Treated as v1 limitation;
+ * exposed unit tests pin the English behavior so the engine is auditable.
+ *
+ * Test cases (see __tests__/fanfiSettle.test.ts):
+ *   ("Brazil wins", "Brazil wins 2-1")     → true
+ *   ("Brazil wins 2-1", "Brazil wins")     → true (shared >= ceil(3/2) = 2)
+ *   ("Brazil loses", "Brazil wins")        → false (shared 1 < 2)
+ *   ("wins", "Brazil wins")                → false (predicted too short)
+ *   ("Brazil", "Brazil knocked out")       → false (predicted too short)
+ *   ("Brazil wins 0-1", "Brazil wins 2-1") → true (shared brazil+wins)
+ *   ("Brazil semifinal", "Brazil quarter") → false (shared 1 < 2)
  */
 function directionMatches(predicted: string, outcome: string): boolean {
   if (!predicted || !outcome) return false;
   const p = predicted.toLowerCase().trim();
   const o = outcome.toLowerCase().trim();
-
-  // Exact or substring match either direction.
   if (p === o) return true;
-  if (o.includes(p) || p.includes(o)) return true;
 
-  // Token overlap: require at least 2 shared non-stopword tokens, OR all
-  // tokens in the predicted side appearing in the outcome (for short predicted).
-  const stopwords = new Set(['the', 'a', 'an', 'to', 'in', 'on', 'at', 'of', 'and', 'or', 'is']);
-  const tokenize = (s: string) =>
-    s
-      .replace(/[^\w\s-]/g, ' ')
-      .split(/\s+/)
-      .filter((t) => t && !stopwords.has(t));
   const pTokens = tokenize(p);
-  const oTokens = new Set(tokenize(o));
-  if (pTokens.length === 0) return false;
+  const oTokens = tokenize(o);
 
-  if (pTokens.length === 1) {
-    return oTokens.has(pTokens[0]);
-  }
+  // Reject single-word predictions — too lossy to count as a directional call.
+  if (pTokens.length < 2) return false;
+  if (oTokens.length < 1) return false;
 
-  // Require ALL tokens of the shorter side to appear in the other side
-  const allMatch = pTokens.every((t) => oTokens.has(t));
-  if (allMatch) return true;
+  const oSet = new Set(oTokens);
+  const sharedCount = pTokens.filter((t) => oSet.has(t)).length;
 
-  // Or at least 2 shared non-trivial tokens.
-  const shared = pTokens.filter((t) => oTokens.has(t)).length;
-  return shared >= 2;
+  // Require >= 2 shared tokens (no single-token coincidence)
+  // AND >= half of the predicted tokens shared (proportional confidence).
+  const requiredShared = Math.max(2, Math.ceil(pTokens.length / 2));
+  return sharedCount >= requiredShared;
 }
+
+// Exported for unit tests.
+export const __testing = { directionMatches, tokenize };
 
 /**
  * Probability distance scoring. Idea: someone who said "Brazil wins, 90%

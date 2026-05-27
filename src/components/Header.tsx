@@ -7,8 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { WalletConnect } from './WalletConnect';
 import { useI18n, LanguageToggle } from '@/lib/i18n';
-
-const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
+import { isAdminAddress } from '@/lib/admin';
 
 export function Header() {
   const pathname = usePathname();
@@ -18,18 +17,23 @@ export function Header() {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { address } = useAccount();
 
-  const isAdmin = isMounted && address?.toLowerCase() === ADMIN_ADDRESS;
+  const isAdmin = isMounted && isAdminAddress(address);
 
   const MENU_ITEMS = [
     { label: t('nav.ai'), href: '/ai' },
     { label: locale === 'zh' ? 'FanFi 竞技场' : 'FanFi Arena', href: '/fanfi/xcup' },
-    { label: locale === 'zh' ? 'FanFi 审计' : 'FanFi Audit', href: '/fanfi/xcup/audit' },
     { label: t('nav.launch'), href: '/launch' },
     { label: t('nav.tokens'), href: '/tokens' },
     { label: t('nav.claim'), href: '/claim' },
     { label: 'Alice Wallet', href: '/alice-wallet' },
     { label: t('nav.docs'), href: '/docs' },
-    ...(isAdmin ? [{ label: 'Admin', href: '/admin/alice' }] : []),
+    // Admin-only: FanFi readiness board exposes internal status. The page
+    // itself is still accessible by direct URL, but we don't surface it in
+    // the public menu to keep external readers focused on the polished UI.
+    ...(isAdmin ? [
+      { label: locale === 'zh' ? 'FanFi 审计' : 'FanFi Audit', href: '/fanfi/xcup/audit' },
+      { label: 'Admin', href: '/admin/alice' },
+    ] : []),
   ];
 
   const getNavItemClasses = (item: { href: string }) => {

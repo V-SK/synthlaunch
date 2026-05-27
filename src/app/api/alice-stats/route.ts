@@ -73,6 +73,38 @@ function formatAlice(raw: bigint): string {
   return `${whole}.${frac}`;
 }
 
+/**
+ * Paginate through alice_distributions success rows. PostgREST caps at 1000
+ * rows per request by default; without this loop, per-address totals
+ * silently truncate once the table grows. Restores the explicit fix that
+ * was removed in an earlier refactor — regression flagged by audit (H-3).
+ */
+async function fetchAllSuccessDistributions(
+  supabase: ReturnType<typeof getSupabase>,
+): Promise<Array<{ bsc_address: string; alice_amount: string }>> {
+  const PAGE_SIZE = 1000;
+  const out: Array<{ bsc_address: string; alice_amount: string }> = [];
+  let from = 0;
+  // Safety: cap pagination at 1M rows so a runaway query can't loop forever.
+  const MAX_ROWS = 1_000_000;
+
+  while (out.length < MAX_ROWS) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('alice_distributions')
+      .select('bsc_address, alice_amount')
+      .eq('status', 'success')
+      .range(from, to);
+    if (error) throw new Error(`alice_distributions paginate: ${error.message}`);
+    const rows = (data || []) as Array<{ bsc_address: string; alice_amount: string }>;
+    out.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return out;
+}
+
 // GET /api/alice-stats
 // Public: returns pool balance, recent rounds, per-address totals
 export async function GET() {
@@ -99,16 +131,16 @@ export async function GET() {
     }
 
     const supabase = getSupabase();
-    const [balanceResult, roundsRes, totalsRes] = await Promise.all([
+    const [balanceResult, roundsRes, allDistributions] = await Promise.all([
       fetchPoolBalance().catch((e) => { console.error('pool balance error:', e); return '0'; }),
       supabase.from('alice_distribution_rounds').select('*').order('created_at', { ascending: false }).limit(10),
-      supabase.from('alice_distributions').select('bsc_address, alice_amount, status').eq('status', 'success'),
+      fetchAllSuccessDistributions(supabase),
     ]);
     const balanceRaw = balanceResult;
 
-    // Aggregate per-address
+    // Aggregate per-address (now over ALL pages, not just the first 1000).
     const addressTotals = new Map<string, bigint>();
-    for (const row of totalsRes.data ?? []) {
+    for (const row of allDistributions) {
       const prev = addressTotals.get(row.bsc_address) ?? 0n;
       addressTotals.set(row.bsc_address, prev + BigInt(row.alice_amount));
     }

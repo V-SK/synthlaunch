@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       tone,
       tokenAddress: body?.tokenAddress || '',
       launchDraft: body?.launchDraft || '',
+      wallet: signatureAuth.wallet,
     });
 
     const campaigns = await getFanFiCampaigns(campaign.fanId);

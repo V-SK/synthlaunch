@@ -1,28 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyMessage } from 'viem';
+import { ADMIN_ADDRESS } from '@/lib/admin';
+import { buildAdminSettleMessage } from '@/lib/fanfiSettleSignature';
 import { scoreReceipt, SETTLEMENT_SCORING_RULES } from '@/lib/fanfiSettle';
 
 /**
  * Admin endpoint to resolve a Prediction Arena and write reputation points
  * back to all matching receipts.
  *
- * Auth: wallet signature from the SynthLaunch deployer wallet (same pattern
- * as /api/admin/alice-distribute). The signed message must include
- * "Timestamp: <ms>" and the request body must echo the same templateId and
- * targetMatch (so signing one settle and replaying as another is rejected).
+ * Auth model: the signed `x-admin-message` must be byte-for-byte equal to
+ * what `buildAdminSettleMessage` reconstructs from the request body — same
+ * pattern as fanfiProofAuth (verifyMessage AFTER rebuild-equality). This
+ * binds the signature to every settle parameter, not just substrings.
  *
- * Body:
+ * Required body:
  *   {
- *     templateId: "brazil" | "final" | "player" | "var" | "scout",
- *     targetMatch: "Brazil vs France",       // free text; matches receipt.target_match
- *     outcome: "Brazil wins",                 // free text; passed to scoring engine
- *     cutoffTimestamp?: "2026-06-11T18:30Z", // optional; for precise early-receipt bonus
- *     dryRun?: true                           // if true, returns scores without writing
+ *     templateId: string,           // e.g. "brazil"
+ *     targetMatch: string,          // free text; "" if none
+ *     outcome: string,              // free text; e.g. "Brazil wins"
+ *     cutoffTimestamp?: string,     // ISO; "" if none
+ *     dryRun?: boolean              // default false
  *   }
+ *
+ * Required headers:
+ *   x-admin-signature: 0x<sig>
+ *   x-admin-message:   <urlencoded canonical message>
  */
 
-const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
+const REPLAY_WINDOW_MS = 5 * 60 * 1000;
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -34,93 +40,136 @@ function getSupabase() {
   });
 }
 
-async function verifyAdmin(req: NextRequest, body: any): Promise<boolean> {
+interface SettleBody {
+  templateId: string;
+  targetMatch: string;
+  outcome: string;
+  cutoffTimestamp: string;
+  dryRun: boolean;
+}
+
+function normalizeBody(raw: any): SettleBody | { error: string } {
+  const templateId = typeof raw?.templateId === 'string' ? raw.templateId.trim() : '';
+  const outcome = typeof raw?.outcome === 'string' ? raw.outcome.trim() : '';
+  if (!templateId) return { error: 'templateId is required' };
+  if (!outcome) return { error: 'outcome is required' };
+
+  return {
+    templateId,
+    targetMatch: typeof raw?.targetMatch === 'string' ? raw.targetMatch.trim() : '',
+    outcome,
+    cutoffTimestamp: typeof raw?.cutoffTimestamp === 'string' ? raw.cutoffTimestamp.trim() : '',
+    dryRun: raw?.dryRun === true,
+  };
+}
+
+async function verifyAdmin(req: NextRequest, body: SettleBody): Promise<{
+  ok: true;
+} | {
+  ok: false;
+  reason: string;
+}> {
   const sig = req.headers.get('x-admin-signature');
   const rawMsg = req.headers.get('x-admin-message');
-  if (!sig || !rawMsg) return false;
+  if (!sig || !rawMsg) return { ok: false, reason: 'missing signature headers' };
+  if (!/^0x[0-9a-fA-F]+$/.test(sig)) return { ok: false, reason: 'malformed signature' };
+
+  let msg: string;
   try {
-    const msg = decodeURIComponent(rawMsg);
+    msg = decodeURIComponent(rawMsg);
+  } catch {
+    return { ok: false, reason: 'message header not url-decodable' };
+  }
 
-    // Message must reference the templateId + outcome being settled to bind
-    // the signature to this request body.
-    if (!msg.includes(`Template: ${body?.templateId}`)) return false;
-    if (!msg.includes(`Outcome: ${body?.outcome}`)) return false;
+  // Timestamp parse — required line in our canonical format.
+  const tsMatch = msg.match(/^Timestamp:\s*(.+)$/m);
+  if (!tsMatch) return { ok: false, reason: 'timestamp missing in signed message' };
+  const ts = Number.parseInt(tsMatch[1], 10);
+  if (!Number.isFinite(ts)) return { ok: false, reason: 'timestamp not numeric' };
+  if (Math.abs(Date.now() - ts) > REPLAY_WINDOW_MS) {
+    return { ok: false, reason: 'signature expired or clock skew' };
+  }
 
-    // Recent timestamp guard (5 min replay window).
-    const match = msg.match(/Timestamp:\s*(\d+)/);
-    if (!match) return false;
-    const ts = Number.parseInt(match[1], 10);
-    if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > 5 * 60 * 1000) return false;
+  // Rebuild expected canonical message from the body and require byte equality.
+  // This is the critical binding: a captured signature can no longer be
+  // replayed with a different (shorter / longer) body.
+  const rebuilt = buildAdminSettleMessage({
+    templateId: body.templateId,
+    targetMatch: body.targetMatch,
+    outcome: body.outcome,
+    cutoffTimestamp: body.cutoffTimestamp,
+    dryRun: body.dryRun,
+    timestamp: String(ts),
+  });
 
+  if (msg !== rebuilt) {
+    return { ok: false, reason: 'signed message does not match body' };
+  }
+
+  // Only after the message+body are equality-bound do we verify the signature.
+  try {
     const valid = await verifyMessage({
       address: ADMIN_ADDRESS as `0x${string}`,
       message: msg,
       signature: sig as `0x${string}`,
     });
-    return valid;
+    if (!valid) return { ok: false, reason: 'signature did not recover admin address' };
   } catch {
-    return false;
+    return { ok: false, reason: 'signature verification threw' };
   }
+
+  return { ok: true };
 }
 
 export async function POST(req: NextRequest) {
-  let body: any;
+  let raw: any;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
   }
 
-  const isAdmin = await verifyAdmin(req, body);
-  if (!isAdmin) {
+  const body = normalizeBody(raw);
+  if ('error' in body) {
+    return NextResponse.json({ error: body.error }, { status: 400 });
+  }
+
+  const auth = await verifyAdmin(req, body);
+  if (!auth.ok) {
+    // Generic 401 to the client; the specific reason goes to server logs only.
+    console.warn('[admin/fanfi-settle] auth failed:', auth.reason);
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const templateId = String(body?.templateId || '').trim();
-  const targetMatch = String(body?.targetMatch || '').trim();
-  const outcome = String(body?.outcome || '').trim();
-  const cutoffTimestamp = body?.cutoffTimestamp ? String(body.cutoffTimestamp) : undefined;
-  const dryRun = body?.dryRun === true;
-
-  if (!templateId || !outcome) {
-    return NextResponse.json(
-      { error: 'templateId and outcome are required' },
-      { status: 400 },
-    );
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch (e) {
+    console.error('[admin/fanfi-settle] supabase init failed', e);
+    return NextResponse.json({ error: 'service unavailable' }, { status: 503 });
   }
-
-  const supabase = getSupabase();
 
   // Pull all OPEN receipts for this template (+ optional targetMatch filter).
   let query = supabase
     .from('fanfi_market_proofs')
     .select('*')
-    .eq('template_id', templateId)
+    .eq('template_id', body.templateId)
     .eq('settlement_status', 'open');
-  if (targetMatch) {
-    query = query.eq('target_match', targetMatch);
-  }
+  if (body.targetMatch) query = query.eq('target_match', body.targetMatch);
 
   const { data: receipts, error: receiptError } = await query;
   if (receiptError) {
-    return NextResponse.json(
-      { error: `Failed to load receipts: ${receiptError.message}` },
-      { status: 500 },
-    );
+    console.error('[admin/fanfi-settle] receipt load error:', receiptError);
+    return NextResponse.json({ error: 'failed to load receipts' }, { status: 500 });
   }
 
-  const settlementOutcome = { outcome, cutoffTimestamp };
+  const settlementOutcome = {
+    outcome: body.outcome,
+    cutoffTimestamp: body.cutoffTimestamp || undefined,
+  };
   const resolvedAt = new Date().toISOString();
 
-  type SettledRow = {
-    id: string;
-    fanId: string;
-    direction: string | null;
-    probability: number | null;
-    breakdown: ReturnType<typeof scoreReceipt>;
-  };
-
-  const settled: SettledRow[] = (receipts || []).map((row: any) => {
+  const settled = (receipts || []).map((row: any) => {
     const breakdown = scoreReceipt(
       {
         predictionDirection: row.prediction_direction,
@@ -139,28 +188,28 @@ export async function POST(req: NextRequest) {
     };
   });
 
-  if (dryRun) {
+  if (body.dryRun) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
-      template: templateId,
-      targetMatch: targetMatch || null,
-      outcome,
+      template: body.templateId,
+      targetMatch: body.targetMatch || null,
+      outcome: body.outcome,
       scoringRules: SETTLEMENT_SCORING_RULES,
       settled,
       count: settled.length,
     });
   }
 
-  // Write reputation + settlement_status back to each receipt.
-  const errors: Array<{ id: string; error: string }> = [];
+  // Real write — flip status + write reputation + breakdown.
+  let errorCount = 0;
   for (const row of settled) {
     const { error: updateError } = await supabase
       .from('fanfi_market_proofs')
       .update({
         settlement_status: 'resolved',
         resolved_at: resolvedAt,
-        resolved_outcome: outcome,
+        resolved_outcome: body.outcome,
         reputation_points: row.breakdown.total,
         reputation_breakdown: {
           direction: row.breakdown.directionPoints,
@@ -172,50 +221,59 @@ export async function POST(req: NextRequest) {
       .eq('id', row.id);
 
     if (updateError) {
-      errors.push({ id: row.id, error: updateError.message });
+      // Don't leak the underlying DB error to the client. Log + count.
+      console.error('[admin/fanfi-settle] receipt update failed:', row.id, updateError);
+      errorCount += 1;
     }
   }
 
   return NextResponse.json({
-    ok: errors.length === 0,
-    template: templateId,
-    targetMatch: targetMatch || null,
-    outcome,
+    ok: errorCount === 0,
+    template: body.templateId,
+    targetMatch: body.targetMatch || null,
+    outcome: body.outcome,
     resolvedAt,
     scoringRules: SETTLEMENT_SCORING_RULES,
     settled,
     count: settled.length,
-    errors: errors.length > 0 ? errors : undefined,
+    errorCount: errorCount > 0 ? errorCount : undefined,
   });
 }
 
 /**
- * GET — preview which receipts would be settled (no auth required for
- * read-only inspection). Useful for the admin UI to show "what will happen".
+ * GET — preview which receipts would be settled. No auth (read-only).
+ * Returns sanitized rows (no signature material, no signed messages) and
+ * does not leak Supabase error internals.
  */
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const templateId = url.searchParams.get('templateId');
-  const targetMatch = url.searchParams.get('targetMatch');
+  const templateId = url.searchParams.get('templateId')?.trim();
+  const targetMatch = url.searchParams.get('targetMatch')?.trim() || '';
 
   if (!templateId) {
     return NextResponse.json({ error: 'templateId query param required' }, { status: 400 });
   }
 
-  const supabase = getSupabase();
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch (e) {
+    console.error('[admin/fanfi-settle GET] supabase init failed', e);
+    return NextResponse.json({ error: 'service unavailable' }, { status: 503 });
+  }
+
   let query = supabase
     .from('fanfi_market_proofs')
     .select(
       'id, fan_id, prediction_direction, prediction_probability, prediction_reason, created_at, settlement_status',
     )
     .eq('template_id', templateId);
-  if (targetMatch) {
-    query = query.eq('target_match', targetMatch);
-  }
+  if (targetMatch) query = query.eq('target_match', targetMatch);
 
   const { data, error } = await query;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[admin/fanfi-settle GET] receipt load error:', error);
+    return NextResponse.json({ error: 'failed to load receipts' }, { status: 500 });
   }
 
   return NextResponse.json({

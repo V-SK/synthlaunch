@@ -9,6 +9,8 @@ import {
   type FanFiCampaignRecord,
 } from '@/lib/localFanfiCampaignStore';
 import {
+  assertFanIdOwnership,
+  assertProductionPersistenceReady,
   getSupabase,
   isLocalFanFiStoreEnabled,
   isSupabaseConfigured,
@@ -136,14 +138,27 @@ async function verifyXLayerTxHash(params: {
       throw new Error('X Layer tx proof was not sent by the submitting wallet');
     }
 
-    const txTarget = transaction.to ? getAddress(transaction.to).toLowerCase() : '';
+    // Cryptographic linkage: the tx calldata MUST include the receipt hash.
+    // Previously this also accepted any tx hitting a known Synth contract as
+    // a fallback, which let a user re-use their own historical tx as "proof"
+    // for an unrelated receipt. Drop the fallback — require receipt linkage.
     const receiptMarker = params.receiptHash.slice(2).toLowerCase();
     const calldata = (transaction.input || '0x').toLowerCase();
     const referencesReceipt = calldata.includes(receiptMarker);
-    const usesKnownSynthTarget = txTarget ? X_LAYER_PROOF_TARGETS.has(txTarget) : false;
 
-    if (!referencesReceipt && !usesKnownSynthTarget) {
-      throw new Error('X Layer tx proof does not reference this receipt or a Synth X Layer contract');
+    if (!referencesReceipt) {
+      throw new Error('X Layer tx proof must reference this receipt hash in calldata');
+    }
+
+    // Defense-in-depth: even with receipt linkage, prefer txs that hit a
+    // SynthLaunch X Layer contract. This is informational only — failing
+    // here would break user flexibility, so we let it pass but log.
+    const txTarget = transaction.to ? getAddress(transaction.to).toLowerCase() : '';
+    if (txTarget && !X_LAYER_PROOF_TARGETS.has(txTarget)) {
+      console.warn(
+        '[fanfi] tx proof references receipt but targets unknown contract',
+        { tx: txHash, to: txTarget },
+      );
     }
 
     return txHash;
@@ -436,6 +451,7 @@ export async function createFanFiMarketProof(params: {
   if (!isFanFiMarketProofStoreEnabled()) {
     throw new Error('FanFi market proof store is disabled');
   }
+  assertProductionPersistenceReady();
 
   const template = getFanFiCampaignTemplate(params.templateId);
   if (!template) {
@@ -443,6 +459,13 @@ export async function createFanFiMarketProof(params: {
   }
 
   const fanId = normalizeFanId(params.fanId);
+
+  // Ownership enforcement (H-1): the wallet that signed the receipt must own
+  // the fan_id, or this is the first claim. The wallet has already been
+  // signature-verified upstream in verifyFanFiReceiptSignature.
+  if (params.wallet) {
+    await assertFanIdOwnership(fanId, params.wallet);
+  }
 
   // Idempotency: if the same signed receipt was already submitted, return existing.
   let existingLaunch: FanFiMarketProofRecord | null = null;

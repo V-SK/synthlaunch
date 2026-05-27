@@ -14,6 +14,7 @@ export interface FanFiProfile {
   fanId: string;
   handle: string;
   wallet: string;
+  ownerWallet: string;
   completions: FanFiCompletion[];
   createdAt: string;
   updatedAt: string;
@@ -34,20 +35,39 @@ function getSupabaseKey(): string | undefined {
 }
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && getSupabaseKey());
+  // Accept either SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL — closes L-1.
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return Boolean(url && getSupabaseKey());
 }
 
 let cachedSupabase: SupabaseClient | null = null;
 export function getSupabase(): SupabaseClient | null {
   if (cachedSupabase) return cachedSupabase;
   if (!isSupabaseConfigured()) return null;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)!;
   const key = getSupabaseKey()!;
   cachedSupabase = createClient(url, key, {
     auth: { persistSession: false },
     global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
   });
   return cachedSupabase;
+}
+
+/**
+ * Production fail-fast (L-5): if we're in a production deploy and Supabase
+ * isn't configured, refuse to silently fall back to `/tmp` (which is per-
+ * function-instance ephemeral on Vercel). Callers that ignore this and try
+ * to write get an obvious error instead of mystery data loss.
+ */
+export function assertProductionPersistenceReady(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  if (process.env.DISABLE_LOCAL_FANFI_STORE === '1') return; // explicit opt-out
+  if (isSupabaseConfigured()) return;
+  throw new Error(
+    'Production persistence misconfigured: Supabase env vars missing. Set ' +
+    'NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) + SUPABASE_SERVICE_ROLE_KEY, ' +
+    'or explicitly set DISABLE_LOCAL_FANFI_STORE=1 to acknowledge.'
+  );
 }
 
 export function normalizeFanId(value: string | null | undefined): string {
@@ -61,6 +81,10 @@ export function normalizeFanId(value: string | null | undefined): string {
   return normalized;
 }
 
+function normalizeWallet(value: string | undefined | null): string {
+  return (value || '').toLowerCase();
+}
+
 // ---------------------------------------------------------------------------
 // File-system fallback (dev / Supabase-not-configured)
 // ---------------------------------------------------------------------------
@@ -70,7 +94,11 @@ async function readProfilesFromFile(): Promise<FanFiProfile[]> {
   try {
     const raw = await fs.readFile(STORE_PATH, 'utf8');
     const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data)) return [];
+    return data.map((p: any) => ({
+      ...p,
+      ownerWallet: p.ownerWallet || p.wallet || '',
+    }));
   } catch (error: any) {
     if (error?.code === 'ENOENT') return [];
     throw error;
@@ -90,6 +118,7 @@ interface SupabaseProfileRow {
   fan_id: string;
   handle: string;
   wallet: string;
+  owner_wallet: string;
   created_at: string;
   updated_at: string;
 }
@@ -112,6 +141,7 @@ function mapProfileRow(row: SupabaseProfileRow, completions: SupabaseCompletionR
     fanId: row.fan_id,
     handle: row.handle,
     wallet: row.wallet || '',
+    ownerWallet: row.owner_wallet || '',
     completions: completions
       .filter((c) => c.fan_id === row.fan_id)
       .map((c) => ({
@@ -137,8 +167,8 @@ async function readProfilesFromSupabase(): Promise<FanFiProfile[]> {
   if (profilesRes.error) throw new Error(`fanfi_profiles read: ${profilesRes.error.message}`);
   if (completionsRes.error) throw new Error(`fanfi_completions read: ${completionsRes.error.message}`);
 
-  const profiles = profilesRes.data || [];
-  const completions = completionsRes.data || [];
+  const profiles = (profilesRes.data || []) as SupabaseProfileRow[];
+  const completions = (completionsRes.data || []) as SupabaseCompletionRow[];
   return profiles.map((row) => mapProfileRow(row, completions));
 }
 
@@ -158,7 +188,10 @@ async function readProfileFromSupabase(fanId: string): Promise<FanFiProfile | nu
   if (completionsRes.error) throw new Error(`fanfi_completions read: ${completionsRes.error.message}`);
 
   if (!profileRes.data) return null;
-  return mapProfileRow(profileRes.data, completionsRes.data || []);
+  return mapProfileRow(
+    profileRes.data as SupabaseProfileRow,
+    (completionsRes.data as SupabaseCompletionRow[]) || [],
+  );
 }
 
 async function readAllReputationPoints(): Promise<Map<string, number>> {
@@ -179,11 +212,97 @@ async function readAllReputationPoints(): Promise<Map<string, number>> {
   return map;
 }
 
+// ---------------------------------------------------------------------------
+// Ownership enforcement (H-1)
+//
+// First wallet to write to a fan_id owns it. Subsequent writes require the
+// same wallet. Enforced at the application layer because the application
+// constructs all writes; we read owner_wallet, check, then write.
+// ---------------------------------------------------------------------------
+
+export class FanIdOwnershipError extends Error {
+  constructor(public fanId: string) {
+    super(`fan_id "${fanId}" is owned by a different wallet`);
+    this.name = 'FanIdOwnershipError';
+  }
+}
+
+export async function assertFanIdOwnership(
+  fanId: string,
+  wallet: string,
+): Promise<{ claimed: boolean; ownerWallet: string }> {
+  const normalizedFanId = normalizeFanId(fanId);
+  const w = normalizeWallet(wallet);
+  if (!w) throw new Error('wallet required to write under a fan_id');
+
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase
+      .from('fanfi_profiles')
+      .select('owner_wallet')
+      .eq('fan_id', normalizedFanId)
+      .maybeSingle();
+
+    if (error) throw new Error(`fanfi_profiles ownership lookup: ${error.message}`);
+
+    const existing = (data?.owner_wallet || '').toLowerCase();
+    if (existing && existing !== w) {
+      throw new FanIdOwnershipError(normalizedFanId);
+    }
+
+    if (!existing) {
+      // Claim ownership by upserting the profile with owner_wallet set.
+      const now = new Date().toISOString();
+      const { error: upsertError } = await supabase
+        .from('fanfi_profiles')
+        .upsert(
+          {
+            fan_id: normalizedFanId,
+            handle: normalizedFanId,
+            wallet: w,
+            owner_wallet: w,
+            updated_at: now,
+          },
+          { onConflict: 'fan_id' },
+        );
+      if (upsertError) throw new Error(`fanfi_profiles claim: ${upsertError.message}`);
+      return { claimed: true, ownerWallet: w };
+    }
+
+    return { claimed: false, ownerWallet: existing };
+  }
+
+  // .local-data fallback (dev) — apply the same rule via JSON file.
+  const profiles = await readProfilesFromFile();
+  const existing = profiles.find((p) => p.fanId === normalizedFanId);
+  if (existing?.ownerWallet && existing.ownerWallet.toLowerCase() !== w) {
+    throw new FanIdOwnershipError(normalizedFanId);
+  }
+  if (!existing || !existing.ownerWallet) {
+    const now = new Date().toISOString();
+    const updated: FanFiProfile = existing
+      ? { ...existing, wallet: w, ownerWallet: w, updatedAt: now }
+      : {
+          fanId: normalizedFanId,
+          handle: normalizedFanId,
+          wallet: w,
+          ownerWallet: w,
+          completions: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+    const others = profiles.filter((p) => p.fanId !== normalizedFanId);
+    await writeProfilesToFile([updated, ...others]);
+    return { claimed: true, ownerWallet: w };
+  }
+  return { claimed: false, ownerWallet: existing.ownerWallet };
+}
+
 async function upsertProfileSupabase(profile: FanFiProfile, completion: FanFiCompletion) {
   const supabase = getSupabase();
   if (!supabase) throw new Error('Supabase not configured');
 
-  // Upsert profile row.
+  // Preserve owner_wallet — never let a write change the owner.
   const { error: profileError } = await supabase
     .from('fanfi_profiles')
     .upsert(
@@ -191,13 +310,13 @@ async function upsertProfileSupabase(profile: FanFiProfile, completion: FanFiCom
         fan_id: profile.fanId,
         handle: profile.handle,
         wallet: profile.wallet,
+        owner_wallet: profile.ownerWallet,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'fan_id' }
+      { onConflict: 'fan_id' },
     );
   if (profileError) throw new Error(`fanfi_profiles upsert: ${profileError.message}`);
 
-  // Upsert completion row.
   const { error: completionError } = await supabase
     .from('fanfi_completions')
     .upsert(
@@ -208,13 +327,13 @@ async function upsertProfileSupabase(profile: FanFiProfile, completion: FanFiCom
         points: completion.points,
         completed_at: completion.completedAt,
       },
-      { onConflict: 'fan_id,mission_id' }
+      { onConflict: 'fan_id,mission_id' },
     );
   if (completionError) throw new Error(`fanfi_completions upsert: ${completionError.message}`);
 }
 
 // ---------------------------------------------------------------------------
-// Unified read/write surface
+// Public API
 // ---------------------------------------------------------------------------
 
 async function readProfiles(): Promise<FanFiProfile[]> {
@@ -252,6 +371,7 @@ export async function getFanFiProgress(fanId: string): Promise<{
     fanId: normalizedFanId,
     handle: normalizedFanId,
     wallet: '',
+    ownerWallet: '',
     completions: [],
     createdAt: now,
     updatedAt: now,
@@ -294,6 +414,7 @@ export async function completeFanFiMission(params: {
   if (!isLocalFanFiStoreEnabled()) {
     throw new Error('Local FanFi mission store is disabled');
   }
+  assertProductionPersistenceReady();
 
   const mission = getFanFiMission(params.missionId);
   if (!mission) {
@@ -306,6 +427,14 @@ export async function completeFanFiMission(params: {
   }
 
   const fanId = normalizeFanId(params.fanId);
+  const wallet = normalizeWallet(params.wallet);
+  if (!wallet) {
+    throw new Error('A connected wallet is required to complete a mission');
+  }
+
+  // Lock the fan_id to this wallet (or verify it already owns it).
+  await assertFanIdOwnership(fanId, wallet);
+
   const now = new Date().toISOString();
   const completion: FanFiCompletion = {
     missionId: mission.id,
@@ -315,24 +444,25 @@ export async function completeFanFiMission(params: {
   };
 
   if (isSupabaseConfigured()) {
-    // Read existing profile (if any) to preserve created_at + handle when absent.
     const existing = await readProfileFromSupabase(fanId);
     const profile: FanFiProfile = existing || {
       fanId,
       handle: params.handle?.trim() || fanId,
-      wallet: params.wallet || '',
+      wallet,
+      ownerWallet: wallet,
       completions: [],
       createdAt: now,
       updatedAt: now,
     };
 
     profile.handle = params.handle?.trim() || profile.handle || fanId;
-    profile.wallet = params.wallet || profile.wallet || '';
+    profile.wallet = wallet;
+    // Never overwrite owner_wallet here — assertFanIdOwnership already set/verified it.
+    profile.ownerWallet = profile.ownerWallet || wallet;
     profile.updatedAt = now;
 
     await upsertProfileSupabase(profile, completion);
 
-    // Reload to include the new completion in the returned profile.
     const reloaded = await readProfileFromSupabase(fanId);
     return reloaded || profile;
   }
@@ -345,7 +475,8 @@ export async function completeFanFiMission(params: {
     profile = {
       fanId,
       handle: params.handle?.trim() || fanId,
-      wallet: params.wallet || '',
+      wallet,
+      ownerWallet: wallet,
       completions: [],
       createdAt: now,
       updatedAt: now,
@@ -361,14 +492,12 @@ export async function completeFanFiMission(params: {
   }
 
   profile.handle = params.handle?.trim() || profile.handle || fanId;
-  profile.wallet = params.wallet || profile.wallet || '';
+  profile.wallet = wallet;
+  profile.ownerWallet = profile.ownerWallet || wallet;
   profile.updatedAt = now;
 
   await writeProfilesToFile(profiles);
   return profile;
 }
 
-export { FANFI_MISSIONS };
-
-// Internal export for the settle endpoint (atomic increment of reputation per fan).
-export { readProfiles };
+export { FANFI_MISSIONS, readProfiles };

@@ -6,14 +6,12 @@ import { completeFanFiMission, getFanFiProgress, normalizeFanId } from '@/lib/lo
 
 export const dynamic = 'force-dynamic';
 
-const AUDIT_MISSION_IDS = [
-  'choose-campaign',
-  'write-launch-draft',
-  'submit-prediction',
-  'create-fan-content',
-  'launch-or-attach-token',
-  'review-trading-flow',
-];
+// Limited to a SINGLE mission credit to prevent single-signature point
+// inflation. The receipt itself is the proof of `submit-prediction`; other
+// missions require their own per-mission EIP-191 signature via
+// /api/fanfi/progress. Prior version credited all 6 missions (680 pts) from
+// one signature — that's a public-leaderboard pollution lever.
+const AUDIT_MISSION_IDS = ['submit-prediction'];
 
 function createMissionProof(params: {
   missionId: string;

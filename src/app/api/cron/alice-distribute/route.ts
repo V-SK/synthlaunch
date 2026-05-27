@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
 import { bsc } from 'viem/chains';
+import { ADMIN_ADDRESS } from '@/lib/admin';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -11,7 +12,6 @@ const ALICE_RPC = 'https://rpc.aliceprotocol.org';
 const ALICE_DECIMALS = 12;
 const ALICE_SS58_PREFIX = 300;
 const DISTRIBUTION_PERCENT = 0.01; // 1% of balance per hour
-const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
 
 const STAKING_ABI = [
   {

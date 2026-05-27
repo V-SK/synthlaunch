@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyMessage } from 'viem';
 
-const ADMIN_ADDRESS = '0x0198b366978ff0ee67bf308b0367c9b6fced2725';
+import { ADMIN_ADDRESS } from '@/lib/admin';
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;

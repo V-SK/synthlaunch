@@ -2,6 +2,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { getFanFiCampaignTemplate } from '@/lib/fanfiCampaigns';
 import {
+  assertFanIdOwnership,
+  assertProductionPersistenceReady,
   getSupabase,
   isLocalFanFiStoreEnabled,
   isSupabaseConfigured,
@@ -190,10 +192,12 @@ export async function upsertFanFiCampaign(params: {
   tone: string;
   tokenAddress?: string;
   launchDraft?: string;
+  wallet?: string;
 }): Promise<FanFiCampaignRecord> {
   if (!isLocalFanFiCampaignStoreEnabled()) {
     throw new Error('FanFi campaign store is disabled');
   }
+  assertProductionPersistenceReady();
 
   const template = getFanFiCampaignTemplate(params.templateId);
   if (!template) {
@@ -206,6 +210,12 @@ export async function upsertFanFiCampaign(params: {
   }
 
   const fanId = normalizeFanId(params.fanId);
+
+  // Ownership enforcement (H-1). Skip when wallet is absent — used internally
+  // by the market-proof flow which has already enforced ownership upstream.
+  if (params.wallet) {
+    await assertFanIdOwnership(fanId, params.wallet);
+  }
   const now = new Date().toISOString();
   const targetMatch = params.targetMatch.trim() || template.team;
   const tone = params.tone.trim() || 'sharp match-day prediction voice';
