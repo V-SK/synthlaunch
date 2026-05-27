@@ -2,6 +2,8 @@
 
 **Agent-native onchain economy for football fans. Wallet-signed predictions on X Layer.**
 
+> **OKX review note**: this repository now contains two separate OKX submissions. Start with [`OKX_SUBMISSIONS_INDEX.md`](OKX_SUBMISSIONS_INDEX.md) and [`docs/OKX_CODE_BOUNDARIES.md`](docs/OKX_CODE_BOUNDARIES.md) before scoring. The X Cup project lives at `/fanfi/xcup`; the Build X Hook project lives at `/build-x-hook` and `hook/`.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![X Layer](https://img.shields.io/badge/Chain-X%20Layer-black.svg)](https://www.oklink.com/x-layer)
 [![OKX Onchain OS](https://img.shields.io/badge/OKX-Onchain%20OS-blue.svg)](https://web3.okx.com)
@@ -21,6 +23,8 @@ Prior recognition: winner of the **OKX Build X Hackathon — X Layer Arena**. Th
 |---|---|
 | 🌐 Live app | https://synthlaunch.fun |
 | 🏆 X Cup arena | https://synthlaunch.fun/fanfi/xcup |
+| 🧬 Build X Hook console | https://synthlaunch.fun/build-x-hook |
+| 📋 OKX submissions index | [`OKX_SUBMISSIONS_INDEX.md`](OKX_SUBMISSIONS_INDEX.md) |
 | 🤖 AI Terminal | https://synthlaunch.fun/ai |
 | 🛠 Source | https://github.com/V-SK/synthlaunch |
 | 🐦 X / Twitter | [@synth_fun](https://twitter.com/synth_fun) |

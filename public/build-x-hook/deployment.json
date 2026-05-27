@@ -1,0 +1,95 @@
+{
+  "project": "SynthAgent Hook",
+  "competition": "OKX Build X Hackathon Hook",
+  "network": {
+    "name": "X Layer mainnet",
+    "chainId": 196,
+    "rpc": "https://xlayerrpc.okx.com"
+  },
+  "deployedAt": {
+    "blockNumber": 61091448,
+    "blockHash": "0x42294a3bcd3d9942e62dee75f20ca3b4f72a3f94b390c39813a99e106972afff",
+    "timestampUtc": "2026-05-27T05:41:24Z"
+  },
+  "deployer": "0x8028227C43947F41bB431571002D512815D77C4F",
+  "poolManager": "0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32",
+  "webSurface": {
+    "productionSite": "https://synthlaunch.fun",
+    "hosting": "Vercel",
+    "productionSubmissionConsole": "https://synthlaunch.fun/build-x-hook",
+    "sourceSubmissionConsole": "hook/demo/index.html",
+    "vercelPublicMirror": "public/build-x-hook",
+    "languages": ["en", "zh-CN"]
+  },
+  "contracts": {
+    "synthAgentHook": "0x76B2e0e9000448161E4e1Ebc04c85840035C00C0",
+    "sagent": "0x35833A76f21b2c9191fFfE7BC2803796Adc2CcA0",
+    "ausd": "0x284851f79E769deBf61561636d09D1E348519AF2",
+    "modifyLiquidityDemoRouter": "0x1Ed36B421A5460dD620cf1530B501b4a69946Ea5",
+    "swapDemoRouter": "0xD41B12F578a3b22056375a61e2D9578466DBC2D3"
+  },
+  "pool": {
+    "poolId": "0x208f16e69188418f5d0d53cd196bc0ceaa9dcc246e391483fdf92cb311fa7850",
+    "token0": "0x284851f79E769deBf61561636d09D1E348519AF2",
+    "token1": "0x35833A76f21b2c9191fFfE7BC2803796Adc2CcA0",
+    "feeMode": "LPFeeLibrary.DYNAMIC_FEE_FLAG",
+    "tickSpacing": 60,
+    "initialSqrtPriceX96": "79228162514264337593543950336",
+    "hookPermissionBits": {
+      "decimal": 192,
+      "hex": "0x00c0",
+      "enabled": ["beforeSwap", "afterSwap"]
+    }
+  },
+  "agentPool": {
+    "agentId": "0xedb45f85bf7cfe6c3bfa95b75de493df45c4b53271977363ac2cb62bcef00528",
+    "creator": "0x8028227C43947F41bB431571002D512815D77C4F",
+    "treasury": "0x8028227C43947F41bB431571002D512815D77C4F",
+    "launchEndsAt": 1779874884,
+    "launchEndsAtUtc": "2026-05-27T09:41:24Z",
+    "launchDurationSeconds": 14400,
+    "launchFeePips": 30000,
+    "normalFeePips": 3000
+  },
+  "proofTransactions": {
+    "hookDeploy": "0x285df945306635073f1148677790e38838cb2182ae2807d4114a039268c85955",
+    "sagentDeploy": "0x03f15b2675bd91c6dbe1ca8b770641f83073ffea5616996807c48060f4ca3bfb",
+    "ausdDeploy": "0xfbfd9f5147b9198da07351301446566c5d2587784d6943ecde371c1d077591c3",
+    "poolInitialize": "0xada127c6ff471a7db103b42e58c4c6c3ccaaf0b3208513c76b919391d4ea640b",
+    "registerAgentPool": "0xdeed44fba72f59f060486b9e50f4bc2354af1c19fa13c045a4d86f07f8118438",
+    "modifyLiquidityRouterDeploy": "0xfb85b43b0757e6a22b8df9896128e21dc28ca9c0ec447694f7a7e68aa3da2f32",
+    "swapRouterDeploy": "0x85d5fbf07f982e8428852e50e54b061a7c35855e3102fe3185daa80d1090b66f",
+    "approveToken0ToModifyRouter": "0xc0486aa39b7a36f4667760ef59e9da75b249361572768dc7edb875782b744615",
+    "approveToken1ToModifyRouter": "0xefd07760b4215f1462947f2571a2153b9f5f3e1835b0c47f1a3bacca42cf1a23",
+    "approveToken0ToSwapRouter": "0x61ccfb36d324c45ea419dbab4ddfedab41ab52f84390a0ac7eebc67a59c2bff0",
+    "approveToken1ToSwapRouter": "0xb01924d04922f894fc85688e13b78215263b05ea87ced6916e7e0fbc2ffaa48e",
+    "addLiquidity": "0x4db035f734664c7aa823217927575f5d427f72f66aad388347a522427508859c",
+    "swapOne": "0x4be74609c3d1041766cbab04123016faa5d027001157420bdf16e16f4ed4ad22",
+    "swapTwo": "0x979a7c50731bcfcafd240dbbbc011f90a4006c0569a44a6baf5ff291796ed5de"
+  },
+  "postDeployState": {
+    "currentFeePips": 30000,
+    "launchActive": true,
+    "volumeMetric": "15000000000000000",
+    "swapCount": 2,
+    "uniqueTraders": 1,
+    "xp": 20,
+    "initialized": true,
+    "hookCodeLengthBytes": 7027
+  },
+  "audit": {
+    "verifiedAtUtc": "2026-05-27T05:45:36Z",
+    "checks": [
+      "Hook runtime code exists on X Layer mainnet.",
+      "Pool is registered against the deployed hook and dynamic-fee PoolKey.",
+      "currentFee returns 30000 pips while the launch window is active.",
+      "Two on-chain swaps emitted AgentXPUpdated events and moved XP from 0 to 20.",
+      "Foundry cache was removed after deployment; this artifact contains no private key."
+    ]
+  },
+  "notes": [
+    "SAGENT and aUSD are demo ERC20 tokens for hackathon evidence, not production assets.",
+    "The deployed routers are Uniswap v4-core test routers used only to produce a full on-chain liquidity and swap proof.",
+    "The hook volume field records absolute swap amountSpecified as a simple agent activity metric."
+  ]
+}

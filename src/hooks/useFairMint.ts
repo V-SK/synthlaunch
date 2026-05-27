@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { parseEther, formatEther, type Address } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { FAIR_MINT_FACTORY_ADDRESS, FAIR_MINT_FACTORY_ABI, FAIR_MINT_TOKEN_ABI, FAIR_MINT_BLACKLIST } from '@/lib/fairMint';
 
 export interface FairMintTokenData {

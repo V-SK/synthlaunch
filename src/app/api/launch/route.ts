@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createWalletClient, createPublicClient, http, getContractAddress, keccak256, toBytes, toHex, zeroAddress, defineChain } from 'viem';
+import { createWalletClient, createPublicClient, http, getContractAddress, keccak256, toBytes, toHex, zeroAddress } from 'viem';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { generatePrivateKey } from 'viem/accounts';
 import { getDeployerAccount } from '@/lib/kms-signer';
-import { bsc } from 'viem/chains';
+import { bsc, xlayer } from '@/lib/chains';
 import { CHAIN_CONFIG, DEFAULT_CHAIN_ID, FLAP_ABI, type SupportedChainId } from '@/lib/contracts';
 import { CUSTODY_ABI } from '@/lib/custody';
 import * as fs from 'fs';
@@ -16,19 +16,6 @@ const EIP1167_SUFFIX = '5af43d82803e903d91602b57fd5bf3';
 
 const LAUNCHES_FILE = '/tmp/synthlaunch-launches.json';
 const MAX_LAUNCHES_PER_HANDLE_PER_DAY = 3; // Target handle can receive max 3 tokens per day
-
-const xlayer = defineChain({
-  id: 196,
-  name: 'X Layer',
-  nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://xlayerrpc.okx.com'] },
-    public: { http: ['https://xlayerrpc.okx.com'] },
-  },
-  blockExplorers: {
-    default: { name: 'OKLink', url: 'https://www.oklink.com/x-layer' },
-  },
-});
 
 // --- Helpers ---
 

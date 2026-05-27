@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { ADMIN_ADDRESS } from '@/lib/admin';
 
 // ─── Config ────────────────────────────────────────────────────────────────

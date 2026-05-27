@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, type Address } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { NFALITE_ABI, ZERO_ADDRESS } from '@/lib/nfaLite';
 import { verifySignature, isNFALiteOwner, isTimestampValid } from '@/lib/auth';
 

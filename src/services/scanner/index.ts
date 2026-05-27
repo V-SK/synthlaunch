@@ -1,5 +1,5 @@
 import { createPublicClient, createWalletClient, http, parseAbiItem, formatEther } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
 // ============ 配置 ============

@@ -1,5 +1,5 @@
 import { createPublicClient, http, parseAbiItem, formatEther } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 
 const FLAP_PORTAL = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0';
 

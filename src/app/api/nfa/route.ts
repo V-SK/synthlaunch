@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http, type Address } from "viem";
-import { bsc } from "viem/chains";
+import { bsc } from "@/lib/chains";
 import { NFA_ADDRESS, NFA_ABI } from "@/lib/nfa";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const client = createPublicClient({
   chain: bsc,

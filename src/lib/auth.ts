@@ -1,6 +1,6 @@
 import { recoverMessageAddress } from 'viem';
 import { createPublicClient, http } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 
 // NFALite ABI (minimal for ownerOf)
 const NFALITE_ABI = [

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, formatEther, parseAbi, defineChain, type Address, type PublicClient } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { CHAIN_CONFIG, type SupportedChainId } from '@/lib/contracts';
 
 export const dynamic = 'force-dynamic';

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, decodeEventLog, http, parseAbi, recoverMessageAddress } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { createClient } from '@/lib/supabase';
 import { xorEncrypt } from '@/lib/agentEncryption';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';

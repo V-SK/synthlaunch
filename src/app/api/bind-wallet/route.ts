@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, encodePacked, keccak256, toHex } from 'viem';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { getDeployerAccount } from '@/lib/kms-signer';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { CUSTODY_ABI, CUSTODY_ADDRESS } from '@/lib/custody';
 
 const CHAIN_ID = 56;

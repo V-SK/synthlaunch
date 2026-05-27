@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, formatEther, parseAbi, getAddress, defineChain, type Address } from 'viem';
-import { bsc } from 'viem/chains';
+import { createPublicClient, http, formatEther, parseAbi, getAddress, type Address } from 'viem';
+import { bsc, xlayer } from '@/lib/chains';
 import { CHAIN_CONFIG, type SupportedChainId } from '@/lib/contracts';
 import { getFanFiMarketProofs } from '@/lib/localFanfiMarketProofStore';
 import { readLocalTokens } from '@/lib/localTokenStore';
@@ -10,13 +10,6 @@ export const dynamic = 'force-dynamic';
 // --- Constants ---
 const BILLION = 1000000000;
 const CACHE_TTL = 15000; // 45 seconds
-
-const xlayer = defineChain({
-  id: 196,
-  name: 'X Layer',
-  nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
-  rpcUrls: { default: { http: [CHAIN_CONFIG[196].rpc] } },
-});
 
 function getViemChain(chainId: SupportedChainId) {
   return chainId === 196 ? xlayer : bsc;

@@ -1,6 +1,6 @@
 import { KMSClient, SignCommand, GetPublicKeyCommand } from '@aws-sdk/client-kms';
 import { createWalletClient, http, keccak256, type Account, type Transport, type Chain } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { toAccount } from 'viem/accounts';
 
 // AWS KMS configuration

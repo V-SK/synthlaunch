@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, type Address } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc } from '@/lib/chains';
 import { SYNTHID_ABI, SYNTHID_ADDRESS } from '@/lib/synthid';
 
 const client = createPublicClient({

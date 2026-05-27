@@ -16,6 +16,14 @@ const nextConfig = {
           source: '/synth-wallet/',
           destination: '/synth-wallet/index.html',
         },
+        {
+          source: '/build-x-hook',
+          destination: '/build-x-hook/index.html',
+        },
+        {
+          source: '/build-x-hook/',
+          destination: '/build-x-hook/index.html',
+        },
       ],
     };
   },
@@ -66,6 +74,42 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/build-x-hook',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/build-x-hook/',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/build-x-hook/index.html',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/build-x-hook/assets/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ];
   },
   typescript: {
@@ -82,6 +126,12 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     // Enable WASM support (required by @polkadot/wasm-crypto)
     config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@react-native-async-storage/async-storage': false,
+      'pino-pretty': false,
+    };
     if (isServer) {
       // On server, mark polkadot as external so it doesn't try to bundle WASM
       const orig = config.externals;
