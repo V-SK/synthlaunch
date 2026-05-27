@@ -11,6 +11,7 @@ This repository contains **two separate OKX hackathon submissions**. They share 
 | Primary live route | `https://synthlaunch.fun/fanfi/xcup` |
 | Audit route | `https://synthlaunch.fun/fanfi/xcup/audit` |
 | Submission document | [`docs/OKX_XCUP_SUBMISSION.md`](docs/OKX_XCUP_SUBMISSION.md) |
+| Final form copy | [`docs/OKX_XCUP_FINAL_SUBMISSION.md`](docs/OKX_XCUP_FINAL_SUBMISSION.md) |
 | Core code | `src/app/fanfi/xcup`, `src/components/fanfi`, `src/lib/fanfi*`, `src/app/api/fanfi`, `src/app/api/admin/fanfi-settle` |
 | Main proof type | Wallet-signed prediction receipts, X Layer tx anchoring, deterministic REP settlement |
 
@@ -23,6 +24,7 @@ This repository contains **two separate OKX hackathon submissions**. They share 
 | Primary live route | `https://synthlaunch.fun/build-x-hook` |
 | Local/source console | [`hook/demo/index.html`](hook/demo/index.html) |
 | Submission document | [`hook/SUBMISSION.md`](hook/SUBMISSION.md) |
+| Final form copy | [`hook/OKX_BUILD_X_HOOK_FINAL_SUBMISSION.md`](hook/OKX_BUILD_X_HOOK_FINAL_SUBMISSION.md) |
 | Deployment evidence | [`hook/deployments/xlayer-agent-demo.json`](hook/deployments/xlayer-agent-demo.json) |
 | Core code | `hook/src`, `hook/script`, `hook/test`, `hook/demo`, `public/build-x-hook` |
 | Main proof type | Deployed Uniswap v4 Hook + v4 Pool on X Layer mainnet, two proof swaps, on-chain XP updates |
